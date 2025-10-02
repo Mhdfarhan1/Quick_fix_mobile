@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../orders/my_order_screen.dart'; // SOLUSI #1
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,9 +21,9 @@ class _HomePageState extends State<HomePage> {
   ];
 
   final List<String> carouselImages = [
-    "https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=2070&auto-format&fit=crop&ixlib-rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1600585152220-90363fe7e115?q=80&w=2070&auto-format&fit-crop&ixlib-rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto-format&fit=crop&ixlib-rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+    "https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=2070&auto-format&fit=crop&ixlib=rb-4.0.3",
+    "https://images.unsplash.com/photo-1600585152220-90363fe7e115?q=80&w=2070&auto-format&fit=crop&ixlib=rb-4.0.3",
+    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto-format&fit=crop&ixlib=rb-4.0.3"
   ];
 
   final List<Map<String, String>> teknisi = [
@@ -31,21 +32,21 @@ class _HomePageState extends State<HomePage> {
       "jarak": "5.0 km",
       "rating": "4.6",
       "deskripsi": "Perbaikan atap rumah, teralis, dan kebocoran pipa",
-      "gambar": "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto-format&fit=crop&ixlib-rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+      "gambar": "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto-format&fit=crop&ixlib=rb-4.0.3"
     },
     {
       "nama": "AHMAD SAROPI",
       "jarak": "5.0 km",
       "rating": "4.6",
       "deskripsi": "Perbaikan atap rumah, teralis, dan kebocoran pipa",
-      "gambar": "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto-format&fit=crop&ixlib-rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+      "gambar": "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto-format&fit=crop&ixlib=rb-4.0.3"
     },
     {
       "nama": "AHMAD SAROPI",
       "jarak": "5.0 km",
       "rating": "4.6",
       "deskripsi": "Perbaikan atap rumah, teralis, dan kebocoran pipa",
-      "gambar": "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto-format&fit=crop&ixlib-rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+      "gambar": "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto-format&fit=crop&ixlib=rb-4.0.3"
     },
   ];
 
@@ -64,12 +65,10 @@ class _HomePageState extends State<HomePage> {
             _buildCategories(),
             _buildSectionTitle("BARU-BARU INI"),
             _buildCarousel(),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Text(
                     "REKOMENDASI TEKNISI",
@@ -100,7 +99,6 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-
             _buildTechnicianRecommendations(),
             const SizedBox(height: 20),
           ],
@@ -109,13 +107,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- KODE NAVIGATION BAR YANG DIPERBARUI ---
+  // ------------------- Bottom Navigation -------------------
   Widget _buildCustomBottomNavBar() {
     return Container(
       height: 70,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: const BoxDecoration(
-        color: Color(0xFF0C4481), // Warna latar belakang biru tua
+        color: Color(0xFF0C4481),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -140,14 +138,21 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _bottomNavIndex = index;
         });
+
+        // Navigasi ke MyOrderScreen jika tombol Pesanan (index 2) ditekan
+        if (index == 2) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MyOrderScreen()),
+          );
+        }
       },
-      // Menghilangkan highlight saat ditekan
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            isActive ? activeIcon : inactiveIcon, // Ikon solid jika aktif, outline jika tidak
+            isActive ? activeIcon : inactiveIcon,
             color: isActive ? activeColor : inactiveColor,
             size: 28,
           ),
@@ -165,8 +170,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- BATAS KODE NAVIGATION BAR ---
-
+  // ------------------- Header & Search -------------------
   Widget _buildHeaderAndSearch() {
     return Stack(
       clipBehavior: Clip.none,
@@ -182,43 +186,30 @@ class _HomePageState extends State<HomePage> {
               end: Alignment.bottomCenter,
             ),
           ),
-          child: Stack(
-            children: [
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/images/Logo_quickfix.png',
-                            height: 60,
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            "QUICKFIX",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                      Image.asset('assets/images/Logo_quickfix.png', height: 60),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "QUICKFIX",
+                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                       ),
-                      const CircleAvatar(
-                        radius: 22,
-                        backgroundColor: Colors.amber,
-                        child: Icon(Icons.chat_bubble,
-                            color: Color(0xFF0C4481), size: 24),
-                      )
                     ],
                   ),
-                ),
+                  const CircleAvatar(
+                    radius: 22,
+                    backgroundColor: Colors.amber,
+                    child: Icon(Icons.chat_bubble, color: Color(0xFF0C4481), size: 24),
+                  )
+                ],
               ),
-            ],
+            ),
           ),
         ),
         Positioned(
@@ -234,8 +225,7 @@ class _HomePageState extends State<HomePage> {
                   hintStyle: const TextStyle(color: Colors.black54),
                   filled: true,
                   fillColor: Colors.amber,
-                  prefixIcon:
-                  const Icon(Icons.search, color: Colors.black, size: 26),
+                  prefixIcon: const Icon(Icons.search, color: Colors.black, size: 26),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
@@ -243,8 +233,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide:
-                    const BorderSide(color: Color(0xFF0C4481), width: 2),
+                    borderSide: const BorderSide(color: Color(0xFF0C4481), width: 2),
                   ),
                 ),
               ),
@@ -255,15 +244,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ------------------- Kategori -------------------
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 18, 18, 10),
       child: Text(
         title,
-        style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: Color(0xFF0C4481)),
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0C4481)),
       ),
     );
   }
@@ -271,39 +258,36 @@ class _HomePageState extends State<HomePage> {
   Widget _buildCategories() {
     return SizedBox(
       height: 100,
-      child: Center(
-        child: ListView.builder(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          scrollDirection: Axis.horizontal,
-          itemCount: kategori.length,
-          itemBuilder: (context, index) {
-            return SizedBox(
-              width: 85,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Colors.white,
-                    child: Icon(kategori[index]["icon"],
-                        color: const Color(0xFF0C4481), size: 28),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    kategori[index]["nama"]!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        scrollDirection: Axis.horizontal,
+        itemCount: kategori.length,
+        itemBuilder: (context, index) {
+          return SizedBox(
+            width: 85,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Colors.white,
+                  child: Icon(kategori[index]["icon"], color: const Color(0xFF0C4481), size: 28),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  kategori[index]["nama"]!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
+  // ------------------- Carousel -------------------
   Widget _buildCarousel() {
     return Column(
       children: [
@@ -342,9 +326,7 @@ class _HomePageState extends State<HomePage> {
               height: 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _carouselIndex == index
-                    ? const Color(0xFF0C4481)
-                    : Colors.grey.shade300,
+                color: _carouselIndex == index ? const Color(0xFF0C4481) : Colors.grey.shade300,
               ),
             );
           }),
@@ -353,6 +335,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ------------------- Teknisi -------------------
   Widget _buildTechnicianRecommendations() {
     return SizedBox(
       height: 250,
@@ -365,8 +348,7 @@ class _HomePageState extends State<HomePage> {
             width: 170,
             margin: const EdgeInsets.symmetric(horizontal: 6),
             child: Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               elevation: 3,
               clipBehavior: Clip.antiAlias,
               child: Column(
@@ -383,22 +365,15 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          teknisi[index]["nama"]!,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
+                        Text(teknisi[index]["nama"]!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Text(teknisi[index]["jarak"]!,
-                                style: const TextStyle(fontSize: 12)),
+                            Text(teknisi[index]["jarak"]!, style: const TextStyle(fontSize: 12)),
                             const SizedBox(width: 8),
-                            const Icon(Icons.star,
-                                color: Colors.amber, size: 16),
+                            const Icon(Icons.star, color: Colors.amber, size: 16),
                             const SizedBox(width: 2),
-                            Text(teknisi[index]["rating"]!,
-                                style: const TextStyle(fontSize: 12)),
+                            Text(teknisi[index]["rating"]!, style: const TextStyle(fontSize: 12)),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -406,12 +381,11 @@ class _HomePageState extends State<HomePage> {
                           teknisi[index]["deskripsi"]!,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                          TextStyle(fontSize: 12, color: Colors.grey[700]),
+                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                         ),
                       ],
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
