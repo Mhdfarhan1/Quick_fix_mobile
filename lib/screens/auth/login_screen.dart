@@ -1,8 +1,7 @@
-// lib/screens/auth/login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'signup_screen.dart'; // Import untuk navigasi kembali ke Sign Up
+import '../home/home_page.dart'; // Import halaman dashboard (HomePage)
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       body: SingleChildScrollView(
-        child: Container(
+        child: SizedBox(
           height: screenSize.height,
           child: Stack(
             children: [
@@ -29,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: screenSize.height * 0.4,
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF0C4481), // Warna biru yang lebih gelap
+                  color: Color(0xFF0C4481),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -73,7 +72,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          // Arahkan ke Dashboard/HomePage
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const HomePage()),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.amber,
                           foregroundColor: Colors.black87,
@@ -82,10 +87,18 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text('LOGIN', style: TextStyle(fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'LOGIN',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                       const SizedBox(height: 24),
-                      const Center(child: Text('Or Login Using', style: TextStyle(color: Colors.grey))),
+                      const Center(
+                        child: Text(
+                          'Or Login Using',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -102,13 +115,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           const Text("Don't have an account?"),
                           TextButton(
                             onPressed: () {
-                              // Navigasi ke halaman Sign Up
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(builder: (context) => const SignUpScreen()),
                               );
                             },
-                            child: const Text('SIGN UP', style: TextStyle(color: Color(0xFF0C4481), fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'SIGN UP',
+                              style: TextStyle(
+                                color: Color(0xFF0C4481),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -123,7 +141,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Helper widget yang sama bisa kita gunakan di sini
   Widget _buildTextField({required IconData icon, required String hintText}) {
     return TextField(
       decoration: InputDecoration(

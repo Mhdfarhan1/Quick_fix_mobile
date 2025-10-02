@@ -58,6 +58,14 @@ flutter:
 
   assets:
     - assets/images/
+
+  # BENAR: 'fonts' sejajar dengan 'assets' sebagai properti dari 'flutter'
+  fonts:
+    - family: Lato
+      fonts:
+        - asset: assets/fonts/Lato-Regular.ttf
+        - asset: assets/fonts/Lato-Bold.ttf
+          weight: 700
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

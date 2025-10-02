@@ -12,9 +12,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    // MaterialApp diubah dari const agar bisa menampung ThemeData
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: SplashScreen(), // <-- Langsung panggil SplashScreen dari file lain
+
+      // TAMBAHKAN BAGIAN INI UNTUK MENERAPKAN FONT
+      theme: ThemeData(
+        // Atur font default aplikasi menjadi 'Lato'
+        fontFamily: 'Lato',
+
+        // (Opsional) Anda juga bisa mengatur warna tema utama di sini
+        primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5), // Warna latar belakang seperti di homepage
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      //---------------------------------------------
+
+      home: const SplashScreen(), // <-- Halaman utama tetap SplashScreen
     );
   }
 }
