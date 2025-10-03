@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../orders/my_order_screen.dart'; // SOLUSI #1
+import '../categories/housing_category_screen.dart';
+import '../categories/electronics_category_screen.dart';
+import '../categories/car_category_screen.dart';
+import '../categories/motorcycle_category_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -256,36 +260,74 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCategories() {
-    return SizedBox(
-      height: 100,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        scrollDirection: Axis.horizontal,
-        itemCount: kategori.length,
-        itemBuilder: (context, index) {
-          return SizedBox(
-            width: 85,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Colors.white,
-                  child: Icon(kategori[index]["icon"], color: const Color(0xFF0C4481), size: 28),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  kategori[index]["nama"]!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
-                ),
-              ],
+  return SizedBox(
+    height: 100,
+    child: ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      scrollDirection: Axis.horizontal,
+      itemCount: kategori.length,
+      itemBuilder: (context, index) {
+        final name = kategori[index]["nama"]?.toString() ?? '<null>';
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              print("🎯 Kategori $name diklik (index $index)");
+
+              if (name == "Renovasi") {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HousingCategoryScreen()),
+                );
+              } else if (name == "Elektronik") {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ElectronicsCategoryScreen()),
+                );
+              } else if (name == "Montir Mobil") {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CarCategoryScreen()),
+                );
+              } else if (name == "Montir Motor") {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MotorcycleCategoryScreen()),
+                );
+              } else {
+                print("Kategori $name diklik (no route)");
+              }
+            },
+            child: SizedBox(
+              width: 85,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Colors.white,
+                    child: Icon(
+                      kategori[index]["icon"], 
+                      color: const Color(0xFF0C4481), 
+                      size: 28
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    kategori[index]["nama"]!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                ],
+              ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 
   // ------------------- Carousel -------------------
   Widget _buildCarousel() {
