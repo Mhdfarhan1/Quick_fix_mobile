@@ -4,6 +4,7 @@ import '../categories/housing_category_screen.dart';
 import '../categories/electronics_category_screen.dart';
 import '../categories/car_category_screen.dart';
 import '../categories/motorcycle_category_screen.dart';
+import '../profile/profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -150,6 +151,14 @@ class _HomePageState extends State<HomePage> {
             MaterialPageRoute(builder: (context) => const MyOrderScreen()),
           );
         }
+
+        if (index == 4) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ProfilePenggunaPage()),
+          );
+        }
+
       },
       behavior: HitTestBehavior.opaque,
       child: Column(
@@ -377,6 +386,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  
+
   // ------------------- Teknisi -------------------
   Widget _buildTechnicianRecommendations() {
     return SizedBox(
@@ -386,49 +397,73 @@ class _HomePageState extends State<HomePage> {
         scrollDirection: Axis.horizontal,
         itemCount: teknisi.length,
         itemBuilder: (context, index) {
-          return Container(
-            width: 170,
-            margin: const EdgeInsets.symmetric(horizontal: 6),
-            child: Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 3,
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Image.network(
-                    teknisi[index]["gambar"]!,
-                    height: 120,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+          final data = teknisi[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProfileTeknisiPage(
+                    nama: data["nama"]!,
+                    jarak: data["jarak"]!,
+                    rating: data["rating"]!,
+                    deskripsi: data["deskripsi"]!,
+                    gambar: data["gambar"]!,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(teknisi[index]["nama"]!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(teknisi[index]["jarak"]!, style: const TextStyle(fontSize: 12)),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.star, color: Colors.amber, size: 16),
-                            const SizedBox(width: 2),
-                            Text(teknisi[index]["rating"]!, style: const TextStyle(fontSize: 12)),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          teknisi[index]["deskripsi"]!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                        ),
-                      ],
+                ),
+              );
+            },
+            child: Container(
+              width: 170,
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              child: Card(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                elevation: 3,
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Image.network(
+                      data["gambar"]!,
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
                     ),
-                  ),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(data["nama"]!,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 14)),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Text(data["jarak"]!,
+                                  style: const TextStyle(fontSize: 12)),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.star,
+                                  color: Colors.amber, size: 16),
+                              const SizedBox(width: 2),
+                              Text(data["rating"]!,
+                                  style: const TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            data["deskripsi"]!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[700]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -436,4 +471,5 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
 }
