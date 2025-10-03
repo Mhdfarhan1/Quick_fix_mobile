@@ -205,8 +205,41 @@ class ProfileTeknisiPage extends StatelessWidget {
                         ),
                       ),
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Booking berhasil!")),
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            title: const Text(
+                              "Konfirmasi Booking",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            content: const Text("Apakah kamu yakin ingin booking teknisi ini?"),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text(
+                                  "Batal",
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0C4381), // warna biru tua
+                                  foregroundColor: Colors.white, // teks putih
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(ctx); // tutup dialog
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("Booking berhasil!")),
+                                  );
+                                },
+                                child: const Text("Ya, Booking"),
+                              ),
+                            ],
+                          ),
                         );
                       },
                       child: const Text(

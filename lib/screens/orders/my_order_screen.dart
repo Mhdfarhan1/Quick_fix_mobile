@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 class MyOrderScreen extends StatefulWidget {
   const MyOrderScreen({super.key});
@@ -10,6 +11,37 @@ class MyOrderScreen extends StatefulWidget {
 class _MyOrderScreenState extends State<MyOrderScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
+  // Dummy data ongoing orders
+  final List<Map<String, dynamic>> ongoingOrders = [
+    {
+      "name": "Barji Jegel",
+      "rating": 4.3,
+      "service": "Pembersihan AC",
+      "estimate": "35 Menit",
+      "price": "Rp 50.000,-",
+      "imageUrl":
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e",
+    },
+    {
+      "name": "Beno Arsudito",
+      "rating": 4.5,
+      "service": "Perbaikan TV",
+      "estimate": "1 Jam",
+      "price": "Rp 110.000,-",
+      "imageUrl":
+      "https://images.unsplash.com/photo-1603415526960-f7e0328c63b1",
+    },
+    {
+      "name": "Hasan Ali",
+      "rating": 4.2,
+      "service": "Perbaikan atap rumah",
+      "estimate": "35 Menit",
+      "price": "Rp 189.000,-",
+      "imageUrl":
+      "https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1",
+    },
+  ];
 
   @override
   void initState() {
@@ -32,60 +64,152 @@ class _MyOrderScreenState extends State<MyOrderScreen>
     required String imageUrl,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundImage: NetworkImage(imageUrl),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), // geser kebawah
+      child: Material(
+        elevation: 6,
+        borderRadius: BorderRadius.circular(20),
+        shadowColor: Colors.black26,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Avatar dengan border
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.blue.shade100, width: 2),
+                  shape: BoxShape.circle,
+                ),
+                child: CircleAvatar(
+                  radius: 30,
+                  backgroundImage: NetworkImage(imageUrl),
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              // Info utama
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.star, color: Colors.amber, size: 16),
-                    Text(rating.toString(),
-                        style: const TextStyle(fontSize: 14)),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.star, color: Colors.amber, size: 16),
+                        Text(
+                          rating.toString(),
+                          style: const TextStyle(
+                              fontSize: 14, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "Service",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                    Text(
+                      service,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "Estimasi Waktu: $estimate",
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black54),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text("Service", style: TextStyle(color: Colors.grey[700])),
-                Text(service,
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w600)),
-                Text("Estimasi Waktu : $estimate",
-                    style: const TextStyle(fontSize: 13)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 12)),
-                onPressed: () {},
-                child: const Text("Lihat Status"),
               ),
-              const SizedBox(height: 6),
-              Text(price,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.bold)),
+
+              // Bagian kanan
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {},
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFD54F), Color(0xFFFFB300)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        "Lihat Status",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    price,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildTab(String title, int count) {
+    return Tab(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              count.toString(),
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black),
+            ),
           ),
         ],
       ),
@@ -95,100 +219,120 @@ class _MyOrderScreenState extends State<MyOrderScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A4CA7),
+      backgroundColor: Colors.grey[100],
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                ),
-                const Text("My Order",
-                    style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white)),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // TabBar
+            // HEADER
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                labelColor: Colors.black,
-                unselectedLabelColor: Colors.grey,
-                indicator: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  color: Colors.blue[100],
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              decoration: const BoxDecoration(
+                color: Color(0xFF0A4CA7),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
                 ),
-                tabs: const [
-                  Tab(text: "Ongoing Orders"),
-                  Tab(text: "Completed Orders"),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  ),
+                  const Text(
+                    "Pesanan",
+                    style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                  ),
                 ],
               ),
             ),
 
-            // TabBar View
+            // TABBAR
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: Colors.black,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: const Color(0xFF0A4CA7),
+                indicatorWeight: 3,
+                tabs: [
+                  buildTab("Pesanan Berlangsung", ongoingOrders.length),
+                  buildTab("Pesanan Selesai", 0),
+                ],
+              ),
+            ),
+
+            // TABBAR VIEW
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  // Ongoing Orders
-                  ListView(
-                    children: [
-                      orderCard(
-                        name: "Ahmad Sahroji",
-                        rating: 4.5,
-                        service: "Perbaikan mesin cuci",
-                        estimate: "1 Jam 35 Menit",
-                        price: "Rp 85.000,-",
-                        imageUrl:
-                            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                      ),
-                      orderCard(
-                        name: "Barji Jegel",
-                        rating: 4.3,
-                        service: "Pembersihan AC",
-                        estimate: "35 Menit",
-                        price: "Rp 50.000,-",
-                        imageUrl:
-                            "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                      ),
-                      orderCard(
-                        name: "Beno Arsudito",
-                        rating: 4.5,
-                        service: "Perbaikan TV",
-                        estimate: "1 Jam",
-                        price: "Rp 110.000,-",
-                        imageUrl:
-                            "https://images.unsplash.com/photo-1603415526960-f7e0328c63b1?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                      ),
-                      orderCard(
-                        name: "Hasan Ali",
-                        rating: 4.2,
-                        service: "Perbaikan atap rumah",
-                        estimate: "35 Menit",
-                        price: "Rp 189.000,-",
-                        imageUrl:
-                            "https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                      ),
-                    ],
+                  // ONGOING ORDERS
+                  ongoingOrders.isEmpty
+                      ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Lottie.asset(
+                          "assets/lottie/empty_box.json",
+                          width: 200,
+                          height: 200,
+                          fit: BoxFit.contain,
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          "Belum ada pesanan berjalan",
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                      : ListView.builder(
+                    itemCount: ongoingOrders.length,
+                    itemBuilder: (context, index) {
+                      final order = ongoingOrders[index];
+                      return orderCard(
+                        name: order["name"],
+                        rating: order["rating"],
+                        service: order["service"],
+                        estimate: order["estimate"],
+                        price: order["price"],
+                        imageUrl: order["imageUrl"],
+                      );
+                    },
                   ),
 
-                  // Completed Orders
+                  // COMPLETED ORDERS
                   Center(
-                      child: Text("Belum ada pesanan selesai",
-                          style: TextStyle(color: Colors.white, fontSize: 16))),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Lottie.asset(
+                          "assets/lottie/empty.json",
+                          width: 200,
+                          height: 200,
+                          fit: BoxFit.contain,
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          "Belum ada pesanan selesai",
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import '../orders/my_order_screen.dart'; // SOLUSI #1
+import '../orders/my_order_screen.dart';
 import '../categories/housing_category_screen.dart';
 import '../categories/electronics_category_screen.dart';
 import '../categories/car_category_screen.dart';
 import '../categories/motorcycle_category_screen.dart';
 import '../profile/profile_page.dart';
+import '../teknisi/teknisi_screen.dart';
+ // pastikan file ini ada
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -37,21 +39,24 @@ class _HomePageState extends State<HomePage> {
       "jarak": "5.0 km",
       "rating": "4.6",
       "deskripsi": "Perbaikan atap rumah, teralis, dan kebocoran pipa",
-      "gambar": "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto-format&fit=crop&ixlib=rb-4.0.3"
+      "gambar":
+      "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto-format&fit=crop&ixlib=rb-4.0.3"
     },
     {
-      "nama": "AHMAD SAROPI",
-      "jarak": "5.0 km",
-      "rating": "4.6",
-      "deskripsi": "Perbaikan atap rumah, teralis, dan kebocoran pipa",
-      "gambar": "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto-format&fit=crop&ixlib=rb-4.0.3"
+      "nama": "BUDI HARTONO",
+      "jarak": "3.2 km",
+      "rating": "4.8",
+      "deskripsi": "Servis AC, kulkas, dan mesin cuci",
+      "gambar":
+      "https://images.unsplash.com/photo-1603386329225-868f9b1ee5a9?q=80&w=2070&auto-format&fit=crop&ixlib=rb-4.0.3"
     },
     {
-      "nama": "AHMAD SAROPI",
-      "jarak": "5.0 km",
-      "rating": "4.6",
-      "deskripsi": "Perbaikan atap rumah, teralis, dan kebocoran pipa",
-      "gambar": "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto-format&fit=crop&ixlib=rb-4.0.3"
+      "nama": "JOKO PRANOTO",
+      "jarak": "6.5 km",
+      "rating": "4.5",
+      "deskripsi": "Montir motor dan mobil berpengalaman",
+      "gambar":
+      "https://images.unsplash.com/photo-1581093804226-ffa7c4a6a77d?q=80&w=2070&auto-format&fit=crop&ixlib=rb-4.0.3"
     },
   ];
 
@@ -85,13 +90,19 @@ class _HomePageState extends State<HomePage> {
                   ),
                   TextButton(
                     onPressed: () {
-                      print("Tombol Lihat Lainnya ditekan!");
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TeknisiScreen(),
+                        ),
+                      );
                     },
                     style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size(50, 30),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        alignment: Alignment.centerRight),
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(50, 30),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      alignment: Alignment.centerRight,
+                    ),
                     child: const Text(
                       "Lihat Lainnya",
                       style: TextStyle(
@@ -144,7 +155,6 @@ class _HomePageState extends State<HomePage> {
           _bottomNavIndex = index;
         });
 
-        // Navigasi ke MyOrderScreen jika tombol Pesanan (index 2) ditekan
         if (index == 2) {
           Navigator.push(
             context,
@@ -158,7 +168,6 @@ class _HomePageState extends State<HomePage> {
             MaterialPageRoute(builder: (context) => const ProfilePenggunaPage()),
           );
         }
-
       },
       behavior: HitTestBehavior.opaque,
       child: Column(
@@ -211,7 +220,11 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(width: 8),
                       const Text(
                         "QUICKFIX",
-                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -257,86 +270,90 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ------------------- Kategori -------------------
+  // ------------------- Section Title -------------------
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 18, 18, 10),
       child: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0C4481)),
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          color: Color(0xFF0C4481),
+        ),
       ),
     );
   }
 
+  // ------------------- Categories -------------------
   Widget _buildCategories() {
-  return SizedBox(
-    height: 100,
-    child: ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      scrollDirection: Axis.horizontal,
-      itemCount: kategori.length,
-      itemBuilder: (context, index) {
-        final name = kategori[index]["nama"]?.toString() ?? '<null>';
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () {
-              print("🎯 Kategori $name diklik (index $index)");
-
-              if (name == "Renovasi") {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const HousingCategoryScreen()),
-                );
-              } else if (name == "Elektronik") {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ElectronicsCategoryScreen()),
-                );
-              } else if (name == "Montir Mobil") {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const CarCategoryScreen()),
-                );
-              } else if (name == "Montir Motor") {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const MotorcycleCategoryScreen()),
-                );
-              } else {
-                print("Kategori $name diklik (no route)");
-              }
-            },
-            child: SizedBox(
-              width: 85,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      kategori[index]["icon"], 
-                      color: const Color(0xFF0C4481), 
-                      size: 28
-                    ),
+    return SizedBox(
+      height: 120,
+      child: Center(
+        child: ListView.builder(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          scrollDirection: Axis.horizontal,
+          itemCount: kategori.length,
+          itemBuilder: (context, index) {
+            final name = kategori[index]["nama"]?.toString() ?? '<null>';
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  if (name == "Renovasi") {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const HousingCategoryScreen()),
+                    );
+                  } else if (name == "Elektronik") {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ElectronicsCategoryScreen()),
+                    );
+                  } else if (name == "Montir Mobil") {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CarCategoryScreen()),
+                    );
+                  } else if (name == "Montir Motor") {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MotorcycleCategoryScreen()),
+                    );
+                  }
+                },
+                child: SizedBox(
+                  width: 85,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Colors.white,
+                        child: Icon(
+                          kategori[index]["icon"],
+                          color: const Color(0xFF0C4481),
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        kategori[index]["nama"]!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    kategori[index]["nama"]!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-        );
-      },
-    ),
-  );
-}
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   // ------------------- Carousel -------------------
   Widget _buildCarousel() {
@@ -344,6 +361,7 @@ class _HomePageState extends State<HomePage> {
       children: [
         SizedBox(
           height: 180,
+          width: double.infinity,
           child: PageView.builder(
             controller: _pageController,
             itemCount: carouselImages.length,
@@ -354,7 +372,7 @@ class _HomePageState extends State<HomePage> {
             },
             itemBuilder: (context, index) {
               return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8.0),
+                margin: const EdgeInsets.symmetric(horizontal: 12.0),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(15),
                   image: DecorationImage(
@@ -366,15 +384,15 @@ class _HomePageState extends State<HomePage> {
             },
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 15),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(carouselImages.length, (index) {
             return AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: 8,
-              height: 8,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: _carouselIndex == index ? 10 : 8,
+              height: _carouselIndex == index ? 10 : 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _carouselIndex == index ? const Color(0xFF0C4481) : Colors.grey.shade300,
@@ -386,9 +404,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  
-
-  // ------------------- Teknisi -------------------
+  // ------------------- Technician Recommendations -------------------
   Widget _buildTechnicianRecommendations() {
     return SizedBox(
       height: 250,
@@ -418,7 +434,8 @@ class _HomePageState extends State<HomePage> {
               margin: const EdgeInsets.symmetric(horizontal: 6),
               child: Card(
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 3,
                 clipBehavior: Clip.antiAlias,
                 child: Column(
@@ -435,20 +452,21 @@ class _HomePageState extends State<HomePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(data["nama"]!,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 14)),
+                          Text(
+                            data["nama"]!,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Text(data["jarak"]!,
-                                  style: const TextStyle(fontSize: 12)),
+                              Text(data["jarak"]!, style: const TextStyle(fontSize: 12)),
                               const SizedBox(width: 8),
-                              const Icon(Icons.star,
-                                  color: Colors.amber, size: 16),
+                              const Icon(Icons.star, color: Colors.amber, size: 16),
                               const SizedBox(width: 2),
-                              Text(data["rating"]!,
-                                  style: const TextStyle(fontSize: 12)),
+                              Text(data["rating"]!, style: const TextStyle(fontSize: 12)),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -456,8 +474,7 @@ class _HomePageState extends State<HomePage> {
                             data["deskripsi"]!,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey[700]),
+                            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                           ),
                         ],
                       ),
@@ -471,5 +488,4 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
 }
