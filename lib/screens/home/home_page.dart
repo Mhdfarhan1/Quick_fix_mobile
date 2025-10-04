@@ -6,7 +6,8 @@ import '../categories/car_category_screen.dart';
 import '../categories/motorcycle_category_screen.dart';
 import '../profile/profile_page.dart';
 import '../teknisi/teknisi_screen.dart';
- // pastikan file ini ada
+import '../pencarian/search_landing_page.dart';
+// pastikan file ini ada
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -246,6 +247,19 @@ class _HomePageState extends State<HomePage> {
             child: SizedBox(
               width: MediaQuery.of(context).size.width * 0.85,
               child: TextField(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      // 'const' sudah dihapus dari baris ini
+                      // Ganti namanya menjadi 'initialQuery'
+                      builder: (context) => SearchLandingPage(
+                        initialQuery: "",
+                      ),
+                    ),
+                  );
+                }, // <-- DITAMBAHKAN: Koma yang hilang
+                readOnly: true,
                 decoration: InputDecoration(
                   hintText: "Mau perbaiki apa hari ini?",
                   hintStyle: const TextStyle(color: Colors.black54),
@@ -253,14 +267,8 @@ class _HomePageState extends State<HomePage> {
                   fillColor: Colors.amber,
                   prefixIcon: const Icon(Icons.search, color: Colors.black, size: 26),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: Color(0xFF0C4481), width: 2),
-                  ),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
                 ),
               ),
             ),
