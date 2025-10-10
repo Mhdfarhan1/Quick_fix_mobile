@@ -14,53 +14,68 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
   @override
   Widget build(BuildContext context) {
     const Color primaryBlue = Color(0xFF0C4481);
-    const Color primaryYellow = Color(0xFFFECC32);
-    const Color pureWhite = Color(0xFFFEFEFE);
+    const Color accentYellow = Color(0xFFFECC32);
+    const Color whiteColor = Color(0xFFFEFEFE);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6FAFF),
-      appBar: AppBar(
-        backgroundColor: primaryBlue,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: pureWhite),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          "Pesanan",
-          style: GoogleFonts.inter(
-            color: pureWhite,
-            fontWeight: FontWeight.bold,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(84),
+        child: AppBar(
+          backgroundColor: primaryBlue,
+          elevation: 0,
+          centerTitle: true,
+          automaticallyImplyLeading: false,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+          ),
+          title: Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: Text(
+              'Pesanan',
+              style: GoogleFonts.inter(
+                color: whiteColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ),
+          leading: Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: whiteColor),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
         ),
-        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Kategori Layanan ---
-            _roundedContainer(
+            // === Kategori Layanan ===
+            _roundedCard(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Kategori Layanan",
-                      style: GoogleFonts.lato(color: Colors.grey, fontSize: 14)),
-                  Text("Elektronik",
+                  Text('Kategori Layanan',
+                      style: GoogleFonts.lato(color: Colors.grey, fontSize: 13)),
+                  Text('Elektronik',
                       style: GoogleFonts.inter(
                           fontSize: 16, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // --- Tukang Service ---
+            // === Tukang ===
             Container(
-              padding: const EdgeInsets.all(16),
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: primaryBlue,
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
@@ -73,68 +88,71 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const CircleAvatar(
-                    radius: 28,
+                    radius: 25,
                     backgroundImage: AssetImage('assets/images/default_user.png'),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          "Vannes Wijaya",
-                          style: GoogleFonts.inter(
-                            color: pureWhite,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _buildServiceItem("Servis AC"),
-                        _buildServiceItem("Servis Mesin Cuci"),
-                        _buildServiceItem("Servis Kulkas"),
+                        Text('Vannes Wijaya',
+                            style: GoogleFonts.inter(
+                                color: whiteColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16)),
+                        const SizedBox(height: 6),
+                        _serviceRow('Servis AC'),
+                        _serviceRow('Servis Mesin Cuci'),
+                        _serviceRow('Servis Mesin Cuci'),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // --- Deskripsi Masalah ---
-            _roundedContainer(
-              child: TextField(
-                maxLines: 3,
-                style: GoogleFonts.lato(),
-                decoration: const InputDecoration(
-                  hintText: "Deskripsi Masalah",
-                  hintStyle: TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
-                  prefixIcon: Icon(Icons.image, color: Colors.grey),
-                ),
+            // === Deskripsi Masalah ===
+            _roundedCard(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      maxLines: 3,
+                      style: GoogleFonts.lato(),
+                      decoration: const InputDecoration(
+                        hintText: 'Deskripsi Masalah',
+                        hintStyle: TextStyle(color: Colors.grey),
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.image, color: Colors.grey),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // --- Tanggal & Jam ---
+            // === Tanggal & Jam ===
             Row(
               children: [
                 Expanded(
-                  child: _roundedContainer(
+                  flex: 2,
+                  child: _roundedCard(
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Icon(Icons.calendar_today,
-                            size: 20, color: Colors.grey),
-                        const SizedBox(width: 8),
+                            color: Colors.grey, size: 20),
+                        const SizedBox(width: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Tanggal",
+                            Text('Tanggal',
                                 style: GoogleFonts.lato(
-                                    color: Colors.grey, fontSize: 13)),
-                            const SizedBox(height: 4),
-                            Text("30 Sep 2025",
+                                    color: Colors.grey, fontSize: 12)),
+                            const SizedBox(height: 6),
+                            Text('30 Sep 2025',
                                 style: GoogleFonts.inter(
                                     fontWeight: FontWeight.bold, fontSize: 15)),
                           ],
@@ -145,34 +163,21 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: pureWhite,
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: primaryBlue, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
+                  flex: 1,
+                  child: _roundedCard(
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Icon(Icons.access_time,
-                            size: 20, color: Colors.grey),
-                        const SizedBox(width: 8),
+                            color: Colors.grey, size: 20),
+                        const SizedBox(width: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Jam",
+                            Text('Jam',
                                 style: GoogleFonts.lato(
-                                    color: Colors.grey, fontSize: 13)),
-                            const SizedBox(height: 4),
-                            Text("09:00",
+                                    color: Colors.grey, fontSize: 12)),
+                            const SizedBox(height: 6),
+                            Text('09:00',
                                 style: GoogleFonts.inter(
                                     fontWeight: FontWeight.bold, fontSize: 15)),
                           ],
@@ -183,130 +188,153 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // --- Alamat ---
-            _roundedContainer(
+            // === Alamat ===
+            _roundedCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Alamat",
+                  Text('Alamat',
                       style: GoogleFonts.inter(
                           fontSize: 14, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   Text(
-                    "Jl. Ahmad Yani, Tlk. Tering, Kec. Batam Kota, Kota Batam, Kepulauan Riau",
+                    'Jl. Ahmad Yani, Tlk. Tering, Kec. Batam Kota, Kota Batam, Kepulauan Riau',
                     style: GoogleFonts.lato(
                         fontSize: 14, color: Colors.black87, height: 1.4),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
                       color: primaryBlue,
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(22),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      "Tap untuk menentukan titik lokasi",
-                      style:
-                          GoogleFonts.lato(color: pureWhite, fontSize: 13),
+                    child: Center(
+                      child: Text(
+                        'Tap untuk menentukan titik lokasi',
+                        style: GoogleFonts.lato(
+                            color: whiteColor,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // --- Ringkasan Pembayaran ---
+            // === Ringkasan Pembayaran ===
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: primaryBlue,
-                borderRadius: BorderRadius.circular(30),
+                color: whiteColor,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Ringkasan Pembayaran",
+                  Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: primaryBlue,
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(22)),
+                    ),
+                    child: Text(
+                      'Ringkasan Pembayaran',
                       style: GoogleFonts.inter(
-                          color: pureWhite,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  _buildPaymentItem("Servis AC", "150.000"),
-                  _buildPaymentItem("Servis Mesin Cuci", "120.000"),
-                  _buildPaymentItem("Servis Kulkas", "130.000"),
-                  const Divider(color: pureWhite, thickness: 0.8),
-                  _buildPaymentItem("Total Pembayaran", "400.000", bold: true),
+                          color: whiteColor, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    child: Column(
+                      children: [
+                        _paymentRow('Servis AC', '000,000'),
+                        _paymentRow('Servis Mesin Cuci', '000,000'),
+                        _paymentRow('Servis Mesin Cuci', '000,000'),
+                        const Divider(),
+                        _paymentRow('Total Pembayaran', '000,000',
+                            isBold: true),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // --- Metode Pembayaran ---
-            _roundedContainer(
+            // === Metode Pembayaran ===
+            _roundedCard(
               child: DropdownButtonFormField<String>(
                 value: selectedMetode,
                 decoration: InputDecoration(
                   border: InputBorder.none,
-                  labelText: "Pilih Metode Pembayaran",
+                  labelText: 'Pilih Metode Pembayaran',
                   labelStyle: GoogleFonts.lato(color: Colors.grey),
                 ),
                 items: const [
-                  DropdownMenuItem(value: "qris", child: Text("QRIS")),
+                  DropdownMenuItem(value: 'qris', child: Text('QRIS')),
                   DropdownMenuItem(
-                      value: "va", child: Text("Virtual Account")),
+                      value: 'va', child: Text('Virtual Account')),
                 ],
                 onChanged: (value) {
-                  setState(() {
-                    selectedMetode = value;
-                  });
+                  setState(() => selectedMetode = value);
                 },
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // --- Tombol Pesan Sekarang ---
-            Center(
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryYellow,
-                    elevation: 2,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
+            // === Tombol Pesan Sekarang ===
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentYellow,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
                   ),
-                  child: Text(
-                    "Pesan Sekarang",
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      color: pureWhite,
+                ),
+                child: Text(
+                  'Pesan Sekarang',
+                  style: GoogleFonts.inter(
+                      color: whiteColor,
                       fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                      fontSize: 16),
                 ),
               ),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  // Reusable Rounded Container
-  static Widget _roundedContainer({required Widget child}) {
+  // === Helper Widgets ===
+
+  static Widget _roundedCard({required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFFEFEFE),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -319,37 +347,44 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
     );
   }
 
-  static Widget _buildServiceItem(String title) {
+  static Widget _serviceRow(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
-          const Icon(Icons.check_box, size: 18, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(title,
-              style: GoogleFonts.lato(color: Colors.white, fontSize: 14)),
+          Expanded(
+            child: Text(title,
+                style: GoogleFonts.lato(color: Colors.white, fontSize: 14)),
+          ),
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.white),
+            ),
+            child: const Icon(Icons.check,
+                color: Colors.white, size: 14),
+          ),
         ],
       ),
     );
   }
 
-  static Widget _buildPaymentItem(String title, String value,
-      {bool bold = false}) {
+  static Widget _paymentRow(String title, String value, {bool isBold = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title,
               style: GoogleFonts.lato(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+                  fontWeight:
+                      isBold ? FontWeight.bold : FontWeight.normal)),
           Text(value,
               style: GoogleFonts.lato(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+                  fontWeight:
+                      isBold ? FontWeight.bold : FontWeight.normal)),
         ],
       ),
     );
