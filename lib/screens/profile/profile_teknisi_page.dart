@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../pemesanan/form_pemesanan.dart'; // IMPORT halaman form pemesanan
 
 class ProfileTeknisiPage extends StatelessWidget {
   final String nama;
@@ -39,16 +40,16 @@ class ProfileTeknisiPage extends StatelessWidget {
                   ),
                 ),
 
-                // Tombol kembali di atas gambar
+                // Tombol kembali
                 Positioned(
-                  top: 20, // jarak dari atas (sesuaikan biar ga ketutup status bar)
-                  left: 16, // jarak dari kiri
+                  top: 20,
+                  left: 16,
                   child: CircleAvatar(
-                    backgroundColor: Colors.black54, // biar ada background bulat semi transparan
+                    backgroundColor: Colors.black54,
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () {
-                        Navigator.pop(context); // kembali ke halaman sebelumnya
+                        Navigator.pop(context);
                       },
                     ),
                   ),
@@ -115,7 +116,7 @@ class ProfileTeknisiPage extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 175), // memberi ruang agar konten tidak ketiban
+            const SizedBox(height: 175),
 
             /// Detail Info
             Padding(
@@ -187,9 +188,9 @@ class ProfileTeknisiPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  reviewTile("Henry Cavill", "Hasil renovasinya rapi dan sesuai harapan. Komunikasi enak dari awal sampai akhir."),
-                  reviewTile("Tom Holland", "Pengerjaan cepat dan detail. Sangat puas dengan hasil akhirnya."),
-                  reviewTile("Timothée Chalamet", "Profesional dan bisa dipercaya. Rumah lama kami jadi terlihat baru!"),
+                  reviewTile("Henry Cavill", "Hasil renovasinya rapi dan sesuai harapan."),
+                  reviewTile("Tom Holland", "Pengerjaan cepat dan detail."),
+                  reviewTile("Timothée Chalamet", "Profesional dan bisa dipercaya."),
 
                   const SizedBox(height: 30),
 
@@ -224,16 +225,19 @@ class ProfileTeknisiPage extends StatelessWidget {
                               ),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0C4381), // warna biru tua
-                                  foregroundColor: Colors.white, // teks putih
+                                  backgroundColor: const Color(0xFF0C4381),
+                                  foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
                                 onPressed: () {
                                   Navigator.pop(ctx); // tutup dialog
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("Booking berhasil!")),
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const FormPemesananPage(),
+                                    ),
                                   );
                                 },
                                 child: const Text("Ya, Booking"),
@@ -262,7 +266,7 @@ class ProfileTeknisiPage extends StatelessWidget {
   static Widget actionButton(IconData icon) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFCC33),
+        color: Color(0xFFFFCC33),
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(12),
