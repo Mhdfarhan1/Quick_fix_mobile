@@ -7,6 +7,8 @@ import '../categories/motorcycle_category_screen.dart';
 import '../profile/profile_page.dart';
 import '../teknisi/teknisi_screen.dart';
 import '../pencarian/search_landing_page.dart';
+import '../profile/profile_teknisi_page.dart';
+import '../chat/chat.dart';
 // pastikan file ini ada
 
 class HomePage extends StatefulWidget {
@@ -215,6 +217,7 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // 🔷 Logo & Judul
                   Row(
                     children: [
                       Image.asset('assets/images/Logo_quickfix.png', height: 60),
@@ -229,16 +232,34 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
-                  const CircleAvatar(
-                    radius: 22,
-                    backgroundColor: Colors.amber,
-                    child: Icon(Icons.chat_bubble, color: Color(0xFF0C4481), size: 24),
-                  )
+
+                  // 💬 Tombol Chat (fungsi aktif)
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChatPage(),
+                        ),
+                      );
+                    },
+                    child: const CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.amber,
+                      child: Icon(
+                        Icons.chat_bubble,
+                        color: Color(0xFF0C4481),
+                        size: 24,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         ),
+
+        // 🔍 Kolom Pencarian
         Positioned(
           bottom: -28,
           child: Material(
@@ -251,24 +272,27 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      // 'const' sudah dihapus dari baris ini
-                      // Ganti namanya menjadi 'initialQuery'
-                      builder: (context) => SearchLandingPage(
-                        initialQuery: "",
-                      ),
+                      builder: (context) => SearchLandingPage(initialQuery: ""),
                     ),
                   );
-                }, // <-- DITAMBAHKAN: Koma yang hilang
+                },
                 readOnly: true,
                 decoration: InputDecoration(
                   hintText: "Mau perbaiki apa hari ini?",
                   hintStyle: const TextStyle(color: Colors.black54),
                   filled: true,
                   fillColor: Colors.amber,
-                  prefixIcon: const Icon(Icons.search, color: Colors.black, size: 26),
+                  prefixIcon:
+                  const Icon(Icons.search, color: Colors.black, size: 26),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             ),
@@ -277,6 +301,7 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
+
 
   // ------------------- Section Title -------------------
   Widget _buildSectionTitle(String title) {

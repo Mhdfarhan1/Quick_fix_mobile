@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../chat/chat.dart'; // ✅ Pastikan path ini sesuai dengan struktur project-mu
 
 class ProfileTeknisiPage extends StatelessWidget {
   final String nama;
@@ -23,11 +24,11 @@ class ProfileTeknisiPage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            /// Banner + Foto Profil
+            // 🟦 Header
             Stack(
               clipBehavior: Clip.none,
               children: [
-                /// Banner
+                // Gambar Banner
                 Container(
                   height: 200,
                   width: double.infinity,
@@ -39,22 +40,20 @@ class ProfileTeknisiPage extends StatelessWidget {
                   ),
                 ),
 
-                // Tombol kembali di atas gambar
+                // Tombol kembali
                 Positioned(
-                  top: 20, // jarak dari atas (sesuaikan biar ga ketutup status bar)
-                  left: 16, // jarak dari kiri
+                  top: 20,
+                  left: 16,
                   child: CircleAvatar(
-                    backgroundColor: Colors.black54, // biar ada background bulat semi transparan
+                    backgroundColor: Colors.black54,
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        Navigator.pop(context); // kembali ke halaman sebelumnya
-                      },
+                      onPressed: () => Navigator.pop(context),
                     ),
                   ),
                 ),
 
-                /// Foto Profil + Status
+                // Foto profil teknisi
                 Positioned(
                   bottom: -150,
                   left: 0,
@@ -101,12 +100,35 @@ class ProfileTeknisiPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
 
+                      // 💬 Tombol Chat & Call
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          actionButton(Icons.chat),
+                          // Tombol Chat
+                          actionButton(
+                            Icons.chat,
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const ChatPage(),
+                                ),
+                              );
+                            },
+                          ),
                           const SizedBox(width: 16),
-                          actionButton(Icons.call),
+
+                          // Tombol Call
+                          actionButton(
+                            Icons.call,
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Fitur panggilan belum tersedia'),
+                                ),
+                              );
+                            },
+                          ),
                         ],
                       ),
                     ],
@@ -115,15 +137,15 @@ class ProfileTeknisiPage extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 175), // memberi ruang agar konten tidak ketiban
+            const SizedBox(height: 175),
 
-            /// Detail Info
+            // 🧾 Detail Informasi
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// Jarak + Rating
+                  // ⭐ Jarak dan rating
                   Row(
                     children: [
                       Text(jarak, style: const TextStyle(fontSize: 14)),
@@ -136,7 +158,7 @@ class ProfileTeknisiPage extends StatelessWidget {
 
                   const SizedBox(height: 20),
 
-                  /// Tentang Teknisi
+                  // 🧍 Tentang teknisi
                   Text(
                     "Tentang Teknisi",
                     style: TextStyle(
@@ -146,14 +168,11 @@ class ProfileTeknisiPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    deskripsi,
-                    style: const TextStyle(fontSize: 14, height: 1.5),
-                  ),
+                  Text(deskripsi, style: const TextStyle(fontSize: 14, height: 1.5)),
 
                   const SizedBox(height: 24),
 
-                  /// Sertifikasi
+                  // 📜 Sertifikasi
                   Text(
                     "Sertifikasi",
                     style: TextStyle(
@@ -177,7 +196,7 @@ class ProfileTeknisiPage extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  /// Ulasan
+                  // 💬 Ulasan pelanggan
                   Text(
                     "Ulasan Pelanggan",
                     style: TextStyle(
@@ -187,13 +206,13 @@ class ProfileTeknisiPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  reviewTile("Henry Cavill", "Hasil renovasinya rapi dan sesuai harapan. Komunikasi enak dari awal sampai akhir."),
-                  reviewTile("Tom Holland", "Pengerjaan cepat dan detail. Sangat puas dengan hasil akhirnya."),
-                  reviewTile("Timothée Chalamet", "Profesional dan bisa dipercaya. Rumah lama kami jadi terlihat baru!"),
+                  reviewTile("Henry Cavill", "Hasil renovasinya rapi dan sesuai harapan."),
+                  reviewTile("Tom Holland", "Pengerjaan cepat dan detail. Sangat puas."),
+                  reviewTile("Timothée Chalamet", "Profesional dan bisa dipercaya."),
 
                   const SizedBox(height: 30),
 
-                  /// Tombol Book Now
+                  // 🟨 Tombol booking
                   Center(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -208,7 +227,9 @@ class ProfileTeknisiPage extends StatelessWidget {
                         showDialog(
                           context: context,
                           builder: (ctx) => AlertDialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             title: const Text(
                               "Konfirmasi Booking",
                               style: TextStyle(fontWeight: FontWeight.bold),
@@ -217,21 +238,18 @@ class ProfileTeknisiPage extends StatelessWidget {
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(ctx),
-                                child: const Text(
-                                  "Batal",
-                                  style: TextStyle(color: Colors.grey),
-                                ),
+                                child: const Text("Batal", style: TextStyle(color: Colors.grey)),
                               ),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0C4381), // warna biru tua
-                                  foregroundColor: Colors.white, // teks putih
+                                  backgroundColor: const Color(0xFF0C4381),
+                                  foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
                                 onPressed: () {
-                                  Navigator.pop(ctx); // tutup dialog
+                                  Navigator.pop(ctx);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(content: Text("Booking berhasil!")),
                                   );
@@ -258,19 +276,22 @@ class ProfileTeknisiPage extends StatelessWidget {
     );
   }
 
-  /// Widget action button kecil (chat & call)
-  static Widget actionButton(IconData icon) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFCC33),
-        borderRadius: BorderRadius.circular(12),
+  // 🔹 Widget action button (chat & call)
+  static Widget actionButton(IconData icon, {required VoidCallback onPressed}) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFCC33),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Icon(icon, color: Colors.black),
       ),
-      padding: const EdgeInsets.all(12),
-      child: Icon(icon, color: Colors.black),
     );
   }
 
-  /// Widget kartu sertifikat
+  // 🔹 Sertifikat card
   static Widget sertifikatCard(String title, String subtitle) {
     return Container(
       width: 200,
@@ -293,7 +314,7 @@ class ProfileTeknisiPage extends StatelessWidget {
     );
   }
 
-  /// Widget ulasan pelanggan
+  // 🔹 Review pelanggan
   static Widget reviewTile(String nama, String ulasan) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

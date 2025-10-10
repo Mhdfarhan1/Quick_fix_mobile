@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'notif.dart';
-
-
+import '../notifikasi/notif.dart'; // Pastikan file notif.dart ada di folder yang sama
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -29,30 +27,34 @@ class _ChatPageState extends State<ChatPage> {
     },
   ];
 
+  // 🔹 Fungsi kirim pesan
   void _sendMessage(String text) {
-    if (text.trim().isEmpty) return;
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
 
     setState(() {
       _messages.add({
         "sender": "Kamu",
-        "message": text,
+        "message": trimmed,
         "isUser": true,
         "time": DateTime.now(),
       });
+    });
 
-      // Simulasi balasan otomatis Ahmad Sahroni
-      Future.delayed(const Duration(seconds: 1), () {
-        setState(() {
-          _messages.add({
-            "sender": "Ahmad Sahroni",
-            "message": "Terima kasih sudah mengirim pesan!",
-            "isUser": false,
-            "time": DateTime.now(),
-          });
+    _controller.clear();
+
+    // 🔁 Simulasi balasan otomatis (1 detik)
+    Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() {
+        _messages.add({
+          "sender": "Ahmad Sahroni",
+          "message": "Terima kasih sudah mengirim pesan!",
+          "isUser": false,
+          "time": DateTime.now(),
         });
       });
     });
-    _controller.clear();
   }
 
   @override
@@ -61,6 +63,8 @@ class _ChatPageState extends State<ChatPage> {
       backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1D3557),
+        elevation: 3,
+        titleSpacing: 0,
         title: Row(
           children: [
             const CircleAvatar(
@@ -85,7 +89,7 @@ class _ChatPageState extends State<ChatPage> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
-                    color: Colors.white,
+                    color: Colors.white70,
                   ),
                 ),
               ],
@@ -96,7 +100,9 @@ class _ChatPageState extends State<ChatPage> {
           IconButton(
             icon: const Icon(Icons.phone, color: Colors.white),
             onPressed: () {
-              // Aksi panggilan bisa ditambahkan di sini
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Fitur panggilan belum tersedia')),
+              );
             },
           ),
           IconButton(
@@ -111,70 +117,65 @@ class _ChatPageState extends State<ChatPage> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
-              // Handle opsi menu di sini
-              switch (value) {
-                case 'Profil':
-                  print('Lihat Profil Teknisi');
-                  break;
-                case 'Permintaan Baru':
-                  print('Buat Permintaan Baru');
-                  break;
-                case 'Laporkan':
-                  print('Laporkan Masalah');
-                  break;
+              String message = switch (value) {
+                'Profil' => 'Lihat Profil Teknisi',
+                'Permintaan Baru' => 'Buat Permintaan Baru',
+                'Laporkan' => 'Laporkan Masalah',
+                _ => '',
+              };
+              if (message.isNotEmpty) {
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(message)));
               }
             },
             itemBuilder: (BuildContext context) => const [
-              PopupMenuItem<String>(
-                value: 'Profil',
-                child: Text('Lihat Profil Teknisi'),
-              ),
-              PopupMenuItem<String>(
-                value: 'Permintaan Baru',
-                child: Text('Buat Permintaan Baru'),
-              ),
-              PopupMenuItem<String>(
-                value: 'Laporkan',
-                child: Text('Laporkan Masalah'),
-              ),
+              PopupMenuItem(value: 'Profil', child: Text('Lihat Profil Teknisi')),
+              PopupMenuItem(value: 'Permintaan Baru', child: Text('Buat Permintaan Baru')),
+              PopupMenuItem(value: 'Laporkan', child: Text('Laporkan Masalah')),
             ],
           ),
         ],
       ),
+
+      // 💬 Body Chat
       body: Column(
         children: [
+          // 🗨️ List Pesan
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final msg = _messages[index];
+                final bool isUser = msg['isUser'] as bool;
                 final formattedTime = DateFormat('HH:mm').format(msg['time']);
-                final isUser = msg['isUser'];
 
                 return Align(
                   alignment:
-                      isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.75,
+                    ),
                     decoration: BoxDecoration(
                       color: isUser
-                          ? const Color.fromARGB(255, 245, 185, 19)
-                          : const Color(0xFFFFFFFF),
+                          ? const Color(0xFFFFCC33)
+                          : Colors.white,
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(16),
                         topRight: const Radius.circular(16),
                         bottomLeft:
-                            isUser ? const Radius.circular(16) : Radius.zero,
+                        isUser ? const Radius.circular(16) : Radius.zero,
                         bottomRight:
-                            isUser ? Radius.zero : const Radius.circular(16),
+                        isUser ? Radius.zero : const Radius.circular(16),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          blurRadius: 4,
+                          color: Colors.grey.withOpacity(0.2),
+                          blurRadius: 3,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -212,35 +213,50 @@ class _ChatPageState extends State<ChatPage> {
               },
             ),
           ),
+
+          // ✏️ Input Pesan
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            color: Colors.white,
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.emoji_emotions_outlined,
-                      color: Colors.grey),
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: const Icon(Icons.attach_file, color: Colors.grey),
-                  onPressed: () {},
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: "Tulis pesan...",
-                      border: InputBorder.none,
-                    ),
-                    onSubmitted: _sendMessage,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Color(0xFF1D3557)),
-                  onPressed: () => _sendMessage(_controller.text),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  offset: Offset(0, -1),
+                  blurRadius: 4,
                 ),
               ],
+            ),
+            child: SafeArea(
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.emoji_emotions_outlined,
+                        color: Colors.grey),
+                    onPressed: () {},
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.attach_file, color: Colors.grey),
+                    onPressed: () {},
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: _sendMessage,
+                      decoration: const InputDecoration(
+                        hintText: "Tulis pesan...",
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.send,
+                        color: Color(0xFF1D3557), size: 26),
+                    onPressed: () => _sendMessage(_controller.text),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
