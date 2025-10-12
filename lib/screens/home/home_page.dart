@@ -8,8 +8,9 @@ import '../profile/profile_page.dart';
 import '../teknisi/teknisi_screen.dart';
 import '../pencarian/search_landing_page.dart';
 import '../profile/profile_teknisi_page.dart';
-import '../chat/chat.dart';
-// pastikan file ini ada
+import '../chat/chat_page.dart';
+import '../notifikasi/notif.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -31,9 +32,9 @@ class _HomePageState extends State<HomePage> {
   ];
 
   final List<String> carouselImages = [
-    "https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=2070&auto-format&fit=crop&ixlib=rb-4.0.3",
-    "https://images.unsplash.com/photo-1600585152220-90363fe7e115?q=80&w=2070&auto-format&fit=crop&ixlib=rb-4.0.3",
-    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto-format&fit=crop&ixlib=rb-4.0.3"
+    "https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=2070&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1600585152220-90363fe7e115?q=80&w=2070&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop"
   ];
 
   final List<Map<String, String>> teknisi = [
@@ -41,25 +42,28 @@ class _HomePageState extends State<HomePage> {
       "nama": "AHMAD SAROPI",
       "jarak": "5.0 km",
       "rating": "4.6",
+      "bidang": "Elektronik",
       "deskripsi": "Perbaikan atap rumah, teralis, dan kebocoran pipa",
       "gambar":
-      "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto-format&fit=crop&ixlib=rb-4.0.3"
+          "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=2071&auto=format&fit=crop"
     },
     {
       "nama": "BUDI HARTONO",
       "jarak": "3.2 km",
       "rating": "4.8",
+      "bidang": "Elektronik",
       "deskripsi": "Servis AC, kulkas, dan mesin cuci",
       "gambar":
-      "https://images.unsplash.com/photo-1603386329225-868f9b1ee5a9?q=80&w=2070&auto-format&fit=crop&ixlib=rb-4.0.3"
+          "https://images.unsplash.com/photo-1603386329225-868f9b1ee5a9?q=80&w=2070&auto=format&fit=crop"
     },
     {
       "nama": "JOKO PRANOTO",
       "jarak": "6.5 km",
       "rating": "4.5",
+      "bidang": "Elektronik",
       "deskripsi": "Montir motor dan mobil berpengalaman",
       "gambar":
-      "https://images.unsplash.com/photo-1581093804226-ffa7c4a6a77d?q=80&w=2070&auto-format&fit=crop&ixlib=rb-4.0.3"
+          "https://images.unsplash.com/photo-1581093804226-ffa7c4a6a77d?q=80&w=2070&auto=format&fit=crop"
     },
   ];
 
@@ -158,14 +162,19 @@ class _HomePageState extends State<HomePage> {
           _bottomNavIndex = index;
         });
 
+        // Navigasi berdasarkan tab yang diklik
         if (index == 2) {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const MyOrderScreen()),
           );
-        }
-
-        if (index == 4) {
+        } else if (index == 3) {
+          // ✅ Tambahkan ini untuk membuka notif.dart
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const NotifikasiPage()),
+          );
+        } else if (index == 4) {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ProfilePenggunaPage()),
@@ -217,7 +226,6 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // 🔷 Logo & Judul
                   Row(
                     children: [
                       Image.asset('assets/images/Logo_quickfix.png', height: 60),
@@ -232,15 +240,12 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
-
-                  // 💬 Tombol Chat (fungsi aktif)
+                  // 💬 Tombol Chat
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const ChatPage(),
-                        ),
+                        MaterialPageRoute(builder: (context) => const ChatListPage()),
                       );
                     },
                     child: const CircleAvatar(
@@ -258,8 +263,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-
-        // 🔍 Kolom Pencarian
         Positioned(
           bottom: -28,
           child: Material(
@@ -282,8 +285,7 @@ class _HomePageState extends State<HomePage> {
                   hintStyle: const TextStyle(color: Colors.black54),
                   filled: true,
                   fillColor: Colors.amber,
-                  prefixIcon:
-                  const Icon(Icons.search, color: Colors.black, size: 26),
+                  prefixIcon: const Icon(Icons.search, color: Colors.black, size: 26),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
@@ -301,7 +303,6 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
-
 
   // ------------------- Section Title -------------------
   Widget _buildSectionTitle(String title) {
@@ -428,7 +429,9 @@ class _HomePageState extends State<HomePage> {
               height: _carouselIndex == index ? 10 : 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _carouselIndex == index ? const Color(0xFF0C4481) : Colors.grey.shade300,
+                color: _carouselIndex == index
+                    ? const Color(0xFF0C4481)
+                    : Colors.grey.shade300,
               ),
             );
           }),
@@ -453,12 +456,15 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => ProfileTeknisiPage(
-                    nama: data["nama"]!,
-                    jarak: data["jarak"]!,
-                    rating: data["rating"]!,
-                    deskripsi: data["deskripsi"]!,
-                    gambar: data["gambar"]!,
-                  ),
+                  nama: data["nama"] ?? "Tidak diketahui",
+                  jarak: data["jarak"] ?? "-",
+                  rating: data["rating"] ?? "0",
+                  bidang: data["bidang"] ?? "Umum",
+                  harga: double.tryParse(data["harga"] ?? "0") ?? 0,
+                  deskripsi: data["deskripsi"] ?? "Belum ada deskripsi",
+                  gambar: data["gambar"] ?? "assets/images/default.png",
+                ),
+
                 ),
               );
             },
@@ -507,7 +513,8 @@ class _HomePageState extends State<HomePage> {
                             data["deskripsi"]!,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.grey[700]),
                           ),
                         ],
                       ),

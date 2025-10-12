@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../orders/Payment_Qris.dart';
 
 class FormPemesananPage extends StatefulWidget {
-  const FormPemesananPage({super.key});
+  final String namaTeknisi;
+  final String fotoTeknisi;
+  final String bidang;
+  final double harga;
+
+  const FormPemesananPage({
+    super.key,
+    required this.namaTeknisi,
+    required this.fotoTeknisi,
+    required this.bidang,
+    required this.harga,
+  });
 
   @override
   State<FormPemesananPage> createState() => _FormPemesananPageState();
@@ -49,6 +61,8 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
           ),
         ),
       ),
+
+      // === BODY ===
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         child: Column(
@@ -61,7 +75,7 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
                 children: [
                   Text('Kategori Layanan',
                       style: GoogleFonts.lato(color: Colors.grey, fontSize: 13)),
-                  Text('Elektronik',
+                  Text(widget.bidang,
                       style: GoogleFonts.inter(
                           fontSize: 16, fontWeight: FontWeight.bold)),
                 ],
@@ -69,7 +83,7 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
             ),
             const SizedBox(height: 14),
 
-            // === Tukang ===
+            // === Informasi Teknisi ===
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),
@@ -87,24 +101,25 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 25,
-                    backgroundImage: AssetImage('assets/images/default_user.png'),
+                    backgroundImage: widget.fotoTeknisi.isNotEmpty
+                        ? NetworkImage(widget.fotoTeknisi)
+                        : const AssetImage('assets/images/default_user.png')
+                            as ImageProvider,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Vannes Wijaya',
+                        Text(widget.namaTeknisi,
                             style: GoogleFonts.inter(
                                 color: whiteColor,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16)),
                         const SizedBox(height: 6),
-                        _serviceRow('Servis AC'),
-                        _serviceRow('Servis Mesin Cuci'),
-                        _serviceRow('Servis Mesin Cuci'),
+                        _serviceRow(widget.bidang),
                       ],
                     ),
                   ),
@@ -263,11 +278,11 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
                         horizontal: 16, vertical: 12),
                     child: Column(
                       children: [
-                        _paymentRow('Servis AC', '000,000'),
-                        _paymentRow('Servis Mesin Cuci', '000,000'),
-                        _paymentRow('Servis Mesin Cuci', '000,000'),
+                        _paymentRow(widget.bidang,
+                            widget.harga.toStringAsFixed(0)),
                         const Divider(),
-                        _paymentRow('Total Pembayaran', '000,000',
+                        _paymentRow('Total Pembayaran',
+                            widget.harga.toStringAsFixed(0),
                             isBold: true),
                       ],
                     ),
@@ -288,8 +303,7 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
                 ),
                 items: const [
                   DropdownMenuItem(value: 'qris', child: Text('QRIS')),
-                  DropdownMenuItem(
-                      value: 'va', child: Text('Virtual Account')),
+                  DropdownMenuItem(value: 'va', child: Text('Virtual Account')),
                 ],
                 onChanged: (value) {
                   setState(() => selectedMetode = value);
@@ -302,7 +316,15 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const PaymentPage(totalPembayaran: 200000),
+                    ),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: accentYellow,
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -313,12 +335,14 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
                 child: Text(
                   'Pesan Sekarang',
                   style: GoogleFonts.inter(
-                      color: whiteColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16),
+                    color: whiteColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
+
             const SizedBox(height: 20),
           ],
         ),
@@ -363,15 +387,15 @@ class _FormPemesananPageState extends State<FormPemesananPage> {
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: Colors.white),
             ),
-            child: const Icon(Icons.check,
-                color: Colors.white, size: 14),
+            child: const Icon(Icons.check, color: Colors.white, size: 14),
           ),
         ],
       ),
     );
   }
 
-  static Widget _paymentRow(String title, String value, {bool isBold = false}) {
+  static Widget _paymentRow(String title, String value,
+      {bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(

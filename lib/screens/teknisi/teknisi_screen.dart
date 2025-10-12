@@ -187,6 +187,8 @@ class _TeknisiScreenState extends State<TeknisiScreen> {
                           nama: t["nama"],
                           jarak: t["jarak"],
                           rating: t["rating"].toString(),
+                          bidang: t["bidang"]!,
+                          harga: double.parse(t["harga"]!),
                           deskripsi: t["desc"],
                           gambar: t["foto"],
                         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import '../tugas/detail_tugas_screen.dart'; // ✅ pastikan file ini ada
 
 class MyOrderScreen extends StatefulWidget {
   const MyOrderScreen({super.key});
@@ -12,7 +13,6 @@ class _MyOrderScreenState extends State<MyOrderScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Dummy data ongoing orders
   final List<Map<String, dynamic>> ongoingOrders = [
     {
       "name": "Barji Jegel",
@@ -21,7 +21,7 @@ class _MyOrderScreenState extends State<MyOrderScreen>
       "estimate": "35 Menit",
       "price": "Rp 50.000,-",
       "imageUrl":
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e",
+          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e",
     },
     {
       "name": "Beno Arsudito",
@@ -30,16 +30,16 @@ class _MyOrderScreenState extends State<MyOrderScreen>
       "estimate": "1 Jam",
       "price": "Rp 110.000,-",
       "imageUrl":
-      "https://images.unsplash.com/photo-1603415526960-f7e0328c63b1",
+          "https://images.unsplash.com/photo-1603415526960-f7e0328c63b1",
     },
     {
       "name": "Hasan Ali",
       "rating": 4.2,
-      "service": "Perbaikan atap rumah",
+      "service": "Perbaikan Atap Rumah",
       "estimate": "35 Menit",
       "price": "Rp 189.000,-",
       "imageUrl":
-      "https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1",
+          "https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1",
     },
   ];
 
@@ -64,7 +64,7 @@ class _MyOrderScreenState extends State<MyOrderScreen>
     required String imageUrl,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), // geser kebawah
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Material(
         elevation: 6,
         borderRadius: BorderRadius.circular(20),
@@ -78,7 +78,7 @@ class _MyOrderScreenState extends State<MyOrderScreen>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar dengan border
+              // Avatar
               Container(
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.blue.shade100, width: 2),
@@ -114,7 +114,9 @@ class _MyOrderScreenState extends State<MyOrderScreen>
                         Text(
                           rating.toString(),
                           style: const TextStyle(
-                              fontSize: 14, color: Colors.black54),
+                            fontSize: 14,
+                            color: Colors.black54,
+                          ),
                         ),
                       ],
                     ),
@@ -144,34 +146,46 @@ class _MyOrderScreenState extends State<MyOrderScreen>
                 ),
               ),
 
-              // Bagian kanan
+              // Tombol kanan
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   InkWell(
-                    borderRadius: BorderRadius.circular(20),
-                    onTap: () {},
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFFD54F), Color(0xFFFFB300)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OrderDetailScreen(
+                          name: name,
+                          service: service,
+                          estimate: estimate,
+                          price: price,
+                          imageUrl: imageUrl,
                         ),
-                        borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        "Lihat Status",
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFD54F), Color(0xFFFFB300)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      "Lihat Status",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
                       ),
                     ),
                   ),
+                ),
                   const SizedBox(height: 12),
                   Text(
                     price,
@@ -206,9 +220,7 @@ class _MyOrderScreenState extends State<MyOrderScreen>
             child: Text(
               count.toString(),
               style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black),
+                  fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black),
             ),
           ),
         ],
@@ -271,31 +283,7 @@ class _MyOrderScreenState extends State<MyOrderScreen>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  // ONGOING ORDERS
-                  ongoingOrders.isEmpty
-                      ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Lottie.asset(
-                          "assets/lottie/empty_box.json",
-                          width: 200,
-                          height: 200,
-                          fit: BoxFit.contain,
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          "Belum ada pesanan berjalan",
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                      : ListView.builder(
+                  ListView.builder(
                     itemCount: ongoingOrders.length,
                     itemBuilder: (context, index) {
                       final order = ongoingOrders[index];
@@ -309,8 +297,7 @@ class _MyOrderScreenState extends State<MyOrderScreen>
                       );
                     },
                   ),
-
-                  // COMPLETED ORDERS
+                  // Pesanan selesai (kosong)
                   Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -319,7 +306,6 @@ class _MyOrderScreenState extends State<MyOrderScreen>
                           "assets/lottie/empty.json",
                           width: 200,
                           height: 200,
-                          fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 20),
                         Text(
