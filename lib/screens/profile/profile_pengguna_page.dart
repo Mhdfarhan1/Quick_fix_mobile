@@ -13,6 +13,16 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
   String currentEmail = "muhammadsyi@gmail.com";
   String currentPhone = "+62 1234 5673";
 
+  // Fungsi untuk ambil inisial dari nama
+  String getInisial(String nama) {
+    List<String> namaSplit = nama.trim().split(' ');
+    if (namaSplit.length == 1) {
+      return namaSplit[0][0].toUpperCase();
+    } else {
+      return (namaSplit[0][0] + namaSplit[1][0]).toUpperCase();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -27,7 +37,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Profil
+            // ===================== HEADER PROFIL =====================
             Container(
               color: const Color(0xFF0C4381),
               padding: const EdgeInsets.all(16),
@@ -46,13 +56,13 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    // Foto Profil
-                    const CircleAvatar(
+                    // FOTO PROFIL DINAMIS
+                    CircleAvatar(
                       radius: 32,
-                      backgroundColor: Color(0xFFFFCC33),
+                      backgroundColor: const Color(0xFFFFCC33),
                       child: Text(
-                        "MS",
-                        style: TextStyle(
+                        getInisial(currentName),
+                        style: const TextStyle(
                           fontSize: 20,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -60,7 +70,8 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    // Info User
+
+                    // INFO USER
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +98,8 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
                         ],
                       ),
                     ),
-                    // Tombol Edit
+
+                    // TOMBOL EDIT PROFIL
                     IconButton(
                       icon: const Icon(Icons.edit, color: Color(0xFF0C4381)),
                       onPressed: () async {
@@ -102,7 +114,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
                           ),
                         );
 
-                        // Tangkap hasil perubahan
+                        // Tangkap hasil perubahan dari halaman edit
                         if (result != null && result is Map<String, String>) {
                           setState(() {
                             currentName = result['name']!;
@@ -119,20 +131,20 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
 
             const SizedBox(height: 20),
 
-            // Section Preferensi
+            // ===================== SECTION PREFERENSI =====================
             sectionTitle("Preferensi"),
             profileMenu("Keamanan akun", Icons.lock_outline),
             profileMenu("Alamat tersimpan", Icons.bookmark_outline),
 
             const SizedBox(height: 20),
 
-            // Section Aktivitas
+            // ===================== SECTION AKTIVITAS =====================
             sectionTitle("Aktivitas di QuickFix"),
             profileMenu("Aktivitas", Icons.history),
 
             const SizedBox(height: 20),
 
-            // Section Lainnya
+            // ===================== SECTION LAINNYA =====================
             sectionTitle("Lainnya"),
             profileMenu("Bantuan & laporan", Icons.help_outline),
             profileMenu("Kebijakan Privasi", Icons.privacy_tip_outlined),
@@ -140,7 +152,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
 
             const SizedBox(height: 20),
 
-            // Tombol Logout
+            // ===================== LOGOUT BUTTON =====================
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               child: ElevatedButton.icon(
@@ -169,7 +181,8 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
     );
   }
 
-  // Widget judul section
+  // ===================== FUNGSI TAMBAHAN =====================
+
   Widget sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -184,7 +197,6 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
     );
   }
 
-  // Widget item menu profil
   Widget profileMenu(String title, IconData icon, {String? trailing}) {
     return Container(
       color: Colors.white,
@@ -199,7 +211,6 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
     );
   }
 
-  // Alert konfirmasi keluar
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
