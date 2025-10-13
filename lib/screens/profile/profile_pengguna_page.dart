@@ -1,7 +1,17 @@
 import 'package:flutter/material.dart';
+import 'profile_edit_pengguna_page.dart';
 
-class ProfilePenggunaPage extends StatelessWidget {
+class ProfilePenggunaPage extends StatefulWidget {
   const ProfilePenggunaPage({super.key});
+
+  @override
+  State<ProfilePenggunaPage> createState() => _ProfilePenggunaPageState();
+}
+
+class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
+  String currentName = "Muhammad Syifa";
+  String currentEmail = "muhammadsyi@gmail.com";
+  String currentPhone = "+62 1234 5673";
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +27,7 @@ class ProfilePenggunaPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+            // Header Profil
             Container(
               color: const Color(0xFF0C4381),
               padding: const EdgeInsets.all(16),
@@ -27,7 +37,7 @@ class ProfilePenggunaPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(),
+                      color: Colors.black.withOpacity(0.1),
                       blurRadius: 6,
                       offset: const Offset(0, 3),
                     )
@@ -54,25 +64,25 @@ class ProfilePenggunaPage extends StatelessWidget {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
-                            "Muhammad Syifa",
-                            style: TextStyle(
+                            currentName,
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                               color: Colors.black,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            "muhammadsyi@gmail.com",
-                            style: TextStyle(color: Colors.grey),
+                            currentEmail,
+                            style: const TextStyle(color: Colors.grey),
                             overflow: TextOverflow.ellipsis,
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            "+62 1234 5673",
-                            style: TextStyle(color: Colors.grey),
+                            currentPhone,
+                            style: const TextStyle(color: Colors.grey),
                           ),
                         ],
                       ),
@@ -80,10 +90,28 @@ class ProfilePenggunaPage extends StatelessWidget {
                     // Tombol Edit
                     IconButton(
                       icon: const Icon(Icons.edit, color: Color(0xFF0C4381)),
-                      onPressed: () {
-                        // edit profil
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfileEditPelangganScreen(
+                              currentName: currentName,
+                              currentEmail: currentEmail,
+                              currentPhone: currentPhone,
+                            ),
+                          ),
+                        );
+
+                        // Tangkap hasil perubahan
+                        if (result != null && result is Map<String, String>) {
+                          setState(() {
+                            currentName = result['name']!;
+                            currentEmail = result['email']!;
+                            currentPhone = result['phone']!;
+                          });
+                        }
                       },
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -161,7 +189,7 @@ class ProfilePenggunaPage extends StatelessWidget {
     return Container(
       color: Colors.white,
       child: ListTile(
-        leading: Icon(icon, color: const Color(0xFFFFFFFF)),
+        leading: Icon(icon, color: const Color(0xFF0C4381)),
         title: Text(title),
         trailing: trailing != null
             ? Text(trailing, style: const TextStyle(color: Color(0xFF0C4381)))
@@ -196,35 +224,31 @@ class ProfilePenggunaPage extends StatelessWidget {
             child: const Text(
               "Batal",
               style: TextStyle(
-                color: Color(0xFF0C4481), // biru tua untuk teks Batal
+                color: Color(0xFF0C4481),
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0C4481), // warna #0C4481
-              foregroundColor: Colors.white, // teks putih
+              backgroundColor: const Color(0xFF0C4481),
+              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             onPressed: () {
-              Navigator.pop(ctx); // tutup dialog
-              Navigator.pop(context); // keluar halaman
-              // bisa tambahkan logika logout (hapus session / pindah ke login page)
+              Navigator.pop(ctx);
+              Navigator.pop(context);
             },
             child: const Text(
               "Keluar",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
       ),
     );
   }
-
 }
