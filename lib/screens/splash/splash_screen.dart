@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:shimmer/shimmer.dart';
-import '../auth/signup_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../auth/login_screen.dart';
+import '../home/home_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -52,12 +54,28 @@ class _SplashScreenState extends State<SplashScreen>
       _textController.forward();
     });
 
-    // Pindah ke SignUpScreen setelah 5 detik
+    // Pindah ke screen berikutnya setelah delay, cek login status dulu
     Timer(const Duration(seconds: 5), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const SignUpScreen()),
-      );
+      _checkLoginStatus();
     });
+  }
+
+  // Cek apakah user sudah login
+  void _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token != null && token.isNotEmpty) {
+      // Sudah login → langsung ke HomePage
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    } else {
+      // Belum login → ke LoginScreen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
   }
 
   @override
@@ -84,12 +102,12 @@ class _SplashScreenState extends State<SplashScreen>
                 scale: _scaleAnimation,
                 child: Image.asset(
                   'assets/images/Logo_quickfix.png',
-                  width: 110, // agak kecil biar proporsional
+                  width: 110,
                 ),
               ),
             ),
 
-            const SizedBox(width: 1), // bisa 0 kalau mau nempel banget
+            const SizedBox(width: 1),
 
             // Judul dengan shimmer + fade
             FadeTransition(
@@ -113,4 +131,3 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-

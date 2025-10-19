@@ -1,10 +1,97 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../auth/login_screen.dart';
 
-class ProfilePenggunaPage extends StatelessWidget {
+class ProfilePenggunaPage extends StatefulWidget {
   const ProfilePenggunaPage({super.key});
 
   @override
+  State<ProfilePenggunaPage> createState() => _ProfilePenggunaPageState();
+}
+
+class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
+  Map<String, dynamic>? user;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  // Ambil data user dari SharedPreferences
+  Future<void> _loadUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userString = prefs.getString('user');
+
+    if (userString != null) {
+      setState(() {
+        user = jsonDecode(userString);
+      });
+    }
+  }
+
+  // Tampilkan dialog konfirmasi logout
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text(
+          "Konfirmasi Logout",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text("Apakah kamu yakin ingin keluar dari akun?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              "Batal",
+              style: TextStyle(
+                  color: Color(0xFF0C4481), fontWeight: FontWeight.w600),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0C4481),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx); // tutup dialog
+              _logout(); // lakukan logout
+            },
+            child: const Text(
+              "Keluar",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Logout: hapus token & user dari SharedPreferences
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    await prefs.remove('user');
+
+    // Navigasi ke halaman login
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final userName = user != null ? user!['nama'] ?? '' : '';
+    final userEmail = user != null ? user!['email'] ?? '' : '';
+    final userRole = user != null ? user!['role'] ?? '' : '';
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -13,7 +100,9 @@ class ProfilePenggunaPage extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
       ),
-      body: SingleChildScrollView(
+      body: user == null
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -27,7 +116,7 @@ class ProfilePenggunaPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(),
+                      color: Colors.black.withOpacity(0.2),
                       blurRadius: 6,
                       offset: const Offset(0, 3),
                     )
@@ -36,13 +125,19 @@ class ProfilePenggunaPage extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    // Foto Profil
-                    const CircleAvatar(
+                    // Foto Profil (ambil inisial nama)
+                    CircleAvatar(
                       radius: 32,
-                      backgroundColor: Color(0xFFFFCC33),
+                      backgroundColor: const Color(0xFFFFCC33),
                       child: Text(
-                        "MS",
-                        style: TextStyle(
+                        userName.isNotEmpty
+                            ? userName
+                            .split(' ')
+                            .map((e) => e[0])
+                            .take(2)
+                            .join()
+                            : '',
+                        style: const TextStyle(
                           fontSize: 20,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -54,32 +149,33 @@ class ProfilePenggunaPage extends StatelessWidget {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
-                            "Muhammad Syifa",
-                            style: TextStyle(
+                            userName,
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                               color: Colors.black,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            "muhammadsyi@gmail.com",
-                            style: TextStyle(color: Colors.grey),
+                            userEmail,
+                            style: const TextStyle(color: Colors.grey),
                             overflow: TextOverflow.ellipsis,
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            "+62 1234 5673",
-                            style: TextStyle(color: Colors.grey),
+                            "Role: $userRole",
+                            style: const TextStyle(color: Colors.grey),
                           ),
                         ],
                       ),
                     ),
                     // Tombol Edit
                     IconButton(
-                      icon: const Icon(Icons.edit, color: Color(0xFF0C4381)),
+                      icon:
+                      const Icon(Icons.edit, color: Color(0xFF0C4381)),
                       onPressed: () {
                         // edit profil
                       },
@@ -116,9 +212,7 @@ class ProfilePenggunaPage extends StatelessWidget {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               child: ElevatedButton.icon(
-                onPressed: () {
-                  _showLogoutDialog(context);
-                },
+                onPressed: _confirmLogout,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   minimumSize: const Size(double.infinity, 50),
@@ -161,7 +255,7 @@ class ProfilePenggunaPage extends StatelessWidget {
     return Container(
       color: Colors.white,
       child: ListTile(
-        leading: Icon(icon, color: const Color(0xFFFFFFFF)),
+        leading: Icon(icon, color: const Color(0xFF0C4381)),
         title: Text(title),
         trailing: trailing != null
             ? Text(trailing, style: const TextStyle(color: Color(0xFF0C4381)))
@@ -170,61 +264,4 @@ class ProfilePenggunaPage extends StatelessWidget {
       ),
     );
   }
-
-  // Alert konfirmasi keluar
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        title: const Text(
-          "Konfirmasi",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        content: const Text(
-          "Apakah kamu yakin ingin keluar dari akun?",
-          style: TextStyle(color: Colors.black54),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              "Batal",
-              style: TextStyle(
-                color: Color(0xFF0C4481), // biru tua untuk teks Batal
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0C4481), // warna #0C4481
-              foregroundColor: Colors.white, // teks putih
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx); // tutup dialog
-              Navigator.pop(context); // keluar halaman
-              // bisa tambahkan logika logout (hapus session / pindah ke login page)
-            },
-            child: const Text(
-              "Keluar",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
 }

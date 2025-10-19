@@ -1,8 +1,10 @@
-// lib/screens/auth/signup_screen.dart
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/api_service.dart';
 import 'login_screen.dart';
+import '../home/home_page.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -12,19 +14,20 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  // --- VARIABEL STATE ---
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
-  // 1. TAMBAHKAN CONTROLLER UNTUK MENGAMBIL DATA DARI FORM
   final _emailController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  String _selectedRole = 'pelanggan'; // default value
+  final List<String> _roles = ['pelanggan', 'teknisi'];
+
   @override
   void dispose() {
-    // 2. BERSIHKAN CONTROLLER SETELAH TIDAK DIGUNAKAN UNTUK MENCEGAH KEBOCORAN MEMORI
     _emailController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
@@ -32,33 +35,95 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
+  void _handleSignUp() async {
+    final email = _emailController.text.trim();
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    if (email.isEmpty || username.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Semua field harus diisi!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password dan konfirmasi tidak sama!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final response = await ApiService.register(
+        nama: username,
+        email: email,
+        password: password,
+        role: _selectedRole,
+      );
+
+      if (response['statusCode'] == 200 || response['statusCode'] == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registrasi berhasil! Silakan login.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Delay 1 detik lalu ke halaman login
+        Future.delayed(const Duration(seconds: 1), () {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        });
+      } else {
+        final message = response['data']['message'] ?? 'Terjadi kesalahan';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
       body: SingleChildScrollView(
-        child: Container(
+        child: SizedBox(
           height: screenSize.height,
           child: Stack(
             children: [
+              // background
               Container(
                 height: screenSize.height * 0.4,
                 width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF0C4481),
-                ),
+                decoration: const BoxDecoration(color: Color(0xFF0C4481)),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset(
-                      'assets/images/Logo_quickfix.png', // PERBAIKI: Gunakan nama file yang konsisten (huruf kecil)
-                      height: 120,
-                    ),
+                    Image.asset('assets/images/Logo_quickfix.png', height: 120),
                     const SizedBox(height: 60),
                   ],
                 ),
               ),
+              // form
               Positioned(
                 top: screenSize.height * 0.3,
                 left: 0,
@@ -75,112 +140,41 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // 3. HUBUNGKAN SETIAP TEXT FIELD DENGAN CONTROLLER-NYA
-                      _buildTextField(
-                          icon: Icons.email_outlined,
-                          hintText: 'Email',
-                          controller: _emailController),
+                      _buildTextField(icon: Icons.email_outlined, hintText: 'Email', controller: _emailController),
                       const SizedBox(height: 16),
-                      _buildTextField(
-                          icon: Icons.person_outline,
-                          hintText: 'Username',
-                          controller: _usernameController),
+                      _buildTextField(icon: Icons.person_outline, hintText: 'Username', controller: _usernameController),
                       const SizedBox(height: 16),
-                      _buildPasswordField(
-                        hintText: 'Password',
-                        obscureText: _obscurePassword,
-                        controller: _passwordController,
-                        onToggleVisibility: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
+                      // dropdown role
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
+                        child: DropdownButton<String>(
+                          value: _selectedRole,
+                          isExpanded: true,
+                          underline: const SizedBox(),
+                          items: _roles.map((role) => DropdownMenuItem(
+                            value: role,
+                            child: Text(role[0].toUpperCase() + role.substring(1)),
+                          )).toList(),
+                          onChanged: (value) => setState(() => _selectedRole = value!),
+                        ),
                       ),
                       const SizedBox(height: 16),
-                      _buildPasswordField(
-                        hintText: 'Confirm Password',
-                        obscureText: _obscureConfirmPassword,
-                        controller: _confirmPasswordController,
-                        onToggleVisibility: () {
-                          setState(() {
-                            _obscureConfirmPassword = !_obscureConfirmPassword;
-                          });
-                        },
-                      ),
+                      _buildPasswordField(hintText: 'Password', obscureText: _obscurePassword, controller: _passwordController, onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword)),
+                      const SizedBox(height: 16),
+                      _buildPasswordField(hintText: 'Confirm Password', obscureText: _obscureConfirmPassword, controller: _confirmPasswordController, onToggleVisibility: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword)),
                       const SizedBox(height: 24),
                       ElevatedButton(
-                        // 4. TAMBAHKAN AKSI PADA TOMBOL SIGN UP
-                        // --- BLOK BARU (DENGAN AKSI) ---
-                        onPressed: () {
-                          // 1. Ambil data dari form (sama seperti sebelumnya)
-                          final email = _emailController.text;
-                          final username = _usernameController.text;
-                          final password = _passwordController.text;
-
-                          // Di sini nanti kamu akan menambahkan logika untuk menyimpan data ke database.
-                          // Untuk sekarang, kita anggap pendaftaran selalu berhasil.
-
-                          // 2. Tampilkan pesan sukses di bagian bawah layar
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Pendaftaran Berhasil! Silakan Login.'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-
-                          // 3. Tunggu sebentar lalu pindah ke halaman Login
-                          Future.delayed(const Duration(seconds: 2), () {
-                            // pushReplacement digunakan agar pengguna tidak bisa kembali ke halaman Sign Up
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (context) => const LoginScreen()),
-                            );
-                          });
-                        },
+                        onPressed: _isLoading ? null : _handleSignUp,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.amber,
                           foregroundColor: Colors.black87,
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Text('SIGN UP',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(height: 24),
-                      const Center(
-                          child: Text('Or Sign Up Using',
-                              style: TextStyle(color: Colors.grey))),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildSocialButton(
-                              icon: FontAwesomeIcons.google, color: Colors.red),
-                          const SizedBox(width: 20),
-                          _buildSocialButton(
-                              icon: FontAwesomeIcons.facebook, color: Colors.blue),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('Already have account?'),
-                          TextButton(
-                            // 5. TAMBAHKAN NAVIGASI KE HALAMAN LOGIN
-                            onPressed: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                              );
-                            },
-                            child: const Text('LOGIN',
-                                style: TextStyle(
-                                    color: Color(0xFF0C4481),
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                        ],
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.black)
+                            : const Text('SIGN UP', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -193,32 +187,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // Helper widget dimodifikasi untuk menerima controller
-  Widget _buildTextField(
-      {required IconData icon,
-        required String hintText,
-        required TextEditingController controller}) {
+  Widget _buildTextField({required IconData icon, required String hintText, required TextEditingController controller}) {
     return TextField(
       controller: controller,
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: Colors.grey),
-        hintText: hintText,
-        filled: true,
-        fillColor: Colors.grey[200],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-      ),
+      decoration: InputDecoration(prefixIcon: Icon(icon, color: Colors.grey), hintText: hintText, filled: true, fillColor: Colors.grey[200], border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
     );
   }
 
-  // Helper widget dimodifikasi untuk menerima controller
-  Widget _buildPasswordField(
-      {required String hintText,
-        required bool obscureText,
-        required VoidCallback onToggleVisibility,
-        required TextEditingController controller}) {
+  Widget _buildPasswordField({required String hintText, required bool obscureText, required VoidCallback onToggleVisibility, required TextEditingController controller}) {
     return TextField(
       controller: controller,
       obscureText: obscureText,
@@ -227,26 +203,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
         hintText: hintText,
         filled: true,
         fillColor: Colors.grey[200],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        suffixIcon: IconButton(
-          icon: Icon(
-            obscureText ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey,
-          ),
-          onPressed: onToggleVisibility,
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        suffixIcon: IconButton(icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility, color: Colors.grey), onPressed: onToggleVisibility),
       ),
     );
   }
 
   Widget _buildSocialButton({required IconData icon, required Color color}) {
-    return CircleAvatar(
-      radius: 25,
-      backgroundColor: Colors.grey[200],
-      child: FaIcon(icon, color: color),
-    );
+    return CircleAvatar(radius: 25, backgroundColor: Colors.grey[200], child: FaIcon(icon, color: color));
   }
 }
