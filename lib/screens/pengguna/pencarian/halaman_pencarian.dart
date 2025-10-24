@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../teknisi/halaman_detail_teknisi.dart';
 
 class HalamanPencarian extends StatefulWidget {
   final String searchQuery;
@@ -27,28 +28,28 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
       "keahlian": "Service AC",
       "rating": "4.8",
       "harga": "Rp 150.000",
-      "image": "https://picsum.photos/seed/teknisi1/200/200"
+      "image": "assets/images/AC-rusak.jpg"
     },
     {
       "nama": "Rafi Elektronik",
       "keahlian": "Service TV & Kulkas",
       "rating": "4.6",
       "harga": "Rp 200.000",
-      "image": "https://picsum.photos/seed/teknisi2/200/200"
+      "image": "assets/images/elektronik.jpeg"
     },
     {
       "nama": "Andi Service",
       "keahlian": "Mesin Cuci & Kulkas",
       "rating": "4.9",
       "harga": "Rp 180.000",
-      "image": "https://picsum.photos/seed/teknisi3/200/200"
+      "image": "assets/images/mesin_cuci.png"
     },
     {
       "nama": "Jaya AC",
       "keahlian": "Pasang & Service AC",
       "rating": "4.7",
       "harga": "Rp 120.000",
-      "image": "https://picsum.photos/seed/teknisi4/200/200"
+      "image": "assets/images/pasangAC.jpeg"
     },
   ];
 
@@ -98,7 +99,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
 
   PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
-      preferredSize: const Size.fromHeight(100), // tinggi AppBar
+      preferredSize: const Size.fromHeight(100),
       child: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: const Color(0xFF0C4481),
@@ -110,18 +111,16 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
           ),
         ),
         leading: Padding(
-          padding: const EdgeInsets.only(top: 14), // 🔽 geser tombol back turun
+          padding: const EdgeInsets.only(top: 14),
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
           ),
         ),
-        title: Padding(
-          padding: const EdgeInsets.only(top: 14), // 🔽 geser teks turun
+        title: const Padding(
+          padding: EdgeInsets.only(top: 14),
           child: Row(
-            children: const [
+            children: [
               Icon(Icons.location_on, color: Colors.white, size: 20),
               SizedBox(width: 2),
               Text(
@@ -137,7 +136,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(top: 16, right: 24), // 🔽 geser ke kiri (kurangi jarak kanan)
+            padding: const EdgeInsets.only(top: 16, right: 24),
             child: IconButton(
               icon: const Icon(Icons.message_outlined, color: Colors.white),
               onPressed: () {},
@@ -147,9 +146,6 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
       ),
     );
   }
-
-
-
 
   Widget _buildSearchBar() {
     return Container(
@@ -164,13 +160,12 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
           )
         ],
       ),
-      child: TextField(
+      child: const TextField(
         decoration: InputDecoration(
           hintText: "Cari teknisi atau layanan...",
-          prefixIcon: const Icon(Icons.search, color: Colors.black54),
+          prefixIcon: Icon(Icons.search, color: Colors.black54),
           border: InputBorder.none,
-          contentPadding:
-          const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         ),
       ),
     );
@@ -191,16 +186,13 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
         ElevatedButton.icon(
           onPressed: () {},
           icon: const Icon(Icons.sort, size: 18, color: Colors.white),
-          label: const Text(
-            "Sort by",
-            style: TextStyle(color: Colors.white),
-          ),
+          label: const Text("Sort by", style: TextStyle(color: Colors.white)),
           style: ElevatedButton.styleFrom(
             backgroundColor: yellow,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             elevation: 0,
           ),
         ),
@@ -239,12 +231,12 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
           ),
           boxShadow: selected
               ? [
-            BoxShadow(
-              color: Colors.blueAccent.withOpacity(0.2),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            )
-          ]
+                  BoxShadow(
+                    color: Colors.blueAccent.withOpacity(0.2),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  )
+                ]
               : [],
         ),
         child: Text(
@@ -283,101 +275,133 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
   }
 
   Widget _buildTeknisiCard(Map<String, String> teknisi, Color yellow) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                teknisi["image"]!,
-                width: 90,
-                height: 90,
-                fit: BoxFit.cover,
-              ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HalamanDetailTeknisi(
+              nama: teknisi["nama"]!,
+              deskripsi: teknisi["keahlian"]!,
+              rating: double.parse(teknisi["rating"]!),
+              harga: teknisi["harga"]!,
+              gambarUtama: teknisi["image"]!,
+              gambarLayanan: [teknisi["image"]!],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    teknisi["nama"]!,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0C4481),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    teknisi["keahlian"]!,
-                    style:
-                    const TextStyle(fontSize: 14, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.star,
-                          color: Colors.amber, size: 18),
-                      const SizedBox(width: 4),
-                      Text(
-                        teknisi["rating"]!,
-                        style:
-                        const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        teknisi["harga"]!,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1976D2),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: yellow,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          "BOOK",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 8,
+              offset: Offset(0, 4),
             ),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  teknisi["image"]!,
+                  width: 90,
+                  height: 90,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      teknisi["nama"]!,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0C4481),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      teknisi["keahlian"]!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.star,
+                            color: Colors.amber, size: 18),
+                        const SizedBox(width: 4),
+                        Text(
+                          teknisi["rating"]!,
+                          style:
+                              const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          teknisi["harga"]!,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1976D2),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => HalamanDetailTeknisi(
+                                  nama: teknisi["nama"]!,
+                                  deskripsi: teknisi["keahlian"]!,
+                                  rating: double.parse(teknisi["rating"]!),
+                                  harga: teknisi["harga"]!,
+                                  gambarUtama: teknisi["image"]!,
+                                  gambarLayanan: [teknisi["image"]!],
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: yellow,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            "BOOK",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-

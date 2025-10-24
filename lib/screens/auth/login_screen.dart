@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
-import '../home/home_page.dart';
+import '../pengguna/home/home_page.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -28,76 +28,82 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    final email = _emailController.text.trim().toLowerCase();
-    final password = _passwordController.text.trim();
+    // TESTING ONLY: Skip login check, go directly to HomePage
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const HomePage()),
+    );
 
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Email dan Password tidak boleh kosong!'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+    // final email = _emailController.text.trim().toLowerCase();
+    // final password = _passwordController.text.trim();
 
-    setState(() => _isLoading = true);
+    // if (email.isEmpty || password.isEmpty) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(
+    //       content: Text('Email dan Password tidak boleh kosong!'),
+    //       backgroundColor: Colors.red,
+    //     ),
+    //   );
+    //   return;
+    // }
 
-    try {
-      final result = await ApiService.login(email: email, password: password);
+    // setState(() => _isLoading = true);
 
-      // cek status code dan data
-      if (result['statusCode'] == 200 && result['data']['status'] == true) {
-        final token = result['data']['token'];
-        final user = result['data']['user'];
+    // try {
+    //   final result = await ApiService.login(email: email, password: password);
 
-        // simpan token & user ke SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', token);
-        await prefs.setString('user', jsonEncode(user));
+    //   // cek status code dan data
+    //   if (result['statusCode'] == 200 && result['data']['status'] == true) {
+    //     final token = result['data']['token'];
+    //     final user = result['data']['user'];
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login berhasil!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+    //     // simpan token & user ke SharedPreferences
+    //     final prefs = await SharedPreferences.getInstance();
+    //     await prefs.setString('token', token);
+    //     await prefs.setString('user', jsonEncode(user));
 
-        // langsung ke HomePage
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
-      } else {
-        // Ambil message error dari Laravel
-        String message = 'Login gagal';
-        if (result['data']['message'] != null) {
-          message = result['data']['message'];
-        } else if (result['data']['errors'] != null) {
-          if (result['data']['errors']['email'] != null) {
-            message = result['data']['errors']['email'][0];
-          } else if (result['data']['errors']['password'] != null) {
-            message = result['data']['errors']['password'][0];
-          }
-        }
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       const SnackBar(
+    //         content: Text('Login berhasil!'),
+    //         backgroundColor: Colors.green,
+    //       ),
+    //     );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Terjadi kesalahan: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
+    //     // langsung ke HomePage
+    //     Navigator.pushReplacement(
+    //       context,
+    //       MaterialPageRoute(builder: (_) => const HomePage()),
+    //     );
+    //   } else {
+    //     // Ambil message error dari Laravel
+    //     String message = 'Login gagal';
+    //     if (result['data']['message'] != null) {
+    //       message = result['data']['message'];
+    //     } else if (result['data']['errors'] != null) {
+    //       if (result['data']['errors']['email'] != null) {
+    //         message = result['data']['errors']['email'][0];
+    //       } else if (result['data']['errors']['password'] != null) {
+    //         message = result['data']['errors']['password'][0];
+    //       }
+    //     }
+
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       SnackBar(
+    //         content: Text(message),
+    //         backgroundColor: Colors.red,
+    //       ),
+    //     );
+    //   }
+    // } catch (e) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     SnackBar(
+    //       content: Text('Terjadi kesalahan: $e'),
+    //       backgroundColor: Colors.red,
+    //     ),
+    //   );
+    // } finally {
+    //   setState(() => _isLoading = false);
+    // }
   }
 
   @override

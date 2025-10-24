@@ -11,7 +11,7 @@ class ChatListPage extends StatefulWidget {
 class _ChatListPageState extends State<ChatListPage> {
   final List<Map<String, String>> _teknisiList = [
     {
-      "nama": "Andi",
+      "nama": "Barji Jegel",
       "gambar": "https://randomuser.me/api/portraits/men/1.jpg",
     },
     {

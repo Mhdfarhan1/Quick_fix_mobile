@@ -65,8 +65,9 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/mesin_cuci.png
     - assets/images/AC-rusak.jpg
-    - assets/images/Cog.png
+    - assets/images/cog.png
     - assets/images/gearsbg.jpg
     - assets/lottie/empty.json
 

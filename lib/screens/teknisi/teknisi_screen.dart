@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../profile/profile_teknisi_page.dart';
+import '../teknisi/profile/profile_teknisi_page.dart';
 
 class TeknisiScreen extends StatefulWidget {
   const TeknisiScreen({super.key});
