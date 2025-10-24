@@ -117,7 +117,8 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 Text(widget.namaTeknisi,
                     style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600)),
+                        fontSize: 14, fontWeight: FontWeight.w400 , color: Colors.white)),
+                
                 Row(
                   children: [
                     Container(
@@ -181,7 +182,7 @@ class _ChatPageState extends State<ChatPage> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black12,
+                          color: const Color.fromARGB(31, 252, 251, 251),
                           offset: const Offset(1, 2),
                           blurRadius: 3,
                         )
@@ -193,7 +194,7 @@ class _ChatPageState extends State<ChatPage> {
                         Text(
                           message["text"],
                           style: TextStyle(
-                            color: isUser ? Colors.white : Colors.black,
+                            color: isUser ? Colors.white : const Color.fromARGB(255, 3, 0, 0),
                             fontSize: 15,
                           ),
                         ),
