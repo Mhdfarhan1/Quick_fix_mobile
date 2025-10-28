@@ -1,381 +1,331 @@
+import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import '../../pengguna/pemesanan/form_pemesanan.dart';
-import '../../chat/chat_page.dart'; // pastikan path ini benar
+import 'package:http/http.dart' as http;
+import 'package:network_info_plus/network_info_plus.dart';
+import '../../../widgets/network_image_with_fallback.dart';
 
-class ProfileTeknisiPage extends StatelessWidget {
-  final String nama;
-  final String jarak;
-  final String rating;
-  final String bidang;
-  final double harga;
-  final String deskripsi;
-  final String gambar;
+class ProfileTeknisiPage extends StatefulWidget {
+  final int teknisiId;
+  const ProfileTeknisiPage({super.key, required this.teknisiId});
 
-  const ProfileTeknisiPage({
-    super.key,
-    required this.nama,
-    required this.jarak,
-    required this.rating,
-    required this.bidang,
-    required this.harga,
-    required this.deskripsi,
-    required this.gambar,
-  });
+  @override
+  State<ProfileTeknisiPage> createState() => _ProfileTeknisiPageState();
+}
+
+class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
+    with SingleTickerProviderStateMixin {
+  Map<String, dynamic>? teknisi;
+  List<dynamic> layananList = [];
+  List<dynamic> buktiList = [];
+  bool isLoading = true;
+  late TabController tabController;
+
+  String baseUrl = "http://10.158.125.178:8000"; // default fallback
+
+  @override
+  void initState() {
+    super.initState();
+    tabController = TabController(length: 2, vsync: this);
+    _initBaseUrl();
+  }
+
+  /// 🔹 Cek apakah dijalankan di Web, Emulator, atau HP Fisik (via WiFi)
+  Future<void> _initBaseUrl() async {
+    if (kIsWeb) {
+      baseUrl = "http://localhost:8000";
+    } else if (Platform.isAndroid) {
+      try {
+        final info = NetworkInfo();
+        final wifiIP = await info.getWifiIP();
+        debugPrint("📱 IP HP: $wifiIP");
+
+        baseUrl = "http://10.158.125.178:8000";
+        debugPrint("🌐 Base URL Laravel: $baseUrl");
+      } catch (e) {
+        baseUrl = "http://10.0.2.2:8000";
+        debugPrint("⚠️ Gagal deteksi IP, fallback ke emulator: $baseUrl");
+      }
+    } else if (Platform.isIOS) {
+      baseUrl = "http://127.0.0.1:8000";
+    }
+
+    await fetchTeknisiData();
+  }
+
+  /// 🧩 Utility untuk memperbaiki URL agar tidak dobel
+  String fixImageUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    if (url.contains('storage/')) {
+      return "$baseUrl/$url";
+    }
+    return "$baseUrl/storage/$url";
+  }
+
+  Future<void> fetchTeknisiData() async {
+    try {
+      final teknisiRes = await http
+          .get(Uri.parse('$baseUrl/api/get_teknisi?id=${widget.teknisiId}'));
+      final layananRes = await http.get(
+          Uri.parse('$baseUrl/api/teknisi/layanan?id_teknisi=${widget.teknisiId}'));
+      final buktiRes =
+          await http.get(Uri.parse('$baseUrl/api/bukti_pekerjaan/${widget.teknisiId}'));
+
+      if (teknisiRes.statusCode == 200 &&
+          layananRes.statusCode == 200 &&
+          buktiRes.statusCode == 200) {
+        setState(() {
+          teknisi = jsonDecode(teknisiRes.body);
+          layananList = jsonDecode(layananRes.body);
+          final buktiData = jsonDecode(buktiRes.body);
+          buktiList = buktiData['data'] ?? [];
+          isLoading = false;
+        });
+
+        debugPrint('🖼 Foto profil: ${teknisi!['foto_profile']}');
+      } else {
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetchTeknisiData: $e');
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (teknisi == null) {
+      return const Scaffold(body: Center(child: Text('Data teknisi tidak ditemukan')));
+    }
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            /// =============================
-            /// Banner + Foto Profil + Tombol
-            /// =============================
-            SizedBox(
-              height: 360, // beri ruang agar elemen dalam Stack bisa diklik
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  /// Banner
-                  Container(
-                    height: 200,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: NetworkImage(gambar),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-
-                  // Tombol kembali
-                  Positioned(
-                    top: 20,
-                    left: 16,
-                    child: CircleAvatar(
-                      backgroundColor: Colors.black54,
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ),
-                  ),
-
-                  /// Foto Profil + Status + Tombol chat & call
-                  Positioned(
-                    bottom: 0, // ubah dari -150 ke 0 agar area klik valid
-                    left: 0,
-                    right: 0,
-                    child: Column(
-                      children: [
-                        Stack(
-                          children: [
-                            const CircleAvatar(
-                              radius: 60,
-                              backgroundImage: NetworkImage(
-                                "https://i.pinimg.com/736x/36/42/f6/3642f64179d8be4b9ef4b9a89cf29010.jpg",
-                              ),
-                            ),
-                            Positioned(
-                              right: 6,
-                              bottom: 10,
-                              child: Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: Colors.green,
-                                  border:
-                                      Border.all(color: Colors.white, width: 2),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          nama,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0C4381),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text("Tersedia Sekarang",
-                            style: TextStyle(color: Colors.grey)),
-                        const SizedBox(height: 12),
-
-                        /// Tombol chat dan call
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            actionButton(context, Icons.chat, nama),
-                            const SizedBox(width: 16),
-                            actionButton(context, Icons.call, nama),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            /// =============================
-            /// Detail Info Teknisi
-            /// =============================
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  /// Jarak + Rating
-                  Row(
-                    children: [
-                      Text(jarak, style: const TextStyle(fontSize: 14)),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.star,
-                          color: Colors.amber, size: 18),
-                      const SizedBox(width: 4),
-                      Text(rating, style: const TextStyle(fontSize: 14)),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  /// Tentang Teknisi
-                  Text(
-                    "Tentang Teknisi",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    deskripsi,
-                    style: const TextStyle(fontSize: 14, height: 1.5),
-                  ),
-                  const SizedBox(height: 24),
-
-                  /// Sertifikasi
-                  Text(
-                    "Sertifikasi",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 140,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        sertifikatCard("Sertifikat Kualitas Tukang", "BNSP, 2023"),
-                        sertifikatCard("Sertifikat Manajemen Proyek", "LPJK, 2022"),
-                        sertifikatCard("Sertifikat Keselamatan Kerja", "Kemenaker, 2021"),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  /// Ulasan
-                  Text(
-                    "Ulasan Pelanggan",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  reviewTile("Henry Cavill",
-                      "Hasil renovasinya rapi dan sesuai harapan. Komunikasi enak dari awal sampai akhir."),
-                  reviewTile("Tom Holland",
-                      "Pengerjaan cepat dan detail. Sangat puas dengan hasil akhirnya."),
-                  reviewTile("Timothée Chalamet",
-                      "Profesional dan bisa dipercaya. Rumah lama kami jadi terlihat baru!"),
-                  const SizedBox(height: 30),
-
-                  /// Tombol Book Now
-                  Center(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFCC33),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 40, vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                     onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          title: const Text(
-                            "Konfirmasi Booking",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          content: const Text("Apakah kamu yakin ingin booking teknisi ini?"),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text("Batal", style: TextStyle(color: Colors.grey)),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0C4381),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              onPressed: () {
-                                Navigator.pop(ctx);
-
-                                // Pindah ke halaman BookingPage
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => FormPemesananPage(
-                                      namaTeknisi: nama,
-                                      fotoTeknisi:gambar,
-                                      bidang: bidang,
-                                      harga: harga,
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Text("Ya, Booking"),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-
-                      child: const Text(
-                        "Book Now",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
+      appBar: AppBar(
+        title: Text(teknisi!['nama'] ?? 'Profil Teknisi'),
+        backgroundColor: Colors.blueAccent,
+        bottom: TabBar(
+          controller: tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          tabs: const [
+            Tab(text: 'Profil'),
+            Tab(text: 'Layanan'),
           ],
         ),
       ),
-    );
-  }
-
-  /// ======================================
-  /// Tombol Chat & Call (sudah bisa diklik)
-  /// ======================================
-  static Widget actionButton(
-      BuildContext context, IconData icon, String namaTeknisi) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          if (icon == Icons.chat) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChatPage(
-                  namaTeknisi: namaTeknisi,
-                  fotoTeknisi:
-                      "https://i.pinimg.com/736x/36/42/f6/3642f64179d8be4b9ef4b9a89cf29010.jpg",
-                ),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Memanggil $namaTeknisi...")),
-            );
-          }
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFCC33),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Icon(icon, color: Colors.black),
-        ),
-      ),
-    );
-  }
-
-  /// Sertifikat
-  static Widget sertifikatCard(String title, String subtitle) {
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: const Color(0xFF0C4381).withOpacity(0.05),
-        border: Border.all(color: const Color(0xFF0C4381)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: TabBarView(
+        controller: tabController,
         children: [
-          const Icon(Icons.workspace_premium,
-              color: Color(0xFF0C4381), size: 40),
-          const SizedBox(height: 8),
-          Text(title,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          Text(subtitle, style: const TextStyle(fontSize: 12)),
+          buildProfileTab(),
+          buildLayananTab(),
         ],
       ),
     );
   }
 
-  /// Ulasan
-  static Widget reviewTile(String nama, String ulasan) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[100],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  // ========================== PROFIL TAB ==========================
+  Widget buildProfileTab() {
+    final foto = fixImageUrl(teknisi?['foto_profile']);
+
+    return SingleChildScrollView(
+      child: Column(
         children: [
-          const CircleAvatar(
-            backgroundColor: Color(0xFF0C4381),
-            child: Icon(Icons.person, color: Colors.white),
+          Stack(
+            children: [
+              NetworkImageWithFallback(
+                imageUrl: foto,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+              Positioned(
+                bottom: 16,
+                left: 16,
+                child: Text(
+                  teknisi!['nama'] ?? '-',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(blurRadius: 4, color: Colors.black)],
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
+          Padding(
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(nama,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 4),
-                Text(ulasan,
-                    style: const TextStyle(fontSize: 13, height: 1.4)),
+                Text(teknisi!['deskripsi'] ?? '-',
+                    style: const TextStyle(fontSize: 15)),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.amber),
+                    Text(' ${teknisi!['rata_rating'] ?? 0.0}'),
+                    const SizedBox(width: 16),
+                    const Icon(Icons.work_outline, color: Colors.grey),
+                    Text(' ${teknisi!['pengalaman']} thn pengalaman'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('Status: ${teknisi!['status']}',
+                    style: TextStyle(
+                        color: teknisi!['status'] == 'aktif'
+                            ? Colors.green
+                            : Colors.red)),
+                const SizedBox(height: 16),
+                Text('Keahlian: ${teknisi!['daftar_keahlian'] ?? '-'}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
-          )
+          ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "Galeri Teknisi",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (buktiList.isEmpty)
+            const Text('Belum ada bukti pekerjaan.')
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: buktiList.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                ),
+                itemBuilder: (context, index) {
+                  final bukti = buktiList[index];
+                  final fullUrl = fixImageUrl(bukti['url']);
+
+                  return GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => Dialog(
+                          backgroundColor: Colors.black.withOpacity(0.8),
+                          insetPadding: const EdgeInsets.all(10),
+                          child: InteractiveViewer(
+                            panEnabled: true,
+                            minScale: 0.8,
+                            maxScale: 4.0,
+                            child: Image.network(
+                              fullUrl,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: NetworkImageWithFallback(
+                        imageUrl: fullUrl,
+                        fit: BoxFit.cover,
+                        height: 120,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+          const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+
+  // ========================== LAYANAN TAB ==========================
+  Widget buildLayananTab() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: layananList.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisExtent: 240,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          itemBuilder: (context, index) {
+            final layanan = layananList[index];
+            final gambarUrl = fixImageUrl(layanan['gambar']);
+
+            return Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              elevation: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(12)),
+                    child: NetworkImageWithFallback(
+                      imageUrl: gambarUrl,
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(layanan['nama_keahlian'] ?? '-',
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(layanan['nama_kategori'] ?? '-',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey)),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.star,
+                                color: Colors.amber, size: 16),
+                            Text(' ${layanan['rating'] ?? 0}'),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Rp ${layanan['harga_min'] ?? 0} - ${layanan['harga_max'] ?? 0}',
+                          style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

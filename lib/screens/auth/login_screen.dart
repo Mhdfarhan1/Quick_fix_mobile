@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
-import '../pengguna/home/home_page.dart';
+import '../../screens/pengguna/home/home_page.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -28,83 +28,89 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    // TESTING ONLY: Skip login check, go directly to HomePage
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const HomePage()),
-    );
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text.trim();
 
-    // final email = _emailController.text.trim().toLowerCase();
-    // final password = _passwordController.text.trim();
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email dan Password tidak boleh kosong!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-    // if (email.isEmpty || password.isEmpty) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(
-    //       content: Text('Email dan Password tidak boleh kosong!'),
-    //       backgroundColor: Colors.red,
-    //     ),
-    //   );
-    //   return;
-    // }
+    setState(() => _isLoading = true);
 
-    // setState(() => _isLoading = true);
+    try {
+      final result = await ApiService.login(email: email, password: password);
 
-    // try {
-    //   final result = await ApiService.login(email: email, password: password);
+      // 🟢 Tambahkan baris ini untuk debugging respons dari Laravel
+      print('Response dari API Laravel: ${result['data']}');
+      print('Status code: ${result['statusCode']}');
 
-    //   // cek status code dan data
-    //   if (result['statusCode'] == 200 && result['data']['status'] == true) {
-    //     final token = result['data']['token'];
-    //     final user = result['data']['user'];
+      // Laravel: {status, message, token, user}
+      if (result['statusCode'] == 200) {
+        final data = result['data'];
 
-    //     // simpan token & user ke SharedPreferences
-    //     final prefs = await SharedPreferences.getInstance();
-    //     await prefs.setString('token', token);
-    //     await prefs.setString('user', jsonEncode(user));
+        if (data['status'] == true) {
+          final token = data['token'];
+          final user = data['user'];
 
-    //     ScaffoldMessenger.of(context).showSnackBar(
-    //       const SnackBar(
-    //         content: Text('Login berhasil!'),
-    //         backgroundColor: Colors.green,
-    //       ),
-    //     );
+          // simpan token & user
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('token', token);
+          await prefs.setString('user', jsonEncode(user));
 
-    //     // langsung ke HomePage
-    //     Navigator.pushReplacement(
-    //       context,
-    //       MaterialPageRoute(builder: (_) => const HomePage()),
-    //     );
-    //   } else {
-    //     // Ambil message error dari Laravel
-    //     String message = 'Login gagal';
-    //     if (result['data']['message'] != null) {
-    //       message = result['data']['message'];
-    //     } else if (result['data']['errors'] != null) {
-    //       if (result['data']['errors']['email'] != null) {
-    //         message = result['data']['errors']['email'][0];
-    //       } else if (result['data']['errors']['password'] != null) {
-    //         message = result['data']['errors']['password'][0];
-    //       }
-    //     }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(data['message'] ?? 'Login berhasil!'),
+              backgroundColor: Colors.green,
+            ),
+          );
 
-    //     ScaffoldMessenger.of(context).showSnackBar(
-    //       SnackBar(
-    //         content: Text(message),
-    //         backgroundColor: Colors.red,
-    //       ),
-    //     );
-    //   }
-    // } catch (e) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(
-    //       content: Text('Terjadi kesalahan: $e'),
-    //       backgroundColor: Colors.red,
-    //     ),
-    //   );
-    // } finally {
-    //   setState(() => _isLoading = false);
-    // }
+          // pindah ke home
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => HomePage()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(data['message'] ?? 'Login gagal'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else if (result['statusCode'] == 401 || result['statusCode'] == 403) {
+        final data = result['data'];
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Email atau password salah'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Terjadi kesalahan, coba lagi nanti'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -181,8 +187,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.black)
-                            : const Text('LOGIN',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                            : const Text(
+                                'LOGIN',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
                       ),
                       const SizedBox(height: 24),
                       const Center(
@@ -246,8 +254,9 @@ class _LoginScreenState extends State<LoginScreen> {
         hintText: hintText,
         filled: true,
         fillColor: Colors.grey[200],
-        border:
-        OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
       ),
     );
   }
@@ -266,11 +275,14 @@ class _LoginScreenState extends State<LoginScreen> {
         hintText: hintText,
         filled: true,
         fillColor: Colors.grey[200],
-        border:
-        OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
         suffixIcon: IconButton(
-          icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility,
-              color: Colors.grey),
+          icon: Icon(
+            obscureText ? Icons.visibility_off : Icons.visibility,
+            color: Colors.grey,
+          ),
           onPressed: onToggleVisibility,
         ),
       ),
@@ -278,6 +290,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildSocialButton({required IconData icon, required Color color}) {
-    return CircleAvatar(radius: 25, backgroundColor: Colors.grey[200], child: FaIcon(icon, color: color));
+    return CircleAvatar(
+      radius: 25,
+      backgroundColor: Colors.grey[200],
+      child: FaIcon(icon, color: color),
+    );
   }
 }

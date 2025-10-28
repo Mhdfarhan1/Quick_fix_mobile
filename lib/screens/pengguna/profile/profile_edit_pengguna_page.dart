@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-class ProfileEditPelangganScreen extends StatefulWidget {
+class ProfileEditPenggunaPage extends StatefulWidget {
   // Data yang diterima dari halaman profil
   final String currentName;
   final String currentEmail;
   final String currentPhone;
 
-  const ProfileEditPelangganScreen({
+  const ProfileEditPenggunaPage({
     super.key,
     required this.currentName,
     required this.currentEmail,
@@ -14,12 +14,12 @@ class ProfileEditPelangganScreen extends StatefulWidget {
   });
 
   @override
-  State<ProfileEditPelangganScreen> createState() =>
-      _ProfileEditPelangganScreenState();
+  State<ProfileEditPenggunaPage> createState() =>
+      _ProfileEditPenggunaPageState();
 }
 
-class _ProfileEditPelangganScreenState
-    extends State<ProfileEditPelangganScreen> {
+class _ProfileEditPenggunaPageState
+    extends State<ProfileEditPenggunaPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;

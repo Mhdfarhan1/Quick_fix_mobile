@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:shimmer/shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/login_screen.dart';
-import '../pengguna/home/home_page.dart';
+import '../home/home_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -67,9 +67,11 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (token != null && token.isNotEmpty) {
       // Sudah login → langsung ke HomePage
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomePage()),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomePage()),
       );
+
     } else {
       // Belum login → ke LoginScreen
       Navigator.of(context).pushReplacement(

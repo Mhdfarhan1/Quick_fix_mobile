@@ -43,6 +43,8 @@ dependencies:
   google_fonts: ^6.3.2
   qr_flutter: ^4.1.0
   shared_preferences: ^2.3.2
+  network_info_plus: ^5.0.3
+  image_picker: ^1.0.7
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +72,8 @@ flutter:
     - assets/images/cog.png
     - assets/images/gearsbg.jpg
     - assets/lottie/empty.json
+    - assets/images/header_bg.png
+    - assets/default.jpg
 
   # BENAR: 'fonts' sejajar dengan 'assets' sebagai properti dari 'flutter'
   fonts:
