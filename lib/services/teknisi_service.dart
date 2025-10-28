@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 class TeknisiService {
   // Ganti 'localhost' jadi '10.0.2.2' kalau kamu pakai emulator Android
-  final String baseUrl = 'http://10.158.125.178:8000/api';
+  final String baseUrl = 'http://172.29.76.247:8000/api';
 
   /// 🔹 Ambil semua teknisi
   Future<List<dynamic>> getTeknisiList() async {

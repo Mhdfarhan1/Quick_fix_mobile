@@ -17,6 +17,6 @@ class BaseUrl {
     }
 
     // Jika kamu pakai device fisik (bisa ubah IP ini)
-    return "http://10.158.125.178:8000/api"; // Ganti IP dengan IP PC kamu
+    return "http://172.29.76.247:8000/api"; // Ganti IP dengan IP PC kamu
   }
 }

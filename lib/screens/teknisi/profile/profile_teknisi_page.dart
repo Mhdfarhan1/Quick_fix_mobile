@@ -22,7 +22,7 @@ class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
   bool isLoading = true;
   late TabController tabController;
 
-  String baseUrl = "http://10.158.125.178:8000"; // default fallback
+  String baseUrl = "http://172.29.76.247:8000"; // default fallback
 
   @override
   void initState() {
@@ -41,7 +41,7 @@ class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
         final wifiIP = await info.getWifiIP();
         debugPrint("📱 IP HP: $wifiIP");
 
-        baseUrl = "http://10.158.125.178:8000";
+        baseUrl = "http://172.29.76.247:8000";
         debugPrint("🌐 Base URL Laravel: $baseUrl");
       } catch (e) {
         baseUrl = "http://10.0.2.2:8000";

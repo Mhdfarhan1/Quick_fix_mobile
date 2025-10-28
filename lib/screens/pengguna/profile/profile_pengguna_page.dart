@@ -41,7 +41,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.158.125.178:8000/api/profile'),
+        Uri.parse('http://172.29.76.247:8000/api/profile'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
@@ -102,7 +102,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
 
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://10.158.125.178:8000/api/profile/upload-foto'),
+        Uri.parse('http://172.29.76.247:8000/api/profile/upload-foto'),
       )
         ..headers['Authorization'] = 'Bearer $token'
         ..fields['id_user'] = userId.toString()

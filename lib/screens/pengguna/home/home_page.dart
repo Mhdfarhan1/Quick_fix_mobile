@@ -46,8 +46,8 @@ class _HomePageState extends State<HomePage> {
       storageBase = "http://localhost:8000/storage";
     
     } else {
-      apiBase = "http://10.158.125.178:8000/api";
-      storageBase = "http://10.158.125.178:8000/storage";
+      apiBase = "http://172.29.76.247:8000/api";
+      storageBase = "http://172.29.76.247:8000/storage";
     }
     loadData();
   }

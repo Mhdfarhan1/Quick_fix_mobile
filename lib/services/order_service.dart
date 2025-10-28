@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OrderService {
-  final String baseUrl = 'http://10.158.125.178:8000/api';
+  final String baseUrl = 'http://172.29.76.247:8000/api';
 
   Future<List<dynamic>> getOrders() async {
     final prefs = await SharedPreferences.getInstance();
