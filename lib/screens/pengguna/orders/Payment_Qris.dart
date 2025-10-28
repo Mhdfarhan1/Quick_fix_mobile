@@ -16,12 +16,15 @@ class PaymentPage extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
         ),
         title: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Icon(Icons.check_circle, color: Colors.green, size: 28),
             const SizedBox(width: 8),
-            Text(
-              'Pemesanan Berhasil',
-              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            Expanded( // ✅ agar teks tidak overflow
+              child: Text(
+                'Pemesanan Berhasil',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -29,6 +32,7 @@ class PaymentPage extends StatelessWidget {
           'Terima kasih! Pemesanan Anda telah berhasil diproses.',
           style: GoogleFonts.inter(fontSize: 14),
         ),
+        actionsAlignment: MainAxisAlignment.end,
         actions: [
           TextButton(
             onPressed: () {
@@ -61,12 +65,13 @@ class PaymentPage extends StatelessWidget {
         backgroundColor: const Color(0xFF0A3D91),
         centerTitle: true,
       ),
-      body: Padding(
+      body: SingleChildScrollView( // ✅ biar aman dari overflow di layar kecil
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
+              width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -90,7 +95,7 @@ class PaymentPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Image.asset(
-                    'assets/images/qris.png', // QRIS kamu simpan di sini
+                    'assets/images/qris.png',
                     width: 180,
                     height: 180,
                   ),
@@ -101,7 +106,7 @@ class PaymentPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "Rp${200000.toString()}",
+                    "Rp${totalPembayaran.toString()}",
                     style: GoogleFonts.inter(
                       color: Colors.orange,
                       fontSize: 18,
@@ -128,9 +133,7 @@ class PaymentPage extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  _showSuccessDialog(context);
-                },
+                onPressed: () => _showSuccessDialog(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0A3D91),
                   padding: const EdgeInsets.symmetric(vertical: 14),

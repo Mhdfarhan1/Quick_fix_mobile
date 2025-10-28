@@ -117,7 +117,7 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 Text(widget.namaTeknisi,
                     style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w400 , color: Colors.white)),
+                        fontSize: 14, fontWeight: FontWeight.w400 , color: Color.fromARGB(255, 255, 255, 255))),
                 
                 Row(
                   children: [
@@ -125,14 +125,14 @@ class _ChatPageState extends State<ChatPage> {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: _isOnline ? Colors.green : Colors.grey,
+                        color: _isOnline ? Colors.green : const Color.fromARGB(255, 158, 158, 158),
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       _isOnline ? "Online" : "Offline",
-                      style: const TextStyle(fontSize: 12, color: Colors.white70),
+                      style: const TextStyle(fontSize: 12, color: Color.fromARGB(179, 255, 255, 255)),
                     ),
                   ],
                 ),

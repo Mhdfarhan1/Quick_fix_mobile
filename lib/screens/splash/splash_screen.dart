@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:shimmer/shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/login_screen.dart';
-import '../home/home_page.dart';
+import '../../screens/pengguna/home/home_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
