@@ -1,416 +1,458 @@
+// form_pemesanan.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../orders/Payment_Qris.dart';
+import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import '../../../config/base_url.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../alamat/pilih_alamat_page.dart';
+import '../Pembayaran/konfirmasi_pembayaran_page.dart';
 
-class FormPemesananPage extends StatefulWidget {
+class FormPemesanan extends StatefulWidget {
+  final int idPelanggan;
+  final int idTeknisi;
+  final int idKeahlian;
   final String namaTeknisi;
-  final String fotoTeknisi;
-  final String bidang;
-  final double harga;
+  final String namaKeahlian;
+  final int harga;
 
-  const FormPemesananPage({
+  const FormPemesanan({
     super.key,
+    required this.idPelanggan,
+    required this.idTeknisi,
+    required this.idKeahlian,
     required this.namaTeknisi,
-    required this.fotoTeknisi,
-    required this.bidang,
+    required this.namaKeahlian,
     required this.harga,
   });
 
   @override
-  State<FormPemesananPage> createState() => _FormPemesananPageState();
+  State<FormPemesanan> createState() => _FormPemesananState();
 }
 
-class _FormPemesananPageState extends State<FormPemesananPage> {
-  String? selectedMetode;
+class _FormPemesananState extends State<FormPemesanan> {
+  // ====== Config / constants ======
+  static const int ADMIN_FEE = 10000;
+  static const int PROP_RUMAH = 30000;
+  static const int PROP_APART = 50000;
+  static const int PROP_LAIN = 100000;
+
+  final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+  // ====== State ======
+  DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+  TimeOfDay selectedTime = const TimeOfDay(hour: 9, minute: 0);
+
+  String keluhan = "";
+  String selectedPayment = "transfer";
+  String selectedProperty = "Rumah";
+
+  bool sending = false;
+  bool loadingAlamat = true;
+  List<Map<String, dynamic>> alamatUser = [];
+  Map<String, dynamic>? alamatDipilih;
+
+  int hargaDasar = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    hargaDasar = widget.harga;
+    _fetchAlamatUser();
+  }
+
+  Future<void> _fetchAlamatUser() async {
+    setState(() => loadingAlamat = true);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? savedAlamat = prefs.getString("alamat_default");
+    int? savedIdAlamat = prefs.getInt("id_alamat_default");
+
+    if (savedAlamat != null) {
+      setState(() {
+        alamatDipilih = {
+          "id_alamat": savedIdAlamat,
+          "alamat_lengkap": savedAlamat,
+          "is_default": true,
+        };
+      });
+    }
+
+    try {
+      final token = prefs.getString('token');
+      final res = await http.get(
+        Uri.parse("${BaseUrl.api}/alamat"),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        List<Map<String, dynamic>> results = [];
+
+        if (body is Map && body.containsKey('data')) {
+          results = List<Map<String, dynamic>>.from(body['data']);
+        }
+
+        if (results.isNotEmpty) {
+          final d = results.firstWhere(
+            (a) => (a['is_default'] == 1 || a['is_default'] == true),
+            orElse: () => results.first,
+          );
+
+          await prefs.setString("alamat_default", d['alamat_lengkap'] ?? "");
+          if (d['id_alamat'] != null) await prefs.setInt("id_alamat_default", d['id_alamat']);
+
+          setState(() {
+            alamatUser = results;
+            alamatDipilih = d;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Gagal ambil alamat: $e");
+    }
+
+    setState(() => loadingAlamat = false);
+  }
+
+  int get propertyFee {
+    switch (selectedProperty) {
+      case "Rumah":
+        return PROP_RUMAH;
+      case "Apartemen":
+        return PROP_APART;
+      default:
+        return PROP_LAIN;
+    }
+  }
+
+  int get totalPembayaran => hargaDasar + propertyFee + ADMIN_FEE;
+  String fmt(int v) => currency.format(v);
+
+  Future<void> pickDate() async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 180)),
+    );
+    if (d != null) setState(() => selectedDate = d);
+  }
+
+  Future<void> pickTime() async {
+    final t = await showTimePicker(context: context, initialTime: selectedTime);
+    if (t != null) setState(() => selectedTime = t);
+  }
+
+  Future<void> submitPemesanan() async {
+    if (keluhan.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Deskripsi masalah wajib diisi")),
+      );
+      return;
+    }
+
+    setState(() => sending = true);
+    final tanggal = "${selectedDate.toIso8601String().substring(0, 10)} ${selectedTime.format(context)}";
+
+    final body = {
+      "id_pelanggan": widget.idPelanggan,
+      "id_teknisi": widget.idTeknisi,
+      "id_keahlian": widget.idKeahlian,
+      "tanggal_booking": tanggal,
+      "keluhan": keluhan,
+      "harga": totalPembayaran,
+      if (alamatDipilih?['id_alamat'] != null) "id_alamat": alamatDipilih!['id_alamat'],
+      "metode_pembayaran": selectedPayment,
+      "jenis_properti": selectedProperty,
+    };
+
+    try {
+      final res = await http.post(
+        Uri.parse("${BaseUrl.api}/add_pemesanan"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+
+      setState(() => sending = false);
+
+      print("Status code: ${res.statusCode}");
+      print("Response body: ${res.body}");
+      print("Body dikirim: ${jsonEncode(body)}");
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        final kode = data['data']?['kode_pemesanan'] ?? '-';
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => KonfirmasiPembayaranPage(
+              kodePemesanan: kode,
+              metodePembayaran: selectedPayment,
+              totalPembayaran: totalPembayaran,
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal membuat pesanan (${res.statusCode})")),
+        );
+      }
+    } catch (e) {
+      setState(() => sending = false);
+      print("Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Terjadi kesalahan jaringan")),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryBlue = Color(0xFF0C4481);
-    const Color accentYellow = Color(0xFFFECC32);
-    const Color whiteColor = Color(0xFFFEFEFE);
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF6FAFF),
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(84),
-        child: AppBar(
-          backgroundColor: primaryBlue,
-          elevation: 0,
-          centerTitle: true,
-          automaticallyImplyLeading: false,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+      appBar: AppBar(
+        title: const Text("Pesanan"),
+        backgroundColor: const Color(0xFF0C4481),
+      ),
+      bottomNavigationBar: Container(
+        color: Colors.transparent,
+        padding: const EdgeInsets.all(16),
+        child: ElevatedButton(
+          onPressed: sending ? null : submitPemesanan,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFFFCC33),
+            foregroundColor: Colors.black,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 20),
-            child: Text(
-              'Pesanan',
-              style: GoogleFonts.inter(
-                color: whiteColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-          ),
-          leading: Padding(
-            padding: const EdgeInsets.only(top: 20),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: whiteColor),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
+          child: sending
+              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.black))
+              : Text("Pesan Sekarang • ${fmt(totalPembayaran)}", style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
       ),
-
-      // === BODY ===
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // === Kategori Layanan ===
-            _roundedCard(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Kategori Layanan',
-                      style: GoogleFonts.lato(color: Colors.grey, fontSize: 13)),
-                  Text(widget.bidang,
-                      style: GoogleFonts.inter(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // === Informasi Teknisi ===
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: primaryBlue,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 25,
-                    backgroundImage: widget.fotoTeknisi.isNotEmpty
-                        ? NetworkImage(widget.fotoTeknisi)
-                        : const AssetImage('assets/images/default_user.png')
-                            as ImageProvider,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(widget.namaTeknisi,
-                            style: GoogleFonts.inter(
-                                color: whiteColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16)),
-                        const SizedBox(height: 6),
-                        _serviceRow(widget.bidang),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // === Deskripsi Masalah ===
-            _roundedCard(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      maxLines: 3,
-                      style: GoogleFonts.lato(),
-                      decoration: const InputDecoration(
-                        hintText: 'Deskripsi Masalah',
-                        hintStyle: TextStyle(color: Colors.grey),
-                        border: InputBorder.none,
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.image, color: Colors.grey),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // === Tanggal & Jam ===
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: _roundedCard(
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_today,
-                            color: Colors.grey, size: 20),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Tanggal',
-                                style: GoogleFonts.lato(
-                                    color: Colors.grey, fontSize: 12)),
-                            const SizedBox(height: 6),
-                            Text('30 Sep 2025',
-                                style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.bold, fontSize: 15)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 1,
-                  child: _roundedCard(
-                    child: Row(
-                      children: [
-                        const Icon(Icons.access_time,
-                            color: Colors.grey, size: 20),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Jam',
-                                style: GoogleFonts.lato(
-                                    color: Colors.grey, fontSize: 12)),
-                            const SizedBox(height: 6),
-                            Text('09:00',
-                                style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.bold, fontSize: 15)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            // === Alamat ===
-            _roundedCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Alamat',
-                      style: GoogleFonts.inter(
-                          fontSize: 14, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Jl. Ahmad Yani, Tlk. Tering, Kec. Batam Kota, Kota Batam, Kepulauan Riau',
-                    style: GoogleFonts.lato(
-                        fontSize: 14, color: Colors.black87, height: 1.4),
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: primaryBlue,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Tap untuk menentukan titik lokasi',
-                        style: GoogleFonts.lato(
-                            color: whiteColor,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 13),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // === Ringkasan Pembayaran ===
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: whiteColor,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: primaryBlue,
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(22)),
-                    ),
-                    child: Text(
-                      'Ringkasan Pembayaran',
-                      style: GoogleFonts.inter(
-                          color: whiteColor, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    child: Column(
-                      children: [
-                        _paymentRow(widget.bidang,
-                            widget.harga.toStringAsFixed(0)),
-                        const Divider(),
-                        _paymentRow('Total Pembayaran',
-                            widget.harga.toStringAsFixed(0),
-                            isBold: true),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // === Metode Pembayaran ===
-            _roundedCard(
-              child: DropdownButtonFormField<String>(
-                value: selectedMetode,
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  labelText: 'Pilih Metode Pembayaran',
-                  labelStyle: GoogleFonts.lato(color: Colors.grey),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'qris', child: Text('QRIS')),
-                  DropdownMenuItem(value: 'va', child: Text('Virtual Account')),
-                ],
-                onChanged: (value) {
-                  setState(() => selectedMetode = value);
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // === Tombol Pesan Sekarang ===
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const PaymentPage(totalPembayaran: 200000),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentYellow,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                child: Text(
-                  'Pesan Sekarang',
-                  style: GoogleFonts.inter(
-                    color: whiteColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // === Helper Widgets ===
-
-  static Widget _roundedCard({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFEFEFE),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-
-  static Widget _serviceRow(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(title,
-                style: GoogleFonts.lato(color: Colors.white, fontSize: 14)),
-          ),
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // ====== ALAMAT PEMESANAN ======
           Container(
-            width: 20,
-            height: 20,
+            margin: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.white),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, 4))],
             ),
-            child: const Icon(Icons.check, color: Colors.white, size: 14),
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text("Alamat Pemesanan", style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              loadingAlamat
+                  ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                  : Center(
+                      child: Text(
+                        alamatDipilih != null
+                            ? (alamatDipilih!['alamat_lengkap'] ?? "Alamat tidak ditemukan")
+                            : "Belum memilih alamat...",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+              const SizedBox(height: 12),
+              Center(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff004aad),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                  ),
+                  onPressed: () async {
+                    final picked = await Navigator.push<Map<String, dynamic>?>(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PilihAlamatPage()),
+                    );
+                    if (picked != null) {
+                      setState(() => alamatDipilih = picked);
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString("alamat_default", picked['alamat_lengkap'] ?? "");
+                      if (picked['id_alamat'] != null) {
+                        await prefs.setInt("id_alamat_default", picked['id_alamat']);
+                      }
+                    }
+                  },
+                  child: const Text("Tap untuk menentukan titik lokasi"),
+                ),
+              ),
+            ]),
           ),
-        ],
+          const SizedBox(height: 16),
+
+          // Layanan
+          _layananCard(),
+
+          const SizedBox(height: 16),
+
+          _deskripsiMasalah(),
+
+          const SizedBox(height: 16),
+
+          _propertiPilihan(),
+
+          const SizedBox(height: 16),
+
+          _tanggalDanJam(),
+
+          const SizedBox(height: 16),
+
+          _ringkasanPembayaran(),
+
+          const SizedBox(height: 16),
+
+          _metodePembayaran(),
+
+          const SizedBox(height: 90),
+
+          
+        ]),
       ),
     );
   }
 
-  static Widget _paymentRow(String title, String value,
-      {bool isBold = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+  // ======== Sub-Widgets ========
+  Widget _layananCard() => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: const Offset(0, 4))
+        ]),
+        child: Row(children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              "${BaseUrl.storage}/gambar_layanan/default_layanan.jpg",
+              width: 80,
+              height: 80,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(width: 80, height: 80, color: Colors.grey[200]),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(widget.namaTeknisi, style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text(widget.namaKeahlian, style: const TextStyle(color: Colors.black54)),
+              const SizedBox(height: 6),
+              Text(fmt(widget.harga), style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              const Text("*Garansi layanan hingga 7 hari", style: TextStyle(fontSize: 12, color: Colors.black54))
+            ]),
+          )
+        ]),
+      );
+
+  Widget _deskripsiMasalah() => Container(
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.all(12),
+        child: TextField(
+          maxLines: 4,
+          decoration: const InputDecoration(border: InputBorder.none, hintText: "Deskripsi Masalah"),
+          onChanged: (v) => keluhan = v,
+        ),
+      );
+
+  Widget _propertiPilihan() => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        child: Column(children: [
+          RadioListTile<String>(
+            value: "Rumah",
+            groupValue: selectedProperty,
+            onChanged: (v) => setState(() => selectedProperty = v!),
+            title: const Text("Rumah"),
+            secondary: Text(fmt(PROP_RUMAH)),
+          ),
+          RadioListTile<String>(
+            value: "Apartemen",
+            groupValue: selectedProperty,
+            onChanged: (v) => setState(() => selectedProperty = v!),
+            title: const Text("Apartemen"),
+            secondary: Text(fmt(PROP_APART)),
+          ),
+          RadioListTile<String>(
+            value: "Lainnya",
+            groupValue: selectedProperty,
+            onChanged: (v) => setState(() => selectedProperty = v!),
+            title: const Text("Lainnya"),
+            secondary: Text(fmt(PROP_LAIN)),
+          ),
+        ]),
+      );
+
+  Widget _tanggalDanJam() => Row(children: [
+        Expanded(
+          child: InkWell(
+            onTap: pickDate,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text("${selectedDate.toIso8601String().substring(0, 10)}"),
+                const Icon(Icons.calendar_today_outlined)
+              ]),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: InkWell(
+            onTap: pickTime,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text(selectedTime.format(context)),
+                const Icon(Icons.access_time_outlined)
+              ]),
+            ),
+          ),
+        ),
+      ]);
+
+  Widget _ringkasanPembayaran() => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        child: Column(children: [
+          _summaryRow(widget.namaKeahlian, hargaDasar),
+          const SizedBox(height: 6),
+          _summaryRow("Biaya Properti (${selectedProperty})", propertyFee),
+          const SizedBox(height: 6),
+          _summaryRow("Biaya Admin", ADMIN_FEE),
+          const Divider(),
+          _summaryRow("Total Pembayaran", totalPembayaran, bold: true),
+        ]),
+      );
+
+  Widget _metodePembayaran() => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        child: DropdownButtonFormField<String>(
+          value: selectedPayment,
+          items: const [
+            DropdownMenuItem(value: "transfer", child: Text("Transfer Bank")),
+            DropdownMenuItem(value: "ewallet", child: Text("E-Wallet")),
+            DropdownMenuItem(value: "qris", child: Text("QRIS")),
+          ],
+          onChanged: (v) => setState(() => selectedPayment = v ?? "transfer"),
+          decoration: const InputDecoration(border: InputBorder.none),
+        ),
+      );
+
+  Widget _summaryRow(String title, int price, {bool bold = false}) => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title,
-              style: GoogleFonts.lato(
-                  fontWeight:
-                      isBold ? FontWeight.bold : FontWeight.normal)),
-          Text(value,
-              style: GoogleFonts.lato(
-                  fontWeight:
-                      isBold ? FontWeight.bold : FontWeight.normal)),
+          Text(title, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+          Text(fmt(price),
+              style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal, color: bold ? Colors.black : Colors.black54)),
         ],
-      ),
-    );
-  }
+      );
+
 }
+

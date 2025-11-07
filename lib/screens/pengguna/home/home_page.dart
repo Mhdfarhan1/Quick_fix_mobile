@@ -18,6 +18,7 @@ import '../../chat/chat_page.dart';
 import '../notifikasi/notif.dart';
 import '../../../widgets/network_image_with_fallback.dart';
 import '../../../widgets/app_dialog.dart';
+import '../../../config/base_url.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -34,23 +35,14 @@ class _HomePageState extends State<HomePage> {
   List<dynamic> pesananList = [];
   bool isLoading = true;
 
-  // 🔹 Otomatis ganti URL sesuai platform
-  late final String apiBase;
-  late final String storageBase;
+  
 
   @override
   void initState() {
     super.initState();
-    if (kIsWeb) {
-      apiBase = "http://localhost:8000/api";
-      storageBase = "http://localhost:8000/storage";
-    
-    } else {
-      apiBase = "http://172.29.76.247:8000/api";
-      storageBase = "http://172.29.76.247:8000/storage";
-    }
     loadData();
   }
+
 
   Future<void> loadData() async {
     try {
@@ -78,13 +70,11 @@ class _HomePageState extends State<HomePage> {
   Future<void> fetchPesanan() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
+      
       int? idUser = prefs.getInt('id_user');
       String? role = prefs.getString('role');
 
-      idUser ??= 1;
-      role ??= 'pelanggan';
-
-      String url = "$apiBase/get_pemesanan?";
+      String url = "${BaseUrl.server}/api/get_pemesanan?";
       if (role == 'pelanggan') {
         url += "id_pelanggan=$idUser";
       } else if (role == 'teknisi') {
@@ -92,16 +82,28 @@ class _HomePageState extends State<HomePage> {
       }
 
       final response = await http.get(Uri.parse(url));
+      print("🔹 URL GET: $url");
+      print("🔹 Status Code: ${response.statusCode}");
+      print("🔹 Response Body: ${response.body}");
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
         setState(() {
           pesananList = data['data'] ?? [];
         });
+
+        print("✅ Jumlah pesanan: ${pesananList.length}");
+      } else {
+        print("❌ Gagal fetch data. Status code: ${response.statusCode}");
       }
     } catch (e) {
       debugPrint("Error fetch pesanan: $e");
     }
+    print(pesananList);
+
   }
+
 
   void _onItemTapped(int index) {
     if (index < 0 || index > 4) return;
@@ -122,6 +124,8 @@ class _HomePageState extends State<HomePage> {
         break;
     }
   }
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -262,6 +266,262 @@ class _HomePageState extends State<HomePage> {
 
                 
 
+                // 🔹 Status Pesanan (hanya tampil jika ada)
+                  if (pesananList.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Status Pesanan',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Color(0xFF0C4481),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const MyOrderScreen()),
+                            );
+                          },
+                          child: const Text(
+                            'Lihat semua',
+                            style: TextStyle(
+                              color: Color(0xFF007AFF),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  SizedBox(
+                    height: 150,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: pesananList.length,
+                      itemBuilder: (context, index) {
+                        final pesanan = pesananList[index];
+
+                        final namaLayanan = pesanan['nama_keahlian'] ?? '-';
+                        final lokasi = pesanan['alamat_lengkap'] ?? '-';
+                        final tanggal = pesanan['tanggal_booking'] ?? '-';
+                        final status = pesanan['status'] ?? 'Menunggu';
+
+
+                        // 🎨 Warna otomatis berdasarkan status
+                        Color statusColor;
+                        switch (status.toLowerCase()) {
+                          case 'menunggu':
+                            statusColor = Colors.orange;
+                            break;
+                          case 'diproses':
+                            statusColor = Colors.blue;
+                            break;
+                          case 'selesai':
+                            statusColor = Colors.green;
+                            break;
+                          case 'dibatalkan':
+                            statusColor = Colors.red;
+                            break;
+                          default:
+                            statusColor = Colors.grey;
+                        }
+
+                        return Container(
+                          width: 220,
+                          margin: EdgeInsets.only(left: index == 0 ? 16 : 8, right: 8),
+                          child: Card(
+                            elevation: 3,
+                            color: const Color(0xFFE7F0FA),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // 🔖 STATUS
+                                  Container(
+                                    padding:
+                                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      status,
+                                      style: TextStyle(
+                                        color: statusColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+
+                                  // 🧰 NAMA LAYANAN
+                                  Text(
+                                    namaLayanan,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF0C4481),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+
+                                  // 📍 LOKASI
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.location_on,
+                                          size: 14, color: Colors.grey),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          lokasi,
+                                          style: const TextStyle(
+                                              fontSize: 12, color: Colors.black87),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+
+                                  // 📅 TANGGAL
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.calendar_today,
+                                          size: 13, color: Colors.grey),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        tanggal,
+                                        style: const TextStyle(
+                                            fontSize: 12, color: Colors.black54),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                  // 🔹 Baru-baru ini (gambar layanan)
+                  if (pesananList.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Baru-baru ini',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Color(0xFF0C4481),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    SizedBox(
+                      height: 160,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: pesananList.length,
+                        itemBuilder: (context, index) {
+                          final pesanan = pesananList[index];
+
+                          // Ambil data bukti pekerjaan & teknisi
+
+                          final fotoBukti = pesanan['foto_bukti'] ?? '';
+                          final fullGambarUrl = '${BaseUrl.server}/storage/bukti/$fotoBukti';
+                          final namaTeknisi = pesanan['teknisi']?['nama'] ?? 'Tidak diketahui';
+
+                          return Container(
+                            width: 260,
+                            margin: EdgeInsets.only(left: index == 0 ? 16 : 8, right: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 5,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(15),
+                              child: Stack(
+                                children: [
+                                  // Gambar bukti pekerjaan
+                                  NetworkImageWithFallback(
+                                    imageUrl: fullGambarUrl,
+                                    fit: BoxFit.cover,
+                                    height: double.infinity,
+                                    width: double.infinity,
+                                  ),
+
+                                  // Gradasi hitam transparan di bawah
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                        colors: [
+                                          Colors.black.withOpacity(0.6),
+                                          Colors.transparent,
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Nama teknisi di bawah gambar
+                                  Positioned(
+                                    left: 10,
+                                    bottom: 8,
+                                    child: Text(
+                                      namaTeknisi,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        shadows: [
+                                          Shadow(
+                                            blurRadius: 5,
+                                            color: Colors.black45,
+                                            offset: Offset(1, 1),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                  ],
+
+
                 // 🔹 Rekomendasi Teknisi
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
@@ -291,7 +551,7 @@ class _HomePageState extends State<HomePage> {
                         final fotoPath = foto.startsWith('foto_teknisi/')
                             ? foto
                             : 'foto_teknisi/$foto';
-                        final fullFotoUrl = '$storageBase/$fotoPath';
+                        final fullFotoUrl = '${BaseUrl.server}/storage/$fotoPath';
 
                         print('🔹 Foto profil teknisi ${user?['nama']}: $fullFotoUrl');
 

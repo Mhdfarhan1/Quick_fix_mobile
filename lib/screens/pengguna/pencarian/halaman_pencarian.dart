@@ -1,10 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../../teknisi/halaman_detail_teknisi.dart';
+import 'package:http/http.dart' as http;
+import 'dart:async';
+import '../../../config/base_url.dart';
+import '../../teknisi/halaman_layanan.dart';
+import 'package:shimmer/shimmer.dart';
 
 class HalamanPencarian extends StatefulWidget {
-  final String searchQuery;
+  String searchQuery;
 
-  const HalamanPencarian({super.key, required this.searchQuery});
+  HalamanPencarian({super.key, required this.searchQuery});
 
   @override
   State<HalamanPencarian> createState() => _HalamanPencarianState();
@@ -12,64 +17,96 @@ class HalamanPencarian extends StatefulWidget {
 
 class _HalamanPencarianState extends State<HalamanPencarian> {
   String _selectedCategory = 'Semua';
-  List<Map<String, String>> _filteredTeknisi = [];
+  String lokasi = "";
+  String sortBy = "rating";
+
+  bool _isLoading = false;
+  bool _isLoadMore = false;
+  int page = 1;
+  bool hasMore = true;
+  List<dynamic> teknisiList = [];
+  Timer? _debounce; // ✅ Debounce
 
   final List<String> _categories = [
     "Semua",
+    "Listrik",
+    "Plumbing",
     "AC",
-    "TV",
-    "Kulkas",
-    "Mesin Cuci"
-  ];
-
-  final List<Map<String, String>> teknisiList = [
-    {
-      "nama": "Budi Teknik",
-      "keahlian": "Service AC",
-      "rating": "4.8",
-      "harga": "Rp 150.000",
-      "image": "assets/images/AC-rusak.jpg"
-    },
-    {
-      "nama": "Rafi Elektronik",
-      "keahlian": "Service TV & Kulkas",
-      "rating": "4.6",
-      "harga": "Rp 200.000",
-      "image": "assets/images/elektronik.jpeg"
-    },
-    {
-      "nama": "Andi Service",
-      "keahlian": "Mesin Cuci & Kulkas",
-      "rating": "4.9",
-      "harga": "Rp 180.000",
-      "image": "assets/images/mesin_cuci.png"
-    },
-    {
-      "nama": "Jaya AC",
-      "keahlian": "Pasang & Service AC",
-      "rating": "4.7",
-      "harga": "Rp 120.000",
-      "image": "assets/images/pasangAC.jpeg"
-    },
+    "Pengecatan",
+    "Perbaikan Rumah",
+    "Elektronik",
   ];
 
   @override
   void initState() {
     super.initState();
-    _filterTeknisi();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      fetchTeknisi();
+    });
   }
 
-  void _filterTeknisi() {
-    setState(() {
-      if (_selectedCategory == 'Semua') {
-        _filteredTeknisi = List.from(teknisiList);
-      } else {
-        _filteredTeknisi = teknisiList.where((teknisi) {
-          final keahlian = teknisi['keahlian']!.toLowerCase();
-          return keahlian.contains(_selectedCategory.toLowerCase());
-        }).toList();
+  @override
+  void dispose() {
+    _debounce?.cancel(); // ✅ Good practice
+    super.dispose();
+  }
+
+  Future<void> fetchTeknisi({bool loadMore = false}) async {
+    if (_isLoading && !loadMore) return;
+    if (loadMore && !hasMore) return;
+
+    if (!loadMore) {
+      setState(() {
+        _isLoading = true;
+      });
+    } else {
+      setState(() {
+        _isLoadMore = true;
+      });
+    }
+
+    final queryParams = <String, String>{
+      if (widget.searchQuery.isNotEmpty) 'search': widget.searchQuery,
+      if (_selectedCategory != "Semua") 'kategori': _selectedCategory,
+      if (lokasi.isNotEmpty) 'lokasi': lokasi,
+      if (sortBy.isNotEmpty) 'sort': sortBy,
+      'page': page.toString(),
+      'limit': '6',
+    };
+
+    final uri = Uri.parse("${BaseUrl.api}/search-teknisi")
+        .replace(queryParameters: queryParams);
+
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+
+        setState(() {
+          if (!loadMore) teknisiList.clear();
+
+          teknisiList.addAll(body["data"] ?? []);
+          hasMore = body["has_more"] ?? false;
+
+          if (hasMore) page++;
+        });
       }
-    });
+    } catch (e) {
+      debugPrint("$e");
+    } finally {
+      setState(() {
+        _isLoading = false;
+        _isLoadMore = false;
+      });
+    }
+  }
+
+  void resetAndFetch() {
+    page = 1;
+    teknisiList.clear();
+    hasMore = true;
+    fetchTeknisi();
   }
 
   @override
@@ -79,18 +116,26 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
       appBar: _buildAppBar(),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSearchBar(),
+            const SizedBox(height: 10),
+            _buildLokasiField(),
             const SizedBox(height: 20),
             _buildHeaderRow(yellow),
             const SizedBox(height: 14),
             _buildCategoryFilters(),
             const SizedBox(height: 24),
-            _buildResultsList(yellow),
+
+            // ✅ Loading Skeleton di posisi benar
+            if (_isLoading) _buildSkeletonGrid()
+            else _buildResultsList(yellow),
+
+            _buildLoadMoreButton(),
           ],
         ),
       ),
@@ -134,39 +179,46 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
             ],
           ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(top: 16, right: 24),
-            child: IconButton(
-              icon: const Icon(Icons.message_outlined, color: Colors.white),
-              onPressed: () {},
-            ),
-          ),
-        ],
       ),
     );
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12.withOpacity(0.05),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          )
-        ],
+    return TextField(
+      textInputAction: TextInputAction.search, // ✅ Keyboard berubah
+      onChanged: (value) {
+        widget.searchQuery = value;
+      },
+      onSubmitted: (value) {
+        resetAndFetch(); // ✅ Hanya saat Enter
+      },
+      decoration: InputDecoration(
+        hintText: "Cari teknisi atau layanan...",
+        prefixIcon: const Icon(Icons.search),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+        filled: true,
+        fillColor: Colors.white,
       ),
-      child: const TextField(
-        decoration: InputDecoration(
-          hintText: "Cari teknisi atau layanan...",
-          prefixIcon: Icon(Icons.search, color: Colors.black54),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        ),
+    );
+  }
+
+  Widget _buildLokasiField() {
+    return TextField(
+      onChanged: (value) {
+        lokasi = value;
+
+        // ✅ Debounce lokasi
+        if (_debounce?.isActive ?? false) _debounce!.cancel();
+        _debounce = Timer(const Duration(milliseconds: 600), () {
+          resetAndFetch();
+        });
+      },
+      decoration: InputDecoration(
+        hintText: "Filter lokasi...",
+        prefixIcon: const Icon(Icons.location_city),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+        filled: true,
+        fillColor: Colors.white,
       ),
     );
   }
@@ -183,18 +235,17 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
             color: Color(0xFF0C4481),
           ),
         ),
-        ElevatedButton.icon(
-          onPressed: () {},
-          icon: const Icon(Icons.sort, size: 18, color: Colors.white),
-          label: const Text("Sort by", style: TextStyle(color: Colors.white)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: yellow,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            elevation: 0,
-          ),
+        DropdownButton(
+          value: sortBy,
+          items: const [
+            DropdownMenuItem(value: "rating", child: Text("Rating")),
+            DropdownMenuItem(value: "harga_min", child: Text("Harga Terendah")),
+            DropdownMenuItem(value: "harga_max", child: Text("Harga Tertinggi")),
+          ],
+          onChanged: (value) {
+            sortBy = value!;
+            resetAndFetch();
+          },
         ),
       ],
     );
@@ -208,199 +259,179 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
         itemCount: _categories.length,
         itemBuilder: (context, index) {
           final category = _categories[index];
-          return _buildCategoryChip(category, _selectedCategory == category);
+          return GestureDetector(
+            onTap: () {
+              _selectedCategory = category;
+              resetAndFetch();
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              decoration: BoxDecoration(
+                color: _selectedCategory == category
+                    ? const Color(0xFF1976D2)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                category,
+                style: TextStyle(
+                  color: _selectedCategory == category
+                      ? Colors.white
+                      : Colors.black87,
+                ),
+              ),
+            ),
+          );
         },
       ),
     );
   }
 
-  Widget _buildCategoryChip(String title, bool selected) {
-    return GestureDetector(
-      onTap: () {
-        _selectedCategory = title;
-        _filterTeknisi();
-      },
-      child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFF1976D2) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? const Color(0xFF1976D2) : Colors.grey.shade400,
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: Colors.blueAccent.withOpacity(0.2),
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : [],
-        ),
-        child: Text(
-          title,
-          style: TextStyle(
-            color: selected ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildResultsList(Color yellow) {
-    if (_filteredTeknisi.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 50),
-          child: Text(
-            "Tidak ada teknisi yang cocok.",
-            style: TextStyle(color: Colors.grey),
-          ),
-        ),
-      );
+    if (teknisiList.isEmpty && !_isLoading) {
+      return const Center(child: Text("Tidak ada teknisi ditemukan."));
     }
 
-    return ListView.builder(
+    return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
-      itemCount: _filteredTeknisi.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.72, // ✅ FIX Overflow
+      ),
+      itemCount: teknisiList.length,
       itemBuilder: (context, index) {
-        final teknisi = _filteredTeknisi[index];
-        return _buildTeknisiCard(teknisi, yellow);
+        return _buildTeknisiCard(teknisiList[index], yellow);
       },
     );
   }
 
-  Widget _buildTeknisiCard(Map<String, String> teknisi, Color yellow) {
+  Widget _buildTeknisiCard(dynamic teknisi, Color yellow) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => HalamanDetailTeknisi(
-              nama: teknisi["nama"]!,
-              deskripsi: teknisi["keahlian"]!,
-              rating: double.parse(teknisi["rating"]!),
-              harga: teknisi["harga"]!,
-              gambarUtama: teknisi["image"]!,
-              gambarLayanan: [teknisi["image"]!],
+            builder: (context) => HalamanLayanan(
+              idTeknisi: int.parse(teknisi["id_teknisi"].toString()),
+              idKeahlian: int.parse(teknisi["id_keahlian"].toString()),
+              nama: teknisi["nama"] ?? '',
+              deskripsi: teknisi["nama_keahlian"] ?? '',
+              rating: double.tryParse(teknisi["rating"].toString()) ?? 0.0,
+              harga: int.tryParse(teknisi["harga_min"].toString()) ?? 0,
+              gambarUtama: "${BaseUrl.storage}/${teknisi['gambar']}",
+              gambarLayanan: ["${BaseUrl.storage}/${teknisi['gambar']}"],
             ),
           ),
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 18),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  teknisi["image"]!,
-                  width: 90,
-                  height: 90,
-                  fit: BoxFit.cover,
-                ),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              child: Image.network(
+                "${BaseUrl.storage}/${teknisi['gambar']}",
+                height: 100,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      teknisi["nama"]!,
+                      teknisi["nama_keahlian"],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF0C4481),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      teknisi["keahlian"]!,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
+
+                    Text("Rp ${teknisi['harga_min']} - ${teknisi['harga_max']}"),
+
                     Row(
                       children: [
                         const Icon(Icons.star,
-                            color: Colors.amber, size: 18),
-                        const SizedBox(width: 4),
-                        Text(
-                          teknisi["rating"]!,
-                          style:
-                              const TextStyle(fontWeight: FontWeight.w500),
-                        ),
+                            size: 16, color: Colors.amber),
+                        Text("${teknisi['rating']}"),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          teknisi["harga"]!,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1976D2),
-                          ),
+
+                    const Spacer(),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: yellow,
+                          foregroundColor: Colors.black,
                         ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => HalamanDetailTeknisi(
-                                  nama: teknisi["nama"]!,
-                                  deskripsi: teknisi["keahlian"]!,
-                                  rating: double.parse(teknisi["rating"]!),
-                                  harga: teknisi["harga"]!,
-                                  gambarUtama: teknisi["image"]!,
-                                  gambarLayanan: [teknisi["image"]!],
-                                ),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: yellow,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            "BOOK",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
+                        child: const Text("Pesan"),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonGrid() {
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: 6,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.72,
+      ),
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLoadMoreButton() {
+    if (!hasMore) return const SizedBox();
+
+    return Center(
+      child: ElevatedButton(
+        onPressed: () => fetchTeknisi(loadMore: true),
+        child: _isLoadMore
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text("Load More"),
       ),
     );
   }

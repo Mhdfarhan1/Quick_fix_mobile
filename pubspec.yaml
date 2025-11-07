@@ -31,9 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.1.0
-
-  font_awesome_flutter: ^10.7.0 #<-- Sejajar dengan 'flutter:', tanpa tanda hubung
-
+  font_awesome_flutter: ^10.7.0 #<-- Sejajar dengan 'flutter:', tanpa tanda hubun
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -45,6 +43,15 @@ dependencies:
   shared_preferences: ^2.3.2
   network_info_plus: ^5.0.3
   image_picker: ^1.0.7
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  geocoding: ^3.0.0
+  flutter_slidable: ^3.0.0
+  geolocator: ^11.0.0
+  google_maps_flutter: ^2.7.0
+  webview_flutter: ^4.7.0
+  url_launcher: ^6.3.2
+
 
 dev_dependencies:
   flutter_test:

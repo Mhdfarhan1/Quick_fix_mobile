@@ -3,20 +3,28 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 class BaseUrl {
   static String get server {
-    // Flutter Web
+    // Flutter Web (browser)
     if (kIsWeb) {
       return "http://localhost:8000";
     }
 
-    // Android Emulator
-    
+    // Android Emulator (default)
+    if (Platform.isAndroid) {
+      return "http://192.168.1.2:8000";
+    }
 
     // iOS Simulator
     if (Platform.isIOS) {
       return "http://127.0.0.1:8000";
     }
 
-    // Jika kamu pakai device fisik (bisa ubah IP ini)
-    return "http://172.29.76.247:8000/api"; // Ganti IP dengan IP PC kamu
+    // Fallback (device fisik)
+    return "http://192.168.1.2:8000"; // ganti IP sesuai PC-mu
   }
+
+  // API endpoint
+  static String get api => "$server/api";
+
+  // Storage (gambar)
+  static String get storage => "$server/storage";
 }

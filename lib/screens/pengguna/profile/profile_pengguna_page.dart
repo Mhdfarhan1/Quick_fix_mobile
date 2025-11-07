@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../auth/login_screen.dart';
 import 'profile_edit_pengguna_page.dart';
+import '../../../config/base_url.dart';
 
 class ProfilePenggunaPage extends StatefulWidget {
   const ProfilePenggunaPage({super.key});
@@ -41,7 +42,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://172.29.76.247:8000/api/profile'),
+        Uri.parse('${BaseUrl.api}/profile'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
@@ -102,7 +103,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
 
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://172.29.76.247:8000/api/profile/upload-foto'),
+        Uri.parse('${BaseUrl.api}/profile'),
       )
         ..headers['Authorization'] = 'Bearer $token'
         ..fields['id_user'] = userId.toString()
@@ -143,6 +144,8 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('user');
+    await prefs.remove("id_user");
+    await prefs.clear();
 
     if (mounted) {
       Navigator.pushAndRemoveUntil(

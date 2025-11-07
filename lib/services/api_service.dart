@@ -1,7 +1,7 @@
 // lib/services/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'api_config.dart';
+import '../config/base_url.dart';
 
 class ApiService {
   /// LOGIN
@@ -9,7 +9,7 @@ class ApiService {
     required String email,
     required String password,
   }) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/auth/login'); // ⬅ sesuai dengan route di Laravel
+    final url = Uri.parse('${BaseUrl.api}/auth/login'); // ⬅ sesuai dengan route di Laravel
 
     try {
       final response = await http.post(
@@ -49,7 +49,8 @@ class ApiService {
     required String role,
     String? noHp,
   }) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/register'); // ⬅ disesuaikan juga
+    final url = Uri.parse('${BaseUrl.api}/auth/register');
+
 
     try {
       final response = await http.post(
@@ -85,7 +86,7 @@ class ApiService {
   }
   /// AMBIL BUKTI PEKERJAAN BERDASARKAN ID TEKNISI
   static Future<List<dynamic>> getBuktiByTeknisi(int idTeknisi) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/bukti/$idTeknisi');
+    final url = Uri.parse('${BaseUrl.api}/bukti/$idTeknisi');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);

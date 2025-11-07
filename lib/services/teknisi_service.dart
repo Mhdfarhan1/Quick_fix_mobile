@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/base_url.dart';
 
 class TeknisiService {
   // Ganti 'localhost' jadi '10.0.2.2' kalau kamu pakai emulator Android
-  final String baseUrl = 'http://172.29.76.247:8000/api';
+  final String baseUrl = BaseUrl.api;
 
   /// 🔹 Ambil semua teknisi
   Future<List<dynamic>> getTeknisiList() async {

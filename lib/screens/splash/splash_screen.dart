@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:convert';
 import 'package:shimmer/shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/login_screen.dart';
 import '../../screens/pengguna/home/home_page.dart';
+import '../../screens/teknisi/home/Home_page_teknisi.dart'; 
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -54,27 +56,44 @@ class _SplashScreenState extends State<SplashScreen>
       _textController.forward();
     });
 
-    // Pindah ke screen berikutnya setelah delay, cek login status dulu
-    Timer(const Duration(seconds: 5), () {
-      _checkLoginStatus();
-    });
+    // Cek login status setelah 5 detik
+    Timer(const Duration(seconds: 5), _checkLoginStatus);
   }
 
-  // Cek apakah user sudah login
-  void _checkLoginStatus() async {
+  /// 🔍 Cek apakah user sudah login & arahkan sesuai role
+  Future<void> _checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+    final userJson = prefs.getString('user');
 
-    if (token != null && token.isNotEmpty) {
-      // Sudah login → langsung ke HomePage
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomePage()),
-      );
+    if (token != null && userJson != null) {
+      try {
+        final user = jsonDecode(userJson);
+        final role = user['role']?.toString().toLowerCase();
 
+        // ✅ Arahkan berdasarkan role
+        if (role == 'teknisi') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeTeknisiPage()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomePage()),
+          );
+        }
+      } catch (e) {
+        // Jika parsing JSON gagal, fallback ke login
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
     } else {
       // Belum login → ke LoginScreen
-      Navigator.of(context).pushReplacement(
+      Navigator.pushReplacement(
+        context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     }

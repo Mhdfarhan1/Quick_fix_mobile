@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import '../../screens/pengguna/home/home_page.dart';
 import 'signup_screen.dart';
+import '../../screens/teknisi/home/Home_page_teknisi.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,11 +47,9 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final result = await ApiService.login(email: email, password: password);
 
-      // 🟢 Tambahkan baris ini untuk debugging respons dari Laravel
       print('Response dari API Laravel: ${result['data']}');
       print('Status code: ${result['statusCode']}');
 
-      // Laravel: {status, message, token, user}
       if (result['statusCode'] == 200) {
         final data = result['data'];
 
@@ -58,10 +57,37 @@ class _LoginScreenState extends State<LoginScreen> {
           final token = data['token'];
           final user = data['user'];
 
-          // simpan token & user
+          print("From server user data: $user");
+          print("Correct id_user: ${user['id_user']}");
+
+          // ✅ SIMPAN DATA DI PREFS
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('token', token);
-          await prefs.setString('user', jsonEncode(user));
+            await prefs.setString('token', token);
+            await prefs.setString('user', jsonEncode(user));
+            await prefs.setInt('id_user', user['id_user']);
+
+            // Pastikan alamat_default tidak null & tipe datanya benar
+            final alamatDefault = user['alamat_default'];
+            final idAlamatDefault = user['id_alamat_default'];
+
+            print("Dari API -> alamat_default: $alamatDefault, id_alamat_default: $idAlamatDefault");
+
+            if (alamatDefault != null && alamatDefault.toString().isNotEmpty) {
+              await prefs.setString('alamat_default', alamatDefault.toString());
+              if (idAlamatDefault != null) {
+                await prefs.setInt('id_alamat_default', idAlamatDefault is int
+                    ? idAlamatDefault
+                    : int.tryParse(idAlamatDefault.toString()) ?? 0);
+              }
+            }
+
+          print("✅ prefs cek id_user: ${prefs.getInt('id_user')}");
+          print("✅ prefs cek alamat_default: ${prefs.getString('alamat_default')}");
+          print("Login response data: $data");
+          print("User map: ${data['user']}");
+          print("Alamat default dari server: ${data['user']['alamat_default']}");
+          print("ID alamat default dari server: ${data['user']['id_alamat_default']}");
+
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -70,11 +96,21 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
 
-          // pindah ke home
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => HomePage()),
-          );
+          // 🔥 Arahkan halaman berdasarkan role
+          final role = user['role']?.toString().toLowerCase();
+
+          if (role == 'teknisi') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeTeknisiPage()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomePage()),
+            );
+          }
+
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -110,7 +146,6 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = false);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {

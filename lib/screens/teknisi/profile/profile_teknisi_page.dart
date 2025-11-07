@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:network_info_plus/network_info_plus.dart';
 import '../../../widgets/network_image_with_fallback.dart';
+import '../../../config/base_url.dart';
 
 class ProfileTeknisiPage extends StatefulWidget {
   final int teknisiId;
@@ -22,37 +23,17 @@ class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
   bool isLoading = true;
   late TabController tabController;
 
-  String baseUrl = "http://172.29.76.247:8000"; // default fallback
 
   @override
   void initState() {
     super.initState();
     tabController = TabController(length: 2, vsync: this);
-    _initBaseUrl();
+    fetchTeknisiData();
   }
+
 
   /// 🔹 Cek apakah dijalankan di Web, Emulator, atau HP Fisik (via WiFi)
-  Future<void> _initBaseUrl() async {
-    if (kIsWeb) {
-      baseUrl = "http://localhost:8000";
-    } else if (Platform.isAndroid) {
-      try {
-        final info = NetworkInfo();
-        final wifiIP = await info.getWifiIP();
-        debugPrint("📱 IP HP: $wifiIP");
-
-        baseUrl = "http://172.29.76.247:8000";
-        debugPrint("🌐 Base URL Laravel: $baseUrl");
-      } catch (e) {
-        baseUrl = "http://10.0.2.2:8000";
-        debugPrint("⚠️ Gagal deteksi IP, fallback ke emulator: $baseUrl");
-      }
-    } else if (Platform.isIOS) {
-      baseUrl = "http://127.0.0.1:8000";
-    }
-
-    await fetchTeknisiData();
-  }
+  
 
   /// 🧩 Utility untuk memperbaiki URL agar tidak dobel
   String fixImageUrl(String? url) {
@@ -61,19 +42,20 @@ class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
       return url;
     }
     if (url.contains('storage/')) {
-      return "$baseUrl/$url";
+      return "${BaseUrl.storage}/$url";
+
     }
-    return "$baseUrl/storage/$url";
+    return "${BaseUrl.storage}/$url";
   }
 
   Future<void> fetchTeknisiData() async {
     try {
       final teknisiRes = await http
-          .get(Uri.parse('$baseUrl/api/get_teknisi?id=${widget.teknisiId}'));
+          .get(Uri.parse('${BaseUrl.api}/get_teknisi?id=${widget.teknisiId}'));
       final layananRes = await http.get(
-          Uri.parse('$baseUrl/api/teknisi/layanan?id_teknisi=${widget.teknisiId}'));
+          Uri.parse('${BaseUrl.api}/teknisi/layanan?id_teknisi=${widget.teknisiId}'));
       final buktiRes =
-          await http.get(Uri.parse('$baseUrl/api/bukti_pekerjaan/${widget.teknisiId}'));
+          await http.get(Uri.parse('${BaseUrl.api}/bukti_pekerjaan/${widget.teknisiId}'));
 
       if (teknisiRes.statusCode == 200 &&
           layananRes.statusCode == 200 &&
