@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../../config/base_url.dart';
 import '../pengguna/pemesanan/form_pemesanan.dart';
+import '../../services/keranjang_service.dart';
 
 class HalamanLayanan extends StatefulWidget {
   final int idTeknisi;
@@ -68,6 +69,10 @@ class _HalamanLayananState extends State<HalamanLayanan> {
   Future<void> fetchDetail() async {
     final url = Uri.parse(
         "${BaseUrl.api}/layanan-detail?id_teknisi=${widget.idTeknisi}&id_keahlian=${widget.idKeahlian}");
+        print("🔎 URL dipanggil: $url");
+
+        print("🖼️ Data gambar dari API: $gambar");
+
 
     try {
       final res = await http.get(url).timeout(const Duration(seconds: 8));
@@ -114,7 +119,7 @@ class _HalamanLayananState extends State<HalamanLayanan> {
                   Stack(
                     children: [
                       Image.network(
-                        "${BaseUrl.storage}/gambar_layanan/${(gambar.isNotEmpty ? gambar.first : 'default_layanan.jpg')}",
+                        "${BaseUrl.storage}/${(gambar.isNotEmpty ? gambar.first : 'gambar_layanan/default_layanan.jpg')}",
                         width: double.infinity,
                         height: 240,
                         fit: BoxFit.cover,
@@ -160,45 +165,98 @@ class _HalamanLayananState extends State<HalamanLayanan> {
 
   Widget _bottomButton() {
     return Container(
-      color: Colors.amber[600],
-      padding: const EdgeInsets.all(16),
-      child: ElevatedButton(
-        onPressed: () {
-          if (idUser == null) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(const SnackBar(content: Text("⚠️ Anda belum login")));
-            return;
-          }
+      padding: const EdgeInsets.all(12),
+      color: Colors.white,
+      child: Row(
+        children: [
+          // 🛒 Tombol Keranjang
+          Expanded(
+            flex: 1,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                if (idUser == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("⚠️ Anda belum login")),
+                  );
+                  return;
+                }
 
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => FormPemesanan(
-                idPelanggan: idUser!,
-                idTeknisi: widget.idTeknisi,
-                idKeahlian: widget.idKeahlian,
-                namaTeknisi: widget.nama,
-                namaKeahlian: widget.deskripsi,
-                harga: hargaMin ?? 0,
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Menambahkan ke keranjang...")),
+                );
+
+                bool success = await KeranjangService().tambahKeranjang(
+                  idTeknisi: widget.idTeknisi,
+                  idKeahlian: widget.idKeahlian,
+                  harga: hargaMin ?? 0,
+                );
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? "✅ Berhasil ditambahkan ke keranjang"
+                        : "❌ Gagal menambahkan ke keranjang"),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+              label: const Text(''),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[800],
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.amber[600],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
           ),
-          elevation: 0,
-        ),
-        child: const Text(
-          "Pesan Sekarang",
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+
+          const SizedBox(width: 10),
+
+          // 🟡 Tombol Pesan Sekarang
+          Expanded(
+            flex: 3,
+            child: ElevatedButton(
+              onPressed: () {
+                if (idUser == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("⚠️ Anda belum login")),
+                  );
+                  return;
+                }
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FormPemesanan(
+                      idPelanggan: idUser!,
+                      idTeknisi: widget.idTeknisi,
+                      idKeahlian: widget.idKeahlian,
+                      namaTeknisi: widget.nama,
+                      namaKeahlian: widget.deskripsi,
+                      harga: hargaMin ?? 0,
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[600],
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                "Pesan Sekarang",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

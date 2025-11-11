@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'chat.dart'; // Pastikan file ini sudah ada
+import 'chat_detail_page.dart'; // pastikan file ini ada
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -9,158 +9,173 @@ class ChatListPage extends StatefulWidget {
 }
 
 class _ChatListPageState extends State<ChatListPage> {
-  final List<Map<String, String>> _teknisiList = [
-    {
-      "nama": "Barji Jegel",
-      "gambar": "https://randomuser.me/api/portraits/men/1.jpg",
-    },
-    {
-      "nama": "Agus Pratama",
-      "gambar": "https://randomuser.me/api/portraits/men/2.jpg",
-    },
-    {
-      "nama": "uhuy",
-      "gambar": "https://randomuser.me/api/portraits/women/3.jpg",
-    },
-    {
-      "nama": "Budi santoso",
-      "gambar": "https://randomuser.me/api/portraits/men/4.jpg",
-    },
-    {
-      "nama": "Carolyn Francis",
-      "gambar": "https://randomuser.me/api/portraits/women/5.jpg",
-    },
-    {
-      "nama": "Isaiah McGee",
-      "gambar": "https://randomuser.me/api/portraits/men/6.jpg",
-    },
-    {
-      "nama": "Mark Holmes",
-      "gambar": "https://randomuser.me/api/portraits/men/7.jpg",
-    },
-    {
-      "nama": "Russell McGuire",
-      "gambar": "https://randomuser.me/api/portraits/women/8.jpg",
-    },
-  ];
+  int _selectedIndex = 2; // posisi default di tab Chat
 
-  String _searchQuery = "";
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    switch (index) {
+      case 0:
+        // Contoh: Navigator.push ke Beranda
+        // Navigator.push(context, MaterialPageRoute(builder: (_) => const BerandaPage()));
+        break;
+      case 1:
+        // Navigator.push(context, MaterialPageRoute(builder: (_) => const AktivitasPage()));
+        break;
+      case 2:
+        // Sudah di halaman Chat
+        break;
+      case 3:
+        // Navigator.push(context, MaterialPageRoute(builder: (_) => const NotifikasiPage()));
+        break;
+      case 4:
+        // Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilPage()));
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final filteredList = _teknisiList
-        .where((teknisi) =>
-            teknisi["nama"]!.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+    final List<Map<String, dynamic>> chats = [
+      {
+        'name': 'Mas Cahyo',
+        'message': 'Lorem ipsum lihat seleng...',
+        'time': '09:42 AM',
+        'unread': 10,
+      },
+      {
+        'name': 'Rahmat TV',
+        'message': 'Lorem ipsum lihat seleng...',
+        'time': '09:42 AM',
+        'unread': 0,
+      },
+      {
+        'name': 'Bagas Bengkel',
+        'message': 'Lorem ipsum lihat seleng...',
+        'time': '09:42 AM',
+        'unread': 5,
+      },
+      {
+        'name': 'Adil Teknisi pipa',
+        'message': 'Lorem ipsum lihat seleng...',
+        'time': '09:42 AM',
+        'unread': 0,
+      },
+    ];
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0C4481),
-        title: const Text(
-          "Chat Kamu",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Column(
-        children: [
-          // 🔹 Search Bar
-          Container(
-            color: const Color(0xFF0C4481),
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-              decoration: InputDecoration(
-                hintText: "Search",
-                filled: true,
-                fillColor: Colors.white,
-                prefixIcon: const Icon(Icons.search),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
+      backgroundColor: const Color(0xFFF7FBFC),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Chat",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: "Silahkan cari",
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.grey.shade200,
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
-            ),
-          ),
-
-          // 🔹 List Chat
-          Expanded(
-            child: ListView.builder(
-              itemCount: filteredList.length,
-              itemBuilder: (context, index) {
-                final teknisi = filteredList[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    radius: 25,
-                    backgroundImage: NetworkImage(teknisi["gambar"]!),
-                  ),
-                  title: Text(teknisi["nama"]!),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _iconButton(
-                        icon: Icons.chat,
-                        color: const Color(0xFFFFCC33),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChatPage(
-                                namaTeknisi: teknisi["nama"]!,
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: chats.length,
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemBuilder: (context, index) {
+                    final chat = chats[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Colors.grey,
+                      ),
+                      title: Text(
+                        chat['name'],
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(chat['message']),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            chat['time'],
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
+                          ),
+                          if (chat['unread'] > 0)
+                            Container(
+                              margin: const EdgeInsets.only(top: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                "${chat['unread']}+",
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          );
-                        },
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      _iconButton(
-                        icon: Icons.call,
-                        color: const Color(0xFF0C4481),
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                "Memanggil ${teknisi["nama"]}...",
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ChatDetailPage(name: chat['name']),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
+      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  // 🔹 Custom tombol ikon
-  Widget _iconButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-        ),
-        padding: const EdgeInsets.all(8),
-        child: Icon(icon, color: Colors.white, size: 20),
-      ),
+  /// Bottom Navigation Bar
+  Widget _buildBottomNav() {
+    return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: const Color(0xFF0C4481),
+      currentIndex: _selectedIndex,
+      onTap: _onItemTapped,
+      selectedItemColor: const Color(0xFFFFC918),
+      unselectedItemColor: Colors.white,
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Beranda'),
+        BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Aktivitas'),
+        BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: 'Chat'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.notifications), label: 'Notifikasi'),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
+      ],
     );
   }
 }

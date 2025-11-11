@@ -1,10 +1,24 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'config/base_url.dart';
 import 'screens/splash/splash_screen.dart';
-import 'screens/splash/auth_gate.dart'; // pastikan path ini sesuai
+import 'screens/splash/auth_gate.dart';
+import 'screens/pengguna/Pembayaran/struk_page.dart';
+import 'screens/pengguna/home/home_page.dart';
+import 'utils/ui_helper.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
+
 }
+
+/// 🔗 Listener deep link seperti: 
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -12,6 +26,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: 'Lato',
@@ -19,8 +34,17 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF5F5F5),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-
-      // Gunakan logika atau widget khusus untuk menentukan halaman awal
+      routes: {
+        '/halaman_struk': (_) => const StrukPage(
+              kodePemesanan: 'default',
+              namaLayanan: 'default',
+              alamat: 'default',
+              tanggal: 'default',
+              namaTeknisi: 'default',
+              harga: 0,
+            ),
+        '/dashboard': (_) => const HomePage(),
+      },
       home: const SplashScreenWrapper(),
     );
   }
@@ -28,7 +52,6 @@ class MyApp extends StatelessWidget {
 
 class SplashScreenWrapper extends StatefulWidget {
   const SplashScreenWrapper({super.key});
-
   @override
   State<SplashScreenWrapper> createState() => _SplashScreenWrapperState();
 }
@@ -44,22 +67,18 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
   }
 
   Future<void> _checkLoginStatus() async {
-    // Contoh: tunggu splash 2 detik dan cek status login
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
     await Future.delayed(const Duration(seconds: 2));
-
-    // Misal cek dari SharedPreferences (ini dummy)
     setState(() {
-      _isLoggedIn = false; // ubah ke true kalau user sudah login
+      _isLoggedIn = token != null;
       _isLoading = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const SplashScreen();
-    } else {
-      return _isLoggedIn ? const AuthGate() : const SplashScreen();
-    }
+    if (_isLoading) return const SplashScreen();
+    return _isLoggedIn ? const AuthGate() : const SplashScreen();
   }
 }

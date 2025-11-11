@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import '../tugas/detail_tugas_screen.dart'; // ✅ pastikan file ini ada
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../../config/base_url.dart';
+import '../../../widgets/network_image_with_fallback.dart';
+import '../tugas/detail_tugas_screen.dart';
 
 class MyOrderScreen extends StatefulWidget {
   const MyOrderScreen({super.key});
@@ -13,40 +18,65 @@ class _MyOrderScreenState extends State<MyOrderScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final List<Map<String, dynamic>> ongoingOrders = [
-    {
-      "name": "Barji Jegel",
-      "rating": 4.3,
-      "service": "Pembersihan AC",
-      "estimate": "35 Menit",
-      "price": "Rp 50.000,-",
-      "imageUrl":
-          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e",
-    },
-    {
-      "name": "Beno Arsudito",
-      "rating": 4.5,
-      "service": "Perbaikan TV",
-      "estimate": "1 Jam",
-      "price": "Rp 110.000,-",
-      "imageUrl":
-          "https://images.unsplash.com/photo-1603415526960-f7e0328c63b1",
-    },
-    {
-      "name": "Hasan Ali",
-      "rating": 4.2,
-      "service": "Perbaikan Atap Rumah",
-      "estimate": "35 Menit",
-      "price": "Rp 189.000,-",
-      "imageUrl":
-          "https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1",
-    },
-  ];
+  List<dynamic> ongoingOrders = [];
+  List<dynamic> completedOrders = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    fetchPesanan();
+  }
+
+  Future<void> fetchPesanan() async {
+    debugPrint("📦 [MyOrderScreen] Mulai ambil pesanan...");
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int? idUser = prefs.getInt('id_user');
+      String? role = prefs.getString('role');
+
+      if (idUser == null || role == null) {
+        debugPrint("⚠️ User belum login, hentikan fetchPesanan()");
+        return;
+      }
+
+      String url = "${BaseUrl.server}/api/get_pemesanan?";
+      if (role == 'pelanggan') {
+        url += "id_pelanggan=$idUser";
+      } else if (role == 'teknisi') {
+        url += "id_teknisi=$idUser";
+      }
+
+      debugPrint("🌐 Fetch URL: $url");
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        debugPrint("🧩 Response dari API: $body");
+
+        if (body['status'] == true && body['data'] != null) {
+          final List<dynamic> data = body['data'];
+
+          setState(() {
+            ongoingOrders =
+                data.where((p) => p['status'] != 'selesai').toList();
+            completedOrders =
+                data.where((p) => p['status'] == 'selesai').toList();
+            isLoading = false;
+          });
+        } else {
+          debugPrint("⚠️ Data tidak ditemukan di response");
+          setState(() => isLoading = false);
+        }
+      } else {
+        debugPrint("❌ HTTP Error: ${response.statusCode}");
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      debugPrint("💥 Error fetchPesanan: $e");
+      setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -55,149 +85,153 @@ class _MyOrderScreenState extends State<MyOrderScreen>
     super.dispose();
   }
 
-  Widget orderCard({
-    required String name,
-    required double rating,
-    required String service,
-    required String estimate,
-    required String price,
-    required String imageUrl,
-  }) {
+  Widget orderCard(Map<String, dynamic> order) {
+    final namaTeknisi = order['nama_teknisi'] ?? 'Tidak diketahui';
+    final namaLayanan = order['nama_keahlian'] ?? '-';
+    final tanggal = order['tanggal_booking'] ?? '-';
+    final alamat = order['alamat_lengkap'] ?? '-';
+    final harga = order['harga'] ?? 0;
+    final status = order['status'] ?? '-';
+    final imageUrl =
+        "${BaseUrl.server}/storage/profil/${order['foto_teknisi'] ?? 'default.png'}";
+
+    Color color;
+    switch (status.toLowerCase()) {
+      case 'selesai':
+        color = Colors.green;
+        break;
+      case 'diproses':
+        color = Colors.blue;
+        break;
+      default:
+        color = Colors.orange;
+    }
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Material(
-        elevation: 6,
+        elevation: 5,
         borderRadius: BorderRadius.circular(20),
         shadowColor: Colors.black26,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: Colors.white,
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Avatar
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.blue.shade100, width: 2),
-                  shape: BoxShape.circle,
-                ),
-                child: CircleAvatar(
-                  radius: 30,
-                  backgroundImage: NetworkImage(imageUrl),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OrderDetailScreen(
+                  name: namaTeknisi,
+                  service: namaLayanan,
+                  estimate: tanggal,
+                  price: "Rp $harga",
+                  imageUrl: imageUrl,
                 ),
               ),
-              const SizedBox(width: 14),
-
-              // Info utama
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            name,
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(50),
+                  child: NetworkImageWithFallback(
+                    imageUrl: imageUrl,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        namaTeknisi,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        namaLayanan,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFF0C4481),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today,
+                              size: 13, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            tanggal,
                             style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                                fontSize: 12, color: Colors.black54),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.location_on,
+                              size: 13, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              alamat,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
                             ),
-                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          status.toUpperCase(),
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        Text(
-                          rating.toString(),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      "Service",
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.blue.shade700,
                       ),
-                    ),
-                    Text(
-                      service,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      "Estimasi Waktu: $estimate",
-                      style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black54),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Tombol kanan
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => OrderDetailScreen(
-                          name: name,
-                          service: service,
-                          estimate: estimate,
-                          price: price,
-                          imageUrl: imageUrl,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFFD54F), Color(0xFFFFB300)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      "Lihat Status",
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
+                    ],
                   ),
                 ),
-                  const SizedBox(height: 12),
-                  Text(
-                    price,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
+                Text(
+                  "Rp $harga",
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -220,10 +254,43 @@ class _MyOrderScreenState extends State<MyOrderScreen>
             child: Text(
               count.toString(),
               style: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget buildOrderList(List<dynamic> list, String emptyText) {
+    if (list.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Lottie.asset("assets/lottie/empty.json", width: 180, height: 180),
+            const SizedBox(height: 20),
+            Text(
+              emptyText,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: fetchPesanan,
+      child: ListView.builder(
+        itemCount: list.length,
+        itemBuilder: (context, index) => orderCard(list[index]),
       ),
     );
   }
@@ -235,7 +302,7 @@ class _MyOrderScreenState extends State<MyOrderScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // HEADER
+            // 🔹 HEADER
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               decoration: const BoxDecoration(
@@ -252,17 +319,18 @@ class _MyOrderScreenState extends State<MyOrderScreen>
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                   ),
                   const Text(
-                    "Pesanan",
+                    "Pesanan Saya",
                     style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // TABBAR
+            // 🔹 TABBAR
             Container(
               margin: const EdgeInsets.only(top: 12),
               child: TabBar(
@@ -272,55 +340,28 @@ class _MyOrderScreenState extends State<MyOrderScreen>
                 indicatorColor: const Color(0xFF0A4CA7),
                 indicatorWeight: 3,
                 tabs: [
-                  buildTab("Pesanan Berlangsung", ongoingOrders.length),
-                  buildTab("Pesanan Selesai", 0),
+                  buildTab("Berlangsung", ongoingOrders.length),
+                  buildTab("Selesai", completedOrders.length),
                 ],
               ),
             ),
 
-            // TABBAR VIEW
+            // 🔹 TABBAR VIEW
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  ListView.builder(
-                    itemCount: ongoingOrders.length,
-                    itemBuilder: (context, index) {
-                      final order = ongoingOrders[index];
-                      return orderCard(
-                        name: order["name"],
-                        rating: order["rating"],
-                        service: order["service"],
-                        estimate: order["estimate"],
-                        price: order["price"],
-                        imageUrl: order["imageUrl"],
-                      );
-                    },
-                  ),
-                  // Pesanan selesai (kosong)
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+              child: isLoading
+                  ? Center(
+                      child: Lottie.asset("assets/lottie/loading.json",
+                          width: 320),
+                    )
+                  : TabBarView(
+                      controller: _tabController,
                       children: [
-                        Lottie.asset(
-                          "assets/lottie/empty.json",
-                          width: 200,
-                          height: 200,
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          "Belum ada pesanan selesai",
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                        buildOrderList(
+                            ongoingOrders, "Belum ada pesanan berlangsung"),
+                        buildOrderList(
+                            completedOrders, "Belum ada pesanan selesai"),
                       ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),

@@ -153,13 +153,19 @@ class _FormPemesananState extends State<FormPemesanan> {
     }
 
     setState(() => sending = true);
-    final tanggal = "${selectedDate.toIso8601String().substring(0, 10)} ${selectedTime.format(context)}";
+
+    // ✅ Pisahkan tanggal dan jam secara eksplisit
+    final tanggalBooking = DateFormat('yyyy-MM-dd').format(selectedDate);
+    final jamBooking = DateFormat('HH:mm:ss').format(
+      DateTime(0, 1, 1, selectedTime.hour, selectedTime.minute),
+    );
 
     final body = {
       "id_pelanggan": widget.idPelanggan,
       "id_teknisi": widget.idTeknisi,
       "id_keahlian": widget.idKeahlian,
-      "tanggal_booking": tanggal,
+      "tanggal_booking": tanggalBooking, // contoh: 2025-11-11
+      "jam_booking": jamBooking,         // contoh: 09:00:00
       "keluhan": keluhan,
       "harga": totalPembayaran,
       if (alamatDipilih?['id_alamat'] != null) "id_alamat": alamatDipilih!['id_alamat'],
@@ -176,9 +182,8 @@ class _FormPemesananState extends State<FormPemesanan> {
 
       setState(() => sending = false);
 
-      print("Status code: ${res.statusCode}");
-      print("Response body: ${res.body}");
       print("Body dikirim: ${jsonEncode(body)}");
+      print("Response: ${res.statusCode} ${res.body}");
 
       if (res.statusCode == 200 || res.statusCode == 201) {
         final data = jsonDecode(res.body);
@@ -190,9 +195,18 @@ class _FormPemesananState extends State<FormPemesanan> {
               kodePemesanan: kode,
               metodePembayaran: selectedPayment,
               totalPembayaran: totalPembayaran,
+              namaTeknisi: widget.namaTeknisi,
+              namaKeahlian: widget.namaKeahlian,
+              keluhan: keluhan,
+              tanggalBooking: tanggalBooking,
+              jamBooking: jamBooking,
+              alamat: alamatDipilih?['alamat_lengkap'] ?? "Alamat belum diatur", // ✅ kirim alamat
             ),
           ),
         );
+
+
+
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Gagal membuat pesanan (${res.statusCode})")),

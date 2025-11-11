@@ -6,6 +6,7 @@ import '../../services/api_service.dart';
 import '../../screens/pengguna/home/home_page.dart';
 import 'signup_screen.dart';
 import '../../screens/teknisi/home/Home_page_teknisi.dart';
+import '../auth/reset_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -119,14 +120,43 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         }
-      } else if (result['statusCode'] == 401 || result['statusCode'] == 403) {
-        final data = result['data'];
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(data['message'] ?? 'Email atau password salah'),
-            backgroundColor: Colors.red,
+      } else if (result['statusCode'] == 423) {
+      // 🔒 Saat Laravel mengembalikan error "Locked"
+      final data = result['data'];
+      final message = data['message'] ?? 'Akun dikunci sementara';
+      final lockedUntil = data['locked_until'];
+
+      // ✅ Tampilkan dialog ke user
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text(
+            'Akun Dikunci',
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
-        );
+          content: Text(
+            lockedUntil != null
+                ? '$message\n\nBuka kembali: $lockedUntil'
+                : message,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+    else if (result['statusCode'] == 401 || result['statusCode'] == 403) {
+      // Salah email/password biasa
+      final data = result['data'];
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(data['message'] ?? 'Email atau password salah'),
+          backgroundColor: Colors.red,
+        ),
+      );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -205,7 +235,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () {},
+                          
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+                            );
+                          },
                           child: const Text('Forgot password?'),
                         ),
                       ),

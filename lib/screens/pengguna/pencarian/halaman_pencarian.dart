@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import '../../../config/base_url.dart';
 import '../../teknisi/halaman_layanan.dart';
+import '../pemesanan/form_pemesanan.dart';
 import 'package:shimmer/shimmer.dart';
 
 class HalamanPencarian extends StatefulWidget {
@@ -19,13 +22,15 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
   String _selectedCategory = 'Semua';
   String lokasi = "";
   String sortBy = "rating";
+  double minHarga = 0;
+  double maxHarga = 2000000;
 
   bool _isLoading = false;
   bool _isLoadMore = false;
   int page = 1;
   bool hasMore = true;
   List<dynamic> teknisiList = [];
-  Timer? _debounce; // ✅ Debounce
+  Timer? _debounce;
 
   final List<String> _categories = [
     "Semua",
@@ -37,6 +42,20 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     "Elektronik",
   ];
 
+  String formatRupiah(int number) {
+    final format = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    return format.format(number);
+  }
+
+  int parseHarga(dynamic harga) {
+    if (harga == null) return 0;
+
+    String str = harga.toString();
+    str = str.replaceAll('.', '').replaceAll(',', ''); // hapus titik/koma
+    return int.tryParse(str) ?? 0;
+  }
+
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +66,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
 
   @override
   void dispose() {
-    _debounce?.cancel(); // ✅ Good practice
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -56,13 +75,9 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     if (loadMore && !hasMore) return;
 
     if (!loadMore) {
-      setState(() {
-        _isLoading = true;
-      });
+      setState(() => _isLoading = true);
     } else {
-      setState(() {
-        _isLoadMore = true;
-      });
+      setState(() => _isLoadMore = true);
     }
 
     final queryParams = <String, String>{
@@ -116,24 +131,21 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
       appBar: _buildAppBar(),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSearchBar(),
+            _buildSearchBarWithFilter(),
             const SizedBox(height: 10),
-            _buildLokasiField(),
-            const SizedBox(height: 20),
             _buildHeaderRow(yellow),
             const SizedBox(height: 14),
-            _buildCategoryFilters(),
-            const SizedBox(height: 24),
 
-            // ✅ Loading Skeleton di posisi benar
-            if (_isLoading) _buildSkeletonGrid()
-            else _buildResultsList(yellow),
+            // hasil pencarian
+            if (_isLoading)
+              _buildSkeletonGrid()
+            else
+              _buildResultsList(yellow),
 
             _buildLoadMoreButton(),
           ],
@@ -142,84 +154,165 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(100),
-      child: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFF0C4481),
-        elevation: 0,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(40),
-            bottomRight: Radius.circular(40),
-          ),
+    PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: const Color(0xFF0C4481),
+      elevation: 0,
+      centerTitle: true,
+      title: const Text(
+        "Pencarian",
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
         ),
-        leading: Padding(
-          padding: const EdgeInsets.only(top: 14),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
+      ),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+          onPressed: () {
+            // TODO: arahkan ke halaman keranjang / pesanan
+          },
         ),
-        title: const Padding(
-          padding: EdgeInsets.only(top: 14),
-          child: Row(
-            children: [
-              Icon(Icons.location_on, color: Colors.white, size: 20),
-              SizedBox(width: 2),
-              Text(
-                "Kota Batam",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
+      ],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBarWithFilter() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    child: Row(
+      children: [
+        // 🔍 Kotak pencarian
+        Expanded(
+          child: TextField(
+            controller: TextEditingController(text: widget.searchQuery),
+            onChanged: (value) => widget.searchQuery = value,
+            onSubmitted: (value) => resetAndFetch(),
+            decoration: InputDecoration(
+              hintText: "Cari teknisi atau layanan...",
+              prefixIcon: const Icon(Icons.search),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
               ),
-            ],
+              filled: true,
+              fillColor: Colors.white,
+            ),
           ),
         ),
+        const SizedBox(width: 8),
+        // ⚙️ Tombol filter
+        InkWell(
+          onTap: () {
+            _showFilterSheet(); // nanti kamu bisa isi modal filter di sini
+          },
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.filter_list, color: Colors.black87),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return TextField(
-      textInputAction: TextInputAction.search, // ✅ Keyboard berubah
-      onChanged: (value) {
-        widget.searchQuery = value;
-      },
-      onSubmitted: (value) {
-        resetAndFetch(); // ✅ Hanya saat Enter
-      },
-      decoration: InputDecoration(
-        hintText: "Cari teknisi atau layanan...",
-        prefixIcon: const Icon(Icons.search),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-    );
-  }
-
-  Widget _buildLokasiField() {
-    return TextField(
-      onChanged: (value) {
-        lokasi = value;
-
-        // ✅ Debounce lokasi
-        if (_debounce?.isActive ?? false) _debounce!.cancel();
-        _debounce = Timer(const Duration(milliseconds: 600), () {
-          resetAndFetch();
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setModalState) {
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Filter Pencarian",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20),
+                const Text("Kategori"),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  children: _categories.map((cat) {
+                    final selected = _selectedCategory == cat;
+                    return ChoiceChip(
+                      label: Text(cat),
+                      selected: selected,
+                      onSelected: (v) {
+                        setModalState(() => _selectedCategory = cat);
+                      },
+                      selectedColor: const Color(0xFF0C4481),
+                      labelStyle: TextStyle(
+                        color: selected ? Colors.white : Colors.black87,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+                const Text("Rentang Harga"),
+                RangeSlider(
+                  values: RangeValues(minHarga, maxHarga),
+                  min: 0,
+                  max: 5000000,
+                  divisions: 50,
+                  activeColor: const Color(0xFF0C4481),
+                  labels: RangeLabels(
+                    "Rp${minHarga.toInt()}",
+                    "Rp${maxHarga.toInt()}",
+                  ),
+                  onChanged: (values) {
+                    setModalState(() {
+                      minHarga = values.start;
+                      maxHarga = values.end;
+                    });
+                  },
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0C4481)),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      resetAndFetch();
+                    },
+                    child: const Text("Terapkan", style: TextStyle(color: Colors.white)),
+                  ),
+                )
+              ],
+            ),
+          );
         });
       },
-      decoration: InputDecoration(
-        hintText: "Filter lokasi...",
-        prefixIcon: const Icon(Icons.location_city),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
-        filled: true,
-        fillColor: Colors.white,
-      ),
     );
   }
 
@@ -251,43 +344,6 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     );
   }
 
-  Widget _buildCategoryFilters() {
-    return SizedBox(
-      height: 40,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final category = _categories[index];
-          return GestureDetector(
-            onTap: () {
-              _selectedCategory = category;
-              resetAndFetch();
-            },
-            child: Container(
-              margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-              decoration: BoxDecoration(
-                color: _selectedCategory == category
-                    ? const Color(0xFF1976D2)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                category,
-                style: TextStyle(
-                  color: _selectedCategory == category
-                      ? Colors.white
-                      : Colors.black87,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildResultsList(Color yellow) {
     if (teknisiList.isEmpty && !_isLoading) {
       return const Center(child: Text("Tidak ada teknisi ditemukan."));
@@ -300,7 +356,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.72, // ✅ FIX Overflow
+        childAspectRatio: 0.72,
       ),
       itemCount: teknisiList.length,
       itemBuilder: (context, index) {
@@ -310,6 +366,14 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
   }
 
   Widget _buildTeknisiCard(dynamic teknisi, Color yellow) {
+    String gambarFile = teknisi['gambar']?.toString() ?? '';
+    gambarFile = gambarFile.replaceFirst(RegExp(r'^/+'), '');
+    String gambarUrl = "${BaseUrl.storage}/$gambarFile";
+
+    int hargaMin = parseHarga(teknisi['harga_min']);
+    int hargaMax = parseHarga(teknisi['harga_max']);
+    double rating = double.tryParse(teknisi["rating"].toString()) ?? 0.0;
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -320,10 +384,10 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
               idKeahlian: int.parse(teknisi["id_keahlian"].toString()),
               nama: teknisi["nama"] ?? '',
               deskripsi: teknisi["nama_keahlian"] ?? '',
-              rating: double.tryParse(teknisi["rating"].toString()) ?? 0.0,
-              harga: int.tryParse(teknisi["harga_min"].toString()) ?? 0,
-              gambarUtama: "${BaseUrl.storage}/${teknisi['gambar']}",
-              gambarLayanan: ["${BaseUrl.storage}/${teknisi['gambar']}"],
+              rating: rating,
+              harga: hargaMin,
+              gambarUtama: gambarUrl,
+              gambarLayanan: [gambarUrl],
             ),
           ),
         );
@@ -341,13 +405,19 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
                 topRight: Radius.circular(16),
               ),
               child: Image.network(
-                "${BaseUrl.storage}/${teknisi['gambar']}",
+                gambarUrl,
                 height: 100,
                 width: double.infinity,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 100,
+                    color: Colors.grey.shade300,
+                    child: const Icon(Icons.image, size: 40, color: Colors.white),
+                  );
+                },
               ),
             ),
-
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -355,7 +425,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      teknisi["nama_keahlian"],
+                      teknisi["nama_keahlian"] ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -363,23 +433,45 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
                         color: Color(0xFF0C4481),
                       ),
                     ),
-
-                    Text("Rp ${teknisi['harga_min']} - ${teknisi['harga_max']}"),
-
+                    // Tampilkan harga dalam format rupiah
+                    Text(
+                      "${formatRupiah(hargaMin)} - ${formatRupiah(hargaMax)}",
+                    ),
                     Row(
                       children: [
-                        const Icon(Icons.star,
-                            size: 16, color: Colors.amber),
-                        Text("${teknisi['rating']}"),
+                        const Icon(Icons.star, size: 16, color: Colors.amber),
+                        Text("$rating"),
                       ],
                     ),
-
                     const Spacer(),
-
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          final idPelanggan = prefs.getInt('id_pelanggan');
+
+                          if (idPelanggan == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Silakan login terlebih dahulu")),
+                            );
+                            return;
+                          }
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => FormPemesanan(
+                                idPelanggan: idPelanggan,
+                                idTeknisi: int.parse(teknisi["id_teknisi"].toString()),
+                                idKeahlian: int.parse(teknisi["id_keahlian"].toString()),
+                                namaTeknisi: teknisi["nama"] ?? '',
+                                namaKeahlian: teknisi["nama_keahlian"] ?? '',
+                                harga: hargaMin,
+                              ),
+                            ),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: yellow,
                           foregroundColor: Colors.black,
