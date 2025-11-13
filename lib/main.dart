@@ -46,6 +46,7 @@ class MyApp extends StatelessWidget {
         '/dashboard': (_) => const HomePage(),
       },
       home: const SplashScreenWrapper(),
+      
     );
   }
 }

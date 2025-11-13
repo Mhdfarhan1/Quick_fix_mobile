@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../pengguna/home/home_page.dart';
 import '../auth/login_screen.dart';
+import '../teknisi/home/Home_page_teknisi.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -25,15 +26,22 @@ class _AuthGateState extends State<AuthGate> {
     final userJson = prefs.getString('user');
 
     if (token != null && userJson != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
+      final user = jsonDecode(userJson);
+      final role = user['role']?.toString().toLowerCase();
+
+      if (role == 'teknisi') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeTeknisiPage()),
+        );
+      } else if (role == 'pelanggan') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      }
     } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      Navigator.pushReplacementNamed(context, '/login');
     }
   }
 
