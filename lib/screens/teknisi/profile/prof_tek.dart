@@ -109,7 +109,6 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
               ],
             ),
           ),
-          const Icon(Icons.chat_bubble_outline, color: Colors.white),
         ],
       ),
     );

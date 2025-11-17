@@ -5,6 +5,10 @@ import '../profile/prof_tek.dart';
 import '../riwayat/riwayat_teknisi_page.dart';
 import '../lainnya/lainnya_page.dart';
 import '../pesan/pesan_teknisi_page.dart';
+import '../home/chat_teknisi_page.dart';
+import '../../teknisi/home/chat_detail_teknisi_page.dart';
+import '../home/notifikasi_page.dart';
+
 
 class HomeTeknisiPage extends StatefulWidget {
   const HomeTeknisiPage({super.key});
@@ -96,16 +100,35 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.chat_bubble_outline,
-                              color: Colors.white),
-                          onPressed: () {},
+                          icon: const Icon(
+                            Icons.chat_bubble_outline,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const ChatTeknisiPage(), // arah ke halaman chat
+                              ),
+                            );
+                          },
                         ),
                         Stack(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.notifications_none,
-                                  color: Colors.white),
-                              onPressed: () {},
+                              icon: const Icon(
+                                Icons.notifications_none,
+                                color: Colors.white,
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const NotifikasiPage(),
+                                  ),
+                                );
+                              },
                             ),
                             Positioned(
                               right: 10,
@@ -130,10 +153,13 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Siap Kerja",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600)),
+                      const Text(
+                        "Siap Kerja",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const SizedBox(width: 8),
                       Switch(
                         activeColor: const Color(0xFFFECC32),
@@ -146,10 +172,13 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                           });
                         },
                       ),
-                      const Text("Istirahat",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600)),
+                      const Text(
+                        "Istirahat",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -165,14 +194,18 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
   @override
   Widget build(BuildContext context) {
     final sedang = tasks
-        .where((t) =>
-            t.statusTugas.toLowerCase().contains("sedang") ||
-            t.statusTugas.toLowerCase().contains("berjalan"))
+        .where(
+          (t) =>
+              t.statusTugas.toLowerCase().contains("sedang") ||
+              t.statusTugas.toLowerCase().contains("berjalan"),
+        )
         .toList();
-    final baru =
-        tasks.where((t) => t.statusTugas.toLowerCase() == "tugas baru").toList();
-    final selesai =
-        tasks.where((t) => t.statusTugas.toLowerCase() == "selesai").toList();
+    final baru = tasks
+        .where((t) => t.statusTugas.toLowerCase() == "tugas baru")
+        .toList();
+    final selesai = tasks
+        .where((t) => t.statusTugas.toLowerCase() == "selesai")
+        .toList();
 
     return Scaffold(
       backgroundColor: const Color(0xfff8f9fd),
@@ -204,11 +237,14 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Proses Sedang Berlangsung",
-              style: TextStyle(
-                  color: Color(0xFF0C4481),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16)),
+          const Text(
+            "Proses Sedang Berlangsung",
+            style: TextStyle(
+              color: Color(0xFF0C4481),
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
           const SizedBox(height: 12),
           SizedBox(
             height: 100,
@@ -220,7 +256,9 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                 final screenWidth = MediaQuery.of(context).size.width;
 
                 return Container(
-                  width: screenWidth * 0.81, // ✅ lebar 90% layar biar penuh tapi masih bisa geser
+                  width:
+                      screenWidth *
+                      0.81, // ✅ lebar 90% layar biar penuh tapi masih bisa geser
                   margin: EdgeInsets.only(
                     right: 12,
                     left: i == 0 ? 16 : 0, // jarak kiri hanya di item pertama
@@ -234,7 +272,9 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                     children: [
                       const CircleAvatar(
                         radius: 25,
-                        backgroundImage: AssetImage('assets/images/teknisi_avatar.png'),
+                        backgroundImage: AssetImage(
+                          'assets/images/teknisi_avatar.png',
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -266,7 +306,10 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade800,
                           borderRadius: BorderRadius.circular(12),
@@ -409,11 +452,14 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                     fontSize: 14,
                   ),
                 ),
-                Text(deskripsi,
-                    style: const TextStyle(fontSize: 12, color: Colors.black87)),
-                Text(jam,
-                    style:
-                        const TextStyle(fontSize: 11, color: Colors.black54)),
+                Text(
+                  deskripsi,
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+                Text(
+                  jam,
+                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                ),
               ],
             ),
           ),
@@ -421,10 +467,10 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
             onPressed: () {},
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFFCC33),
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             ),
             child: const Text(
               "Terima",
@@ -437,16 +483,18 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
   }
 
   Widget _statusCount(String label, int count) => Column(
-        children: [
-          Text(count.toString(),
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18)),
-          Text(label,
-              style: const TextStyle(color: Colors.white70, fontSize: 11)),
-        ],
-      );
+    children: [
+      Text(
+        count.toString(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
+      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+    ],
+  );
 
   Widget _buildTaskCard(Task t) {
     Color badgeColor;
@@ -473,23 +521,28 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
         children: [
           const CircleAvatar(
             radius: 25,
-            backgroundImage:
-                AssetImage('assets/images/teknisi_avatar.png'),
+            backgroundImage: AssetImage('assets/images/teknisi_avatar.png'),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t.namaPelanggan,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14)),
-                Text(t.deskripsi,
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.black87)),
-                Text(DateFormat('HH:mm').format(t.createdAt),
-                    style: const TextStyle(
-                        fontSize: 11, color: Colors.black54)),
+                Text(
+                  t.namaPelanggan,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  t.deskripsi,
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+                Text(
+                  DateFormat('HH:mm').format(t.createdAt),
+                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                ),
               ],
             ),
           ),
@@ -499,8 +552,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
               color: badgeColor,
               borderRadius: BorderRadius.circular(12),
             ),
-            child:
-                Text(badgeText, style: const TextStyle(fontSize: 11)),
+            child: Text(badgeText, style: const TextStyle(fontSize: 11)),
           ),
         ],
       ),
@@ -517,9 +569,13 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
       padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          const Text("Riwayat Bulan Ini",
-              style:
-                  TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0C4481))),
+          const Text(
+            "Riwayat Bulan Ini",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0C4481),
+            ),
+          ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(14),
@@ -542,7 +598,10 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
             children: const [
               _RiwayatBox(icon: Icons.star, label: "Ulasan", value: "0,0"),
               _RiwayatBox(
-                  icon: Icons.done_all, label: "Pekerjaan Selesai", value: "0"),
+                icon: Icons.done_all,
+                label: "Pekerjaan Selesai",
+                value: "0",
+              ),
             ],
           ),
         ],
@@ -556,23 +615,33 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
     switch (index) {
       case 0:
         Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const HomeTeknisiPage()));
+          context,
+          MaterialPageRoute(builder: (_) => const HomeTeknisiPage()),
+        );
         break;
       case 1:
         Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const PesananTeknisiPage()));
+          context,
+          MaterialPageRoute(builder: (_) => const PesananTeknisiPage()),
+        );
         break;
       case 2:
         Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const RiwayatTeknisiPage()));
+          context,
+          MaterialPageRoute(builder: (_) => const RiwayatTeknisiPage()),
+        );
         break;
       case 3:
         Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const TechnicianProfilePage()));
+          context,
+          MaterialPageRoute(builder: (_) => const TechnicianProfilePage()),
+        );
         break;
       case 4:
         Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const LainnyaPage()));
+          context,
+          MaterialPageRoute(builder: (_) => const LainnyaPage()),
+        );
         break;
     }
   }
@@ -592,7 +661,11 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: const Offset(0, -1))
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: const Offset(0, -1),
+          ),
         ],
       ),
       child: Row(
@@ -606,7 +679,9 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
                 decoration: BoxDecoration(
-                  color: active ? highlight.withOpacity(0.12) : Colors.transparent,
+                  color: active
+                      ? highlight.withOpacity(0.12)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -615,17 +690,25 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: active ? highlight.withOpacity(0.18) : Colors.transparent,
+                        color: active
+                            ? highlight.withOpacity(0.18)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(item.icon,
-                          color: active ? highlight : Colors.grey, size: 22),
+                      child: Icon(
+                        item.icon,
+                        color: active ? highlight : Colors.grey,
+                        size: 22,
+                      ),
                     ),
                     const SizedBox(height: 4),
-                    Text(item.label,
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: active ? highlight : Colors.grey)),
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: active ? highlight : Colors.grey,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -647,8 +730,11 @@ class _RiwayatBox extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  const _RiwayatBox(
-      {required this.icon, required this.label, required this.value});
+  const _RiwayatBox({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -664,9 +750,10 @@ class _RiwayatBox extends StatelessWidget {
           children: [
             Icon(icon, color: Colors.blueGrey),
             const SizedBox(height: 6),
-            Text(value,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             Text(label, style: const TextStyle(fontSize: 12)),
           ],
         ),

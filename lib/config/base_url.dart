@@ -10,16 +10,16 @@ class BaseUrl {
 
     // Android Emulator (default)
     if (Platform.isAndroid) {
-      return "http://192.168.1.2:8000";
+      return "http://10.18.229.247:8000";
     }
 
     // iOS Simulator
     if (Platform.isIOS) {
-      return "http://127.0.0.1:8000";
+      return "http://10.18.229.247:8000";
     }
 
     // Fallback (device fisik)
-    return "http://192.168.1.2:8000"; // ganti IP sesuai PC-mu
+    return "http://10.18.229.247:8000"; // ganti IP sesuai PC-mu
   }
 
   // API endpoint

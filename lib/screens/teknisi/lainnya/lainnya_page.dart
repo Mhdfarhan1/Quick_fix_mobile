@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:quick_fix/screens/teknisi/pesan/pesan_teknisi_page.dart';
 import 'package:quick_fix/screens/teknisi/riwayat/riwayat_teknisi_page.dart';
+import 'package:quick_fix/screens/teknisi/lainnya/pendapatan_page.dart';
 
 // Import halaman lain
 import '../home/Home_page_teknisi.dart';
 import '../profile/prof_tek.dart';
+import '../../../screens/auth/login_screen.dart';
+
+
 
 class LainnyaPage extends StatefulWidget {
   const LainnyaPage({super.key});
@@ -14,7 +18,7 @@ class LainnyaPage extends StatefulWidget {
 }
 
 class _LainnyaPageState extends State<LainnyaPage> {
-  int _currentIndex = 4; // posisi aktif = Lainnya
+  int _currentIndex = 4;
 
   void _onNavTap(int index) {
     setState(() => _currentIndex = index);
@@ -32,12 +36,14 @@ class _LainnyaPageState extends State<LainnyaPage> {
           context,
           MaterialPageRoute(builder: (_) => const PesananTeknisiPage()),
         );
+        break;
 
       case 2:
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const RiwayatTeknisiPage()),
         );
+        break;
 
       case 3:
         Navigator.pushReplacement(
@@ -47,9 +53,45 @@ class _LainnyaPageState extends State<LainnyaPage> {
         break;
 
       case 4:
-        // Sudah di halaman Lainnya
         break;
     }
+  }
+
+  // ==== POP-UP LOGOUT ====
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Konfirmasi'),
+          content: const Text('Anda yakin ingin keluar?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFC918),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
+              child: const Text('Keluar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -61,26 +103,55 @@ class _LainnyaPageState extends State<LainnyaPage> {
           children: [
             _buildHeader(),
             const SizedBox(height: 20),
+
             _buildSectionTitle("Preferensi"),
             _buildMenuCard([
               _buildMenuItem(Icons.security, "Keamanan akun"),
-              _buildMenuItem(Icons.payments, "Pendapatan"),
-              _buildMenuItem(Icons.miscellaneous_services, "Jenis Layanan Utama"),
+
+              // ⬅️ SUDAH DIBENERIN SINI
+              _buildMenuItem(
+                Icons.payments,
+                "Pendapatan",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PendapatanPage(),
+                    ),
+                  );
+                },
+              ),
+
+              _buildMenuItem(
+                Icons.miscellaneous_services,
+                "Jenis Layanan Utama",
+              ),
             ]),
+
             const SizedBox(height: 20),
+
             _buildSectionTitle("Pengaturan aplikasi"),
             _buildMenuCard([
               _buildMenuItem(Icons.language, "Bahasa"),
               _buildMenuItem(Icons.work_outline, "Portofolio"),
             ]),
+
             const SizedBox(height: 20),
+
             _buildSectionTitle("Lainnya"),
             _buildMenuCard([
               _buildMenuItem(Icons.help_outline, "Bantuan & Laporan"),
               _buildMenuItem(Icons.info_outline, "Tentang Aplikasi"),
               _buildMenuItem(Icons.privacy_tip_outlined, "Kebijakan Privasi"),
-              _buildMenuItem(Icons.logout, "Keluar Akun"),
+              _buildMenuItem(
+                Icons.logout,
+                "Keluar Akun",
+                onTap: () {
+                  _showLogoutDialog(context);
+                },
+              ),
             ]),
+
             const SizedBox(height: 80),
           ],
         ),
@@ -97,7 +168,7 @@ class _LainnyaPageState extends State<LainnyaPage> {
           height: 140,
           decoration: const BoxDecoration(
             image: DecorationImage(
-              image: AssetImage('assets/images/bg_teknisi.jpg'), // ubah sesuai assetmu
+              image: AssetImage('assets/images/bg_teknisi.jpg'),
               fit: BoxFit.cover,
             ),
           ),
@@ -106,7 +177,9 @@ class _LainnyaPageState extends State<LainnyaPage> {
           margin: const EdgeInsets.only(top: 90),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             elevation: 3,
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -124,16 +197,20 @@ class _LainnyaPageState extends State<LainnyaPage> {
                       children: const [
                         Text(
                           "Ahmad Sahroni",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
-                        Text("+6286399101234",
-                            style:
-                                TextStyle(color: Colors.black54, fontSize: 13)),
+                        Text(
+                          "+6286399101234",
+                          style: TextStyle(color: Colors.black54, fontSize: 13),
+                        ),
                         SizedBox(height: 6),
                         Row(
                           children: [
-                            Icon(Icons.star, color: Color(0xFFFFCC33), size: 18),
+                            Icon(
+                              Icons.star,
+                              color: Color(0xFFFFCC33),
+                              size: 18,
+                            ),
                             SizedBox(width: 4),
                             Text("4.9", style: TextStyle(fontSize: 14)),
                           ],
@@ -163,7 +240,10 @@ class _LainnyaPageState extends State<LainnyaPage> {
         child: Text(
           title,
           style: const TextStyle(
-              fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
       ),
     );
@@ -180,15 +260,17 @@ class _LainnyaPageState extends State<LainnyaPage> {
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String title) {
+  Widget _buildMenuItem(IconData icon, String title, {VoidCallback? onTap}) {
     return ListTile(
       leading: Icon(icon, color: Colors.black87),
       title: Text(title, style: const TextStyle(fontSize: 14)),
       trailing: const Icon(Icons.chevron_right),
-      onTap: () {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("$title belum tersedia.")));
-      },
+      onTap: onTap ??
+          () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("$title belum tersedia.")),
+            );
+          },
     );
   }
 
@@ -209,7 +291,10 @@ class _LainnyaPageState extends State<LainnyaPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-              color: Colors.black12, blurRadius: 6, offset: const Offset(0, -1))
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: const Offset(0, -1),
+          ),
         ],
       ),
       child: Row(
@@ -221,11 +306,9 @@ class _LainnyaPageState extends State<LainnyaPage> {
               borderRadius: BorderRadius.circular(12),
               onTap: () => _onNavTap(i),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
                 decoration: BoxDecoration(
-                  color:
-                      active ? highlight.withOpacity(0.12) : Colors.transparent,
+                  color: active ? highlight.withOpacity(0.12) : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -234,19 +317,23 @@ class _LainnyaPageState extends State<LainnyaPage> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: active
-                            ? highlight.withOpacity(0.18)
-                            : Colors.transparent,
+                        color: active ? highlight.withOpacity(0.18) : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(item.icon,
-                          color: active ? highlight : Colors.grey, size: 22),
+                      child: Icon(
+                        item.icon,
+                        color: active ? highlight : Colors.grey,
+                        size: 22,
+                      ),
                     ),
                     const SizedBox(height: 4),
-                    Text(item.label,
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: active ? highlight : Colors.grey)),
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: active ? highlight : Colors.grey,
+                      ),
+                    ),
                   ],
                 ),
               ),
