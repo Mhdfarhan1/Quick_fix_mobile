@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../config/base_url.dart';
-import '../kerja/proses_kerja_page.dart';
+import '../kerja/menuju_kerja_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
@@ -38,7 +38,7 @@ class DetailKerjaPage extends StatelessWidget {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => ProsesKerjaPage(data: body['data']),
+            builder: (_) => MenujuKerjaPage(data: body['data']),
           ),
         );
         return;

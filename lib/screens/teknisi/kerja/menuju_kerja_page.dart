@@ -6,24 +6,30 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../config/base_url.dart';
+import 'sedang_bekerja_page.dart';
 
-class ProsesKerjaPage extends StatefulWidget {
+class MenujuKerjaPage extends StatefulWidget {
   final Map<String, dynamic> data;
-  const ProsesKerjaPage({super.key, required this.data});
+  const MenujuKerjaPage({super.key, required this.data});
 
   @override
-  State<ProsesKerjaPage> createState() => _ProsesKerjaPageState();
+  State<MenujuKerjaPage> createState() => _MenujuKerjaPageState();
 }
 
-class _ProsesKerjaPageState extends State<ProsesKerjaPage>
+class _MenujuKerjaPageState extends State<MenujuKerjaPage>
     with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
   bool _isFollowing = true;
   bool _userInteracted = false;
+
+  String token = "";
+  Map<String, dynamic>? dataPemesanan;
 
   LatLng pelangganPos = LatLng(0, 0);
 
@@ -58,9 +64,28 @@ class _ProsesKerjaPageState extends State<ProsesKerjaPage>
     });
   }
 
+  void _showError(String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Gagal"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          )
+        ],
+      ),
+    );
+  }
+
+
   @override
   void initState() {
     super.initState();
+    _loadToken();
+    dataPemesanan = widget.data;
 
 
     final data = widget.data;
@@ -150,6 +175,21 @@ class _ProsesKerjaPageState extends State<ProsesKerjaPage>
     _trackingTimer = null;
     print("🛑 Tracking OFF");
   }
+
+  Future<void> _loadToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedToken = prefs.getString("token");
+
+    if (savedToken != null && savedToken.isNotEmpty) {
+      setState(() {
+        token = savedToken;
+      });
+      print("✅ Token dari storage: $token");
+    } else {
+      print("❌ Token tidak ditemukan di SharedPreferences");
+    }
+  }
+
 
   // ============================ LOCATION ============================
 
@@ -277,6 +317,58 @@ class _ProsesKerjaPageState extends State<ProsesKerjaPage>
 
     setState(() {});
   }
+
+  Future<void> _handleSampaiLokasi() async {
+    try {
+      final int idPemesanan = int.parse(widget.data["id_pemesanan"].toString());
+
+      if (token.isEmpty) {
+        _showError("Token tidak ditemukan, silakan login ulang.");
+        return;
+      }
+
+      print("🚀 Update status untuk pemesanan: $idPemesanan");
+
+      final response = await http.post(
+        Uri.parse("${BaseUrl.api}/teknisi/pemesanan/$idPemesanan/sampai-lokasi"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "status_pekerjaan": "sedang_bekerja",
+        }),
+      );
+
+      print("STATUS: ${response.statusCode}");
+      print("BODY: ${response.body}");
+
+      final result = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && result["status"] == true) {
+        print("✅ Status berhasil diubah ke sedang_bekerja");
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SedangBekerjaPage(
+              idPemesanan: idPemesanan,
+              token: token,              // ✅ kirim token
+              initialData: dataPemesanan, // ✅ kirim data
+            ),
+          ),
+        );
+      } else {
+        _showError(result["message"] ?? "Gagal update status pekerjaan");
+      }
+
+    } catch (e) {
+      print("❌ ERROR: $e");
+      _showError("Terjadi kesalahan saat mengubah status.");
+    }
+  }
+
 
   // ============================ UTIL ============================
 
@@ -625,12 +717,10 @@ class _ProsesKerjaPageState extends State<ProsesKerjaPage>
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xffFDBA12),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
           ),
-          onPressed: () {
-            print("Teknisi sampai lokasi");
-          },
+          onPressed: _handleSampaiLokasi,
           child: const Text(
             "Sampai lokasi",
             style: TextStyle(
@@ -642,4 +732,5 @@ class _ProsesKerjaPageState extends State<ProsesKerjaPage>
       ),
     );
   }
+
 }

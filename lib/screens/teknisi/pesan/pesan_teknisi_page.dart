@@ -10,7 +10,8 @@ import '../profile/prof_tek.dart';
 import '../lainnya/lainnya_page.dart';
 import 'terima_pesanan_page.dart';
 import 'detail_kerja_page.dart';
-import '../kerja/proses_kerja_page.dart';
+import '../kerja/menuju_kerja_page.dart';
+import '../kerja/sedang_bekerja_page.dart';
 
 // BASE URL
 import 'package:quick_fix/config/base_url.dart';
@@ -313,7 +314,7 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage>
               const SizedBox(width: 8),
               buildFilterChip("Menuju Lokasi", "menuju_lokasi"),
               const SizedBox(width: 8),
-              buildFilterChip("Sedang Bekerja", "sedang bekerja"),
+              buildFilterChip("Sedang Bekerja", "sedang_bekerja"),
             ],
           ),
         ),
@@ -331,21 +332,36 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage>
                     final order = filteredData[i];
 
                     return InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProsesKerjaPage(
-                              data: {
-                                ...order,
-                                "latitude": double.parse(order['latitude'].toString()),
-                                "longitude": double.parse(order['longitude'].toString()),
-                                "latitude_teknisi": double.parse(order['latitude_teknisi'].toString()),
-                                "longitude_teknisi": double.parse(order['longitude_teknisi'].toString()),
-                              },
+                      onTap: () async {
+                        final orderData = Map<String, dynamic>.from(order);
+
+                        if (orderData["status_pekerjaan"] == "menuju_lokasi") {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MenujuKerjaPage(
+                                data: orderData,
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        } 
+                        else if (orderData["status_pekerjaan"] == "sedang_bekerja") {
+
+                          // jika token diambil dari sharedprefs
+                          SharedPreferences prefs = await SharedPreferences.getInstance();
+                          final token = prefs.getString("token") ?? "";
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SedangBekerjaPage(
+                                idPemesanan: int.parse(orderData["id_pemesanan"].toString()),
+                                token: token,
+                                initialData: orderData, // optional
+                              ),
+                            ),
+                          );
+                        }
                       },
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 14),
