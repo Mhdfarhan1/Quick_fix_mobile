@@ -27,6 +27,8 @@ class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
   @override
   void initState() {
     super.initState();
+    print("📌 BaseUrl.storage = ${BaseUrl.storage}");
+
     tabController = TabController(length: 2, vsync: this);
     fetchTeknisiData();
   }
@@ -38,42 +40,68 @@ class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
   /// 🧩 Utility untuk memperbaiki URL agar tidak dobel
   String fixImageUrl(String? url) {
     if (url == null || url.isEmpty) return '';
+
+    // Kalau URL sudah full, langsung return
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
-    if (url.contains('storage/')) {
-      return "${BaseUrl.storage}/$url";
 
-    }
-    return "${BaseUrl.storage}/$url";
+    // Jika hanya kirim nama file
+    return "${BaseUrl.storage}/foto_teknisi/$url";
   }
+
+  
+
 
   Future<void> fetchTeknisiData() async {
     try {
-      final teknisiRes = await http
-          .get(Uri.parse('${BaseUrl.api}/get_teknisi?id=${widget.teknisiId}'));
-      final layananRes = await http.get(
-          Uri.parse('${BaseUrl.api}/teknisi/layanan?id_teknisi=${widget.teknisiId}'));
-      final buktiRes =
-          await http.get(Uri.parse('${BaseUrl.api}/bukti_pekerjaan/${widget.teknisiId}'));
+      final teknisiUrl = '${BaseUrl.api}/get_teknisi?id=${widget.teknisiId}';
+      final layananUrl = '${BaseUrl.api}/teknisi/layanan?id_teknisi=${widget.teknisiId}';
+      final buktiUrl = '${BaseUrl.api}/bukti_pekerjaan/${widget.teknisiId}';
 
-      if (teknisiRes.statusCode == 200 &&
-          layananRes.statusCode == 200 &&
-          buktiRes.statusCode == 200) {
-        setState(() {
-          teknisi = jsonDecode(teknisiRes.body);
-          layananList = jsonDecode(layananRes.body);
-          final buktiData = jsonDecode(buktiRes.body);
-          buktiList = buktiData['data'] ?? [];
-          isLoading = false;
-        });
+      debugPrint("🔍 [FETCH TEKNISI] URL dipanggil:");
+      debugPrint("   👉 Teknisi  : $teknisiUrl");
+      debugPrint("   👉 Layanan  : $layananUrl");
+      debugPrint("   👉 Bukti    : $buktiUrl");
 
-        debugPrint('🖼 Foto profil: ${teknisi!['foto_profile']}');
+      final teknisiRes = await http.get(Uri.parse(teknisiUrl));
+      final layananRes = await http.get(Uri.parse(layananUrl));
+      final buktiRes = await http.get(Uri.parse(buktiUrl));
+
+      debugPrint("📡 [STATUS] Teknisi: ${teknisiRes.statusCode}, "
+          "Layanan: ${layananRes.statusCode}, Bukti: ${buktiRes.statusCode}");
+
+      debugPrint("📦 [RESPONSE TEKNISI] ${teknisiRes.body}");
+      debugPrint("📦 [RESPONSE LAYANAN] ${layananRes.body}");
+      debugPrint("📦 [RESPONSE BUKTI] ${buktiRes.body}");
+
+      if (teknisiRes.statusCode == 200) {
+        teknisi = jsonDecode(teknisiRes.body);
+        debugPrint("✅ DATA TEKNISI TERDECODE: $teknisi");
       } else {
-        setState(() => isLoading = false);
+        debugPrint("❌ GAGAL MENDAPATKAN TEKNISI: ${teknisiRes.body}");
       }
-    } catch (e) {
-      debugPrint('❌ Error fetchTeknisiData: $e');
+
+      if (layananRes.statusCode == 200) {
+        layananList = jsonDecode(layananRes.body);
+      } else {
+        debugPrint("❌ GAGAL MENDAPATKAN LAYANAN: ${layananRes.body}");
+      }
+
+      if (buktiRes.statusCode == 200) {
+        final buktiData = jsonDecode(buktiRes.body);
+        buktiList = buktiData['data'] ?? [];
+      } else {
+        debugPrint("❌ GAGAL MENDAPATKAN BUKTI: ${buktiRes.body}");
+      }
+
+      setState(() {
+        isLoading = false;
+      });
+
+    } catch (e, s) {
+      debugPrint("🔥 ERROR FETCH TEKNISI: $e");
+      debugPrint("🔥 STACKTRACE: $s");
       setState(() => isLoading = false);
     }
   }
@@ -91,7 +119,7 @@ class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
     return Scaffold(
       appBar: AppBar(
         title: Text(teknisi!['nama'] ?? 'Profil Teknisi'),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: const Color(0x0C4481),
         bottom: TabBar(
           controller: tabController,
           labelColor: Colors.white,

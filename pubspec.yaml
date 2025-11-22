@@ -55,6 +55,10 @@ dependencies:
   webview_flutter_android: ^3.16.0
   webview_flutter_wkwebview: ^3.12.0
   animations: ^2.0.8
+  flutter_background_service: ^5.0.1
+  flutter_background_service_android: ^6.0.1
+  permission_handler: ^11.0.1
+  
   
 
 
@@ -78,7 +82,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/
+    - assets/images/profile.jpg
     - assets/images/mesin_cuci.png
     - assets/images/AC-rusak.jpg
     - assets/images/cog.png

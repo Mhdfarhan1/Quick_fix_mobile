@@ -218,4 +218,14 @@ class ApiService {
       return [];
     }
   }
+
+  static Future<Map<String, dynamic>> acceptOrder({
+    required int idPemesanan,
+    BuildContext? context,
+  }) async {
+    // endpoint tanpa base karena post() menambahkan BaseUrl.api
+    final endpoint = '/pemesanan/$idPemesanan/terima';
+    // kirim body kosong (atau bisa dikirim alasan/metadata)
+    return await post(endpoint: endpoint, data: {}, context: context);
+  }
 }

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../auth/login_screen.dart';
 import 'profile_edit_pengguna_page.dart';
 import '../../../config/base_url.dart';
+import '../Lainnya/Lainnya_route.dart';
 
 class ProfilePenggunaPage extends StatefulWidget {
   const ProfilePenggunaPage({super.key});
@@ -329,7 +330,6 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
             sectionTitle("Lainnya"),
             profileMenu("Bantuan & laporan", Icons.help_outline),
             profileMenu("Kebijakan Privasi", Icons.privacy_tip_outlined),
-            profileMenu("Atur akun", Icons.settings),
 
             const SizedBox(height: 20),
             Container(
@@ -370,16 +370,62 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
         ),
       );
 
-  Widget profileMenu(String title, IconData icon, {String? trailing}) => Container(
-        color: Colors.white,
-        child: ListTile(
-          leading: Icon(icon, color: const Color(0xFF0C4381)),
-          title: Text(title),
-          trailing: trailing != null
-              ? Text(trailing,
-                  style: const TextStyle(color: Color(0xFF0C4381)))
-              : const Icon(Icons.chevron_right, color: Colors.grey),
-          onTap: () {},
-        ),
-      );
+  Widget profileMenu(String title, IconData icon, {String? trailing}) {
+    return Container(
+      color: Colors.white,
+      child: ListTile(
+        leading: Icon(icon, color: const Color(0xFF0C4381)),
+        title: Text(title),
+        trailing: trailing != null
+            ? Text(
+                trailing,
+                style: const TextStyle(color: Color(0xFF0C4381)),
+              )
+            : const Icon(Icons.chevron_right, color: Colors.grey),
+        onTap: () {
+          // ====== ROUTING SETIAP MENU ======
+          switch (title) {
+            case "Keamanan akun":
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const KeamananAkunPage()),
+              );
+              break;
+
+            case "Alamat tersimpan":
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PilihAlamatPage()),
+              );
+              break;
+
+            case "Aktivitas":
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AktivitasPage()),
+              );
+              break;
+
+            case "Bantuan & laporan":
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BantuanLaporanPage()),
+              );
+              break;
+
+            case "Kebijakan Privasi":
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const KebijakanPrivasiPage()),
+              );
+              break;
+
+            case "Atur akun":
+              // kamu bilang tidak usah dibuat → biarkan kosong
+              break;
+          }
+        },
+      ),
+    );
+  }
 }

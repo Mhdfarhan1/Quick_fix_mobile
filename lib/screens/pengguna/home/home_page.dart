@@ -20,6 +20,13 @@ import '../../../widgets/network_image_with_fallback.dart';
 import '../../../widgets/app_dialog.dart';
 import '../../../config/base_url.dart';
 
+extension ResponsiveHeight on BuildContext {
+  double adaptiveHeight(double percent, {double min = 120, double max = 200}) {
+    final h = MediaQuery.of(this).size.height * percent;
+    return h.clamp(min, max);
+  }
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -395,7 +402,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         SizedBox(
-          height: 160,
+          height: context.adaptiveHeight(0.2, min: 140, max: 220),
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: pesananList.length,
@@ -555,7 +562,7 @@ class _HomePageState extends State<HomePage> {
               final pesanan = pesananList[index];
               final foto = pesanan['foto_bukti'] ?? '';
               final nama = pesanan['nama_teknisi'] ?? '-';
-              final fullUrl = '${BaseUrl.server}/storage/bukti/$foto';
+              final fullUrl = '${BaseUrl.server}/storage/foto/bukti/$foto';
 
               return Container(
                 width: 260,
@@ -600,6 +607,8 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildTeknisiSection() {
     if (isLoadingTeknisi) {
+      final screenHeight = MediaQuery.of(context).size.height;
+
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
@@ -609,12 +618,15 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             const SizedBox(height: 10),
             SizedBox(
-              height: 160,
+            height: context.adaptiveHeight(0.27, min: 200, max: 260),
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: 3,
                 itemBuilder: (_, __) =>
-                    Padding(padding: const EdgeInsets.only(right: 10), child: shimmerBox(160, 180)),
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: shimmerBox(screenHeight * 0.18, 180),
+                ),
               ),
             ),
           ],
@@ -636,7 +648,7 @@ class _HomePageState extends State<HomePage> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         ),
         SizedBox(
-          height: 230,
+          height: context.adaptiveHeight(0.27, min: 200, max: 260),
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: teknisiList.length,
@@ -644,8 +656,12 @@ class _HomePageState extends State<HomePage> {
               final teknisi = teknisiList[index];
               final user = teknisi['user'];
               final foto = user?['foto_profile'] ?? '';
-              final fotoPath = foto.startsWith('foto_teknisi/') ? foto : 'foto_teknisi/$foto';
+              final fotoPath = foto.startsWith('foto/foto_teknisi/')
+                  ? foto
+                  : 'foto/foto_teknisi/$foto';
+
               final fullUrl = '${BaseUrl.server}/storage/$fotoPath';
+
 
               return GestureDetector(
                 onTap: () => Navigator.push(
@@ -667,7 +683,7 @@ class _HomePageState extends State<HomePage> {
                               const BorderRadius.vertical(top: Radius.circular(15)),
                           child: NetworkImageWithFallback(
                             imageUrl: fullUrl,
-                            height: 120,
+                            height: context.adaptiveHeight(0.12, min: 80, max: 120),
                             width: double.infinity,
                             fit: BoxFit.cover,
                           ),

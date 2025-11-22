@@ -1,8 +1,19 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+// IMPORT HALAMAN LAIN
 import 'package:quick_fix/screens/teknisi/riwayat/riwayat_teknisi_page.dart';
 import '../home/Home_page_teknisi.dart';
 import '../profile/prof_tek.dart';
 import '../lainnya/lainnya_page.dart';
+import 'terima_pesanan_page.dart';
+import 'detail_kerja_page.dart';
+import '../kerja/proses_kerja_page.dart';
+
+// BASE URL
+import 'package:quick_fix/config/base_url.dart';
 
 class PesananTeknisiPage extends StatefulWidget {
   const PesananTeknisiPage({Key? key}) : super(key: key);
@@ -11,12 +22,82 @@ class PesananTeknisiPage extends StatefulWidget {
   State<PesananTeknisiPage> createState() => _PesananTeknisiPageState();
 }
 
-class _PesananTeknisiPageState extends State<PesananTeknisiPage> {
+class _PesananTeknisiPageState extends State<PesananTeknisiPage>
+    with SingleTickerProviderStateMixin {
   int _currentIndex = 1;
-  int _selectedFilter = 1;
-  final Color blueHeader = const Color(0xFF0C4481);
-  final List<String> filters = ["Hari ini", "Minggu ini", "Bulan ini", "Tahun ini"];
 
+  List<dynamic> pesananBaru = [];
+  List<dynamic> pesananJadwal = [];
+  List<dynamic> pesananBerjalan = [];
+
+  bool loading = true;
+  String token = "";
+
+  String filterStatus = "semua";
+
+
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    loadPesanan();
+  }
+
+  // ====================================================
+  //  AMBIL TOKEN SharedPreferences
+  // ====================================================
+  Future<void> loadToken() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    token = prefs.getString("token") ?? "";
+  }
+
+  // ====================================================
+  //  LOAD PESANAN
+  // ====================================================
+  Future<void> loadPesanan() async {
+    await loadToken();
+
+    final baru = await fetchPesanan("${BaseUrl.api}/teknisi/pesanan/baru");
+    final jadwal = await fetchPesanan("${BaseUrl.api}/teknisi/pesanan/dijadwalkan");
+    final berjalan = await fetchPesanan("${BaseUrl.api}/teknisi/pesanan/berjalan");
+
+    setState(() {
+      pesananBaru = baru;
+      pesananJadwal = jadwal;
+      pesananBerjalan = berjalan;
+      loading = false;
+      
+    });
+  }
+
+  // ====================================================
+  //  FETCH API
+  // ====================================================
+  Future<List<dynamic>> fetchPesanan(String url) async {
+    try {
+      final res = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data["data"] ?? [];
+      }
+    } catch (e) {
+      print("Error GET pesanan: $e");
+    }
+    return [];
+  }
+
+  // ====================================================
+  //  NAVBAR ACTION
+  // ====================================================
   void _onNavTap(int index) {
     setState(() => _currentIndex = index);
 
@@ -26,14 +107,14 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage> {
             context, MaterialPageRoute(builder: (_) => const HomeTeknisiPage()));
         break;
       case 1:
-        // Ganti ke halaman Pesanan jika sudah siap
+        break;
       case 2:
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const RiwayatTeknisiPage()));
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const RiwayatTeknisiPage()));
         break;
       case 3:
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const TechnicianProfilePage()));
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const TechnicianProfilePage()));
         break;
       case 4:
         Navigator.pushReplacement(
@@ -50,14 +131,12 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // ==== HEADER ====
+          // HEADER
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
               color: blueHeader,
-              borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(16),
-              ),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
             ),
             padding: const EdgeInsets.only(top: 50, bottom: 14),
             child: const Center(
@@ -71,159 +150,284 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          _buildFilterCarousel(),
-          const SizedBox(height: 10),
-          Expanded(child: _buildTaskList()),
+
+          // TAB
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: blueHeader,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: blueHeader,
+              tabs: const [
+                Tab(text: "Permintaan"),
+                Tab(text: "Dijadwalkan"),
+                Tab(text: "Proses")
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: loading
+                ? const Center(child: CircularProgressIndicator())
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      buildPesananList(pesananBaru, isBaru: true),
+                      buildPesananList(pesananJadwal, isBaru: false),
+                      buildPesananBerjalan(),
+                    ],
+                  ),
+          ),
         ],
       ),
-      bottomNavigationBar: _buildCustomBottomNav(),
+
+      bottomNavigationBar: _buildNavBar(),
     );
   }
 
-  Widget _buildFilterCarousel() {
-    return SizedBox(
-      height: 45,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: filters.length,
-        itemBuilder: (context, index) {
-          final isSelected = _selectedFilter == index;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedFilter = index),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFD2F4F9) : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Text(
-                filters[index],
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: isSelected ? blueHeader : Colors.black87,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTaskList() {
-    final List<Map<String, dynamic>> tasks = [
-      {
-        "date": "Rabu, 23 Oktober 2025",
-        "items": [
-          {"time": "08.00", "title": "Servis AC Rumah Tangga", "name": "Rizky Hidayat", "address": "Jl.Merpati No.33"},
-          {"time": "11.00", "title": "Instalasi Kabel", "name": "Siti Budiman", "address": "Jl.Merak No.05"},
-          {"time": "14.00", "title": "Perbaikan Mesin Cuci", "name": "Agus Rahardjo", "address": "Jl.Elang No.11"},
-        ]
-      },
-      {
-        "date": "Kamis, 24 Oktober 2025",
-        "items": [
-          {"time": "09.00", "title": "Perbaikan Kulkas", "name": "Rahmat Jaya", "address": "Jl.Bangau No.27"},
-          {"time": "13.00", "title": "Instalasi CCTV", "name": "Tono Suryo", "address": "Jl.Kenari No.14"},
-        ]
-      },
-      {
-        "date": "Jumat, 25 Oktober 2025",
-        "items": [
-          {"time": "08.30", "title": "Pengecekan Listrik", "name": "Lukman Hakim", "address": "Jl.Cendrawasih No.09"},
-          {"time": "10.00", "title": "Servis Pompa Air", "name": "Nina Wahyuni", "address": "Jl.Kutilang No.21"},
-          {"time": "15.00", "title": "Perbaikan Mesin Cuci", "name": "Bagus Saputra", "address": "Jl.Garuda No.07"},
-        ]
-      },
-    ];
+  // ====================================================
+  //  LIST VIEW PESANAN
+  // ====================================================
+  Widget buildPesananList(List<dynamic> data, {required bool isBaru}) {
+    if (data.isEmpty) {
+      return const Center(child: Text("Tidak ada pesanan"));
+    }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: tasks.length,
+      padding: const EdgeInsets.all(16),
+      itemCount: data.length,
       itemBuilder: (context, i) {
-        final day = tasks[i];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(day["date"], style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-            const SizedBox(height: 6),
-            ...List.generate((day["items"] as List).length, (j) {
-              final item = day["items"][j];
-              return _buildTaskCard(item);
-            }),
-            const SizedBox(height: 10),
-          ],
+        final order = data[i];
+
+        return InkWell(
+          onTap: () async {
+            if (isBaru) {
+              // PESANAN BARU → halaman terima pesanan
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DetailPesananPage(order: order),
+                ),
+              );
+
+              if (result == true) {
+                _tabController.animateTo(1);
+                loadPesanan();
+              }
+            } else {
+              // DIJADWALKAN → halaman Mulai Kerja
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DetailKerjaPage(data: order),
+                ),
+              );
+            }
+          },
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(order["nama_keahlian"] ?? "",
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(order["nama_pelanggan"] ?? "",
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w500)),
+                Text(order["alamat_lengkap"] ?? "",
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.grey)),
+                const SizedBox(height: 10),
+
+                if (isBaru)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DetailPesananPage(order: order),
+                          ),
+                        );
+
+                        if (result == true) {
+                          _tabController.animateTo(1);
+                          loadPesanan();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0C4481),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "Terima Pesanan",
+                        style: TextStyle(fontSize: 14, color: Colors.white),
+                      ),
+                    ),
+                  )
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildTaskCard(Map<String, dynamic> item) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 3)),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Kolom waktu + garis vertikal tipis
-          Column(
+  Widget buildPesananBerjalan() {
+    
+    List<dynamic> filteredData = pesananBerjalan.where((item) {
+      if (filterStatus == "semua") return true;
+      return item["status_pekerjaan"] == filterStatus;
+    }).toList();
+
+    return Column(
+      children: [
+        // CHIP FILTER
+        Container(
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: ListView(
+            scrollDirection: Axis.horizontal,
             children: [
-              Text(
-                item["time"],
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                width: 1.5,
-                height: 60,
-                color: Colors.grey.shade300,
-              ),
+              buildFilterChip("Semua", "semua"),
+              const SizedBox(width: 8),
+              buildFilterChip("Menuju Lokasi", "menuju_lokasi"),
+              const SizedBox(width: 8),
+              buildFilterChip("Sedang Bekerja", "sedang bekerja"),
             ],
           ),
-          const SizedBox(width: 12),
-          // Detail tugas di kanan
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item["title"], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                const SizedBox(height: 2),
-                Text(item["name"], style: const TextStyle(fontSize: 13, color: Colors.black87)),
-                Text(item["address"], style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Detail ${item["title"]}")),
-                  ),
-                  child: const Text(
-                    "Detail Tugas",
-                    style: TextStyle(
-                      color: Color(0xFF0C4481),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                )
-              ],
-            ),
-          ),
-        ],
+        ),
+
+        const SizedBox(height: 8),
+
+        // LIST
+        Expanded(
+          child: filteredData.isEmpty
+              ? const Center(child: Text("Tidak ada pesanan"))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filteredData.length,
+                  itemBuilder: (context, i) {
+                    final order = filteredData[i];
+
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProsesKerjaPage(
+                              data: {
+                                ...order,
+                                "latitude": double.parse(order['latitude'].toString()),
+                                "longitude": double.parse(order['longitude'].toString()),
+                                "latitude_teknisi": double.parse(order['latitude_teknisi'].toString()),
+                                "longitude_teknisi": double.parse(order['longitude_teknisi'].toString()),
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(order["nama_keahlian"] ?? "",
+                                style: const TextStyle(
+                                    fontSize: 15, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 4),
+                            Text(order["nama_pelanggan"] ?? "",
+                                style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w500)),
+                            Text(order["alamat_lengkap"] ?? "",
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey)),
+
+                            const SizedBox(height: 8),
+
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: order["status_pekerjaan"] ==
+                                        "menuju_lokasi"
+                                    ? Colors.orange[100]
+                                    : Colors.green[100],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                order["status_pekerjaan"],
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        )
+      ],
+    );
+  }
+
+    Widget buildFilterChip(String label, String value) {
+    final isActive = filterStatus == value;
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: isActive,
+      onSelected: (val) {
+        setState(() {
+          filterStatus = value;
+        });
+      },
+      selectedColor: const Color(0xFF0C4481),
+      labelStyle: TextStyle(
+        color: isActive ? Colors.white : Colors.black,
+        fontSize: 12,
       ),
     );
   }
 
-  Widget _buildCustomBottomNav() {
+  // ====================================================
+  //  BOTTOM NAVBAR
+  // ====================================================
+  Widget _buildNavBar() {
     const highlight = Color(0xFFFFCC33);
     final items = [
       _NavItem(icon: Icons.home, label: 'Beranda'),
@@ -237,31 +441,32 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6, offset: const Offset(0, -1))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: const Offset(0, -1))
+        ],
       ),
       child: Row(
         children: List.generate(items.length, (i) {
           final active = i == _currentIndex;
           final item = items[i];
+
           return Expanded(
             child: InkWell(
-              borderRadius: BorderRadius.circular(12),
               onTap: () => _onNavTap(i),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                decoration: BoxDecoration(
-                  color: active ? highlight.withOpacity(0.12) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(item.icon, color: active ? highlight : Colors.grey, size: 22),
-                    const SizedBox(height: 4),
-                    Text(item.label,
-                        style: TextStyle(fontSize: 11, color: active ? highlight : Colors.grey)),
-                  ],
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(item.icon,
+                      color: active ? highlight : Colors.grey, size: 22),
+                  const SizedBox(height: 4),
+                  Text(item.label,
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: active ? highlight : Colors.grey)),
+                ],
               ),
             ),
           );
@@ -274,5 +479,6 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage> {
 class _NavItem {
   final IconData icon;
   final String label;
+
   const _NavItem({required this.icon, required this.label});
 }

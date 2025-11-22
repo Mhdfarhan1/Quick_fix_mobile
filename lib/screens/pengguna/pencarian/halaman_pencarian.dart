@@ -356,7 +356,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.8,
       ),
       itemCount: teknisiList.length,
       itemBuilder: (context, index) {
@@ -367,8 +367,15 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
 
   Widget _buildTeknisiCard(dynamic teknisi, Color yellow) {
     String gambarFile = teknisi['gambar']?.toString() ?? '';
-    gambarFile = gambarFile.replaceFirst(RegExp(r'^/+'), '');
+
+    if (!gambarFile.contains("foto/")) {
+      gambarFile = "foto/$gambarFile";
+    }
+
     String gambarUrl = "${BaseUrl.storage}/$gambarFile";
+    print(BaseUrl.storage);
+    print(gambarUrl);
+
 
     int hargaMin = parseHarga(teknisi['harga_min']);
     int hargaMax = parseHarga(teknisi['harga_max']);
@@ -418,7 +425,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
                 },
               ),
             ),
-            Expanded(
+            Flexible(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
@@ -444,41 +451,6 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
                       ],
                     ),
                     const Spacer(),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          final prefs = await SharedPreferences.getInstance();
-                          final idPelanggan = prefs.getInt('id_pelanggan');
-
-                          if (idPelanggan == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Silakan login terlebih dahulu")),
-                            );
-                            return;
-                          }
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => FormPemesanan(
-                                idPelanggan: idPelanggan,
-                                idTeknisi: int.parse(teknisi["id_teknisi"].toString()),
-                                idKeahlian: int.parse(teknisi["id_keahlian"].toString()),
-                                namaTeknisi: teknisi["nama"] ?? '',
-                                namaKeahlian: teknisi["nama_keahlian"] ?? '',
-                                harga: hargaMin,
-                              ),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: yellow,
-                          foregroundColor: Colors.black,
-                        ),
-                        child: const Text("Pesan"),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -498,7 +470,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.8,
       ),
       itemBuilder: (context, index) {
         return Shimmer.fromColors(

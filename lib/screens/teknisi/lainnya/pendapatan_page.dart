@@ -87,45 +87,118 @@ class _PendapatanPageState extends State<PendapatanPage> {
         ? ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
         : ["M1", "M2", "M3", "M4", "M5", "M6", "M7"];
 
-    // Contoh data dummy
     List<double> values = isMingguan
         ? [100, 150, 180, 120, 200, 140, 160]
         : [500, 700, 400, 900, 600, 800, 750];
+
+    final List<Color> colors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.red,
+      Colors.purple,
+      Colors.cyan,
+      Colors.teal,
+    ];
+
+    // mencari nilai terbesar untuk scaling grafik
+    double maxValue = values.reduce((a, b) => a > b ? a : b);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           isMingguan ? "Pendapatan Mingguan" : "Pendapatan Bulanan",
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
 
+        // GRID + GRAPH
         Expanded(
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: labels.length,
-            itemBuilder: (_, i) {
-              return Column(
-                children: [
-                  Container(
-                    width: 20,
-                    height: values[i],
-                    margin: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0C4481),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+          child: Container(
+            padding: const EdgeInsets.only(top: 10, bottom: 10),
+            child: Stack(
+              children: [
+                // ================================
+                // GARIS GRID
+                // ================================
+                Positioned.fill(
+                  child: Column(
+                    children: List.generate(5, (i) {
+                      return Expanded(
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Colors.black12, width: 0.7),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                   ),
-                  const SizedBox(height: 4),
-                  Text(labels[i]),
-                ],
-              );
-            },
+                ),
+
+                // ================================
+                // CHART
+                // ================================
+                ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: labels.length,
+                  itemBuilder: (_, i) {
+                    double barHeight = (values[i] / maxValue) * 220; // scaling
+
+                    return Container(
+                      width: 50,
+                      margin: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          // NIlai
+                          Text(
+                            values[i].toString(),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+
+                          // BAR DARI BAWAH DENGAN ANIMASI
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.bottomCenter,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 700),
+                                curve: Curves.easeOutBack,
+                                width: 28,
+                                height: barHeight,
+                                decoration: BoxDecoration(
+                                  color: colors[i % colors.length],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          // LABEL
+                          Text(
+                            labels[i],
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ],
