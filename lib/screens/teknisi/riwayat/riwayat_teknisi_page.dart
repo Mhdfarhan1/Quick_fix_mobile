@@ -119,12 +119,12 @@ class _RiwayatTeknisiPageState extends State<RiwayatTeknisiPage> {
                                 vertical: 8, horizontal: 20),
                             decoration: BoxDecoration(
                               color: _filter == tab
-                                  ? highlight.withOpacity(0.2)
-                                  : Colors.white,
+                                  ? const Color(0xFFD2F4F9) // warna background tab aktif
+                                  : Colors.white, // warna tab tidak aktif
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                   color: _filter == tab
-                                      ? highlight
+                                      ? const Color(0xFFD2F4F9) // border tab aktif
                                       : Colors.grey.shade400),
                             ),
                             child: Text(
@@ -132,7 +132,10 @@ class _RiwayatTeknisiPageState extends State<RiwayatTeknisiPage> {
                               style: TextStyle(
                                   fontWeight: _filter == tab
                                       ? FontWeight.bold
-                                      : FontWeight.normal),
+                                      : FontWeight.normal,
+                                  color: _filter == tab
+                                      ? Colors.black // teks tab aktif
+                                      : Colors.grey[700]), // teks tab tidak aktif
                             ),
                           ),
                         ))
@@ -283,7 +286,7 @@ class _RiwayatTeknisiPageState extends State<RiwayatTeknisiPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF0C4481),
         boxShadow: [
           BoxShadow(
               color: Colors.black12, blurRadius: 6, offset: const Offset(0, -1))
@@ -317,13 +320,13 @@ class _RiwayatTeknisiPageState extends State<RiwayatTeknisiPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(item.icon,
-                          color: active ? highlight : Colors.grey, size: 22),
+                          color: active ? highlight : const Color.fromARGB(255, 255, 255, 255), size: 22),
                     ),
                     const SizedBox(height: 4),
                     Text(item.label,
                         style: TextStyle(
                             fontSize: 11,
-                            color: active ? highlight : Colors.grey)),
+                            color: active ? highlight : const Color.fromARGB(255, 255, 255, 255))),
                   ],
                 ),
               ),

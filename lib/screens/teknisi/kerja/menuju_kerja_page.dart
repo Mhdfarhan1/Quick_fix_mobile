@@ -13,14 +13,34 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../config/base_url.dart';
 import 'sedang_bekerja_page.dart';
+import '../../../models/task_model.dart';
 
 class MenujuKerjaPage extends StatefulWidget {
-  final Map<String, dynamic> data;
-  const MenujuKerjaPage({super.key, required this.data});
+  final Map<String, dynamic>? data;
+  final Task? task;
+
+  const MenujuKerjaPage({
+    super.key,
+    this.data,
+    this.task,
+  });
+
+  // constructor khusus untuk map
+  const MenujuKerjaPage.fromMap({
+    super.key,
+    required this.data,
+  }) : task = null;
+
+  // constructor khusus untuk task ✅
+  const MenujuKerjaPage.fromTask({
+    super.key,
+    required this.task,
+  }) : data = null;
 
   @override
   State<MenujuKerjaPage> createState() => _MenujuKerjaPageState();
 }
+
 
 class _MenujuKerjaPageState extends State<MenujuKerjaPage>
     with SingleTickerProviderStateMixin {
@@ -52,6 +72,82 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
   List<LatLng> _routePoints = [];
   String _distanceText = "-";
   String _etaText = "-";
+
+  dynamic getValue(String key) {
+    if (widget.data != null) {
+      return widget.data![key];
+    } 
+    else if (widget.task != null) {
+      switch (key) {
+        case "id_pemesanan":
+          return widget.task!.id;
+
+        case "kode_pemesanan":
+          return widget.task!.kodePemesanan;
+
+        case "latitude":
+          return widget.task!.latitude;
+
+        case "longitude":
+          return widget.task!.longitude;
+
+        case "nama_pelanggan":
+          return widget.task!.namaPelanggan;
+
+        case "alamat_lengkap":
+          return widget.task!.alamatLengkap;
+
+        case "kota":
+          return widget.task!.kota;
+
+        case "provinsi":
+          return widget.task!.provinsi;
+
+        case "keluhan":
+          return widget.task!.deskripsi;
+
+        case "harga":
+          return widget.task!.harga;
+
+        case "tanggal_booking":
+          return widget.task!.tanggalBooking;
+
+        case "jam_booking":
+          return widget.task!.jamBooking;
+
+        case "nama_keahlian":
+          return widget.task!.namaKeahlian;
+
+        case "nama_teknisi":
+          return widget.task!.namaTeknisi;
+
+        case "status_pekerjaan":    
+          return widget.task!.statusPekerjaan;
+
+        case "id_teknisi":
+          return widget.task!.idTeknisi;
+
+        default:
+          return null;
+      }
+    }
+
+    return null;
+  }
+
+  String safeString(dynamic value) {
+  if (value == null) return "-";
+
+  // Jika DateTime → ubah ke string format yyyy-MM-dd
+  if (value is DateTime) {
+    return DateFormat('yyyy-MM-dd').format(value);
+  }
+
+  return value.toString();
+}
+
+
+
 
   void _onCenterButtonPressed() {
     if (_animatedPosition == null) return;
@@ -91,16 +187,20 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
     final data = widget.data;
 
     pelangganPos = LatLng(
-      double.tryParse(data['latitude']?.toString() ?? '') ?? 0.0,
-      double.tryParse(data['longitude']?.toString() ?? '') ?? 0.0,
+      double.tryParse(getValue("latitude")?.toString() ?? '') ?? 0.0,
+      double.tryParse(getValue("longitude")?.toString() ?? '') ?? 0.0,
     );
 
+
     final tekLat =
-        double.tryParse(data['latitude_teknisi']?.toString() ?? '') ??
-            pelangganPos.latitude;
+        double.tryParse(getValue("latitude_teknisi")?.toString() ?? "") ??
+        pelangganPos.latitude;
+
     final tekLng =
-        double.tryParse(data['longitude_teknisi']?.toString() ?? '') ??
-            pelangganPos.longitude;
+        double.tryParse(getValue("longitude_teknisi")?.toString() ?? "") ??
+        pelangganPos.longitude;
+
+
 
     _animatedPosition = LatLng(tekLat, tekLng);
     _targetPosition = _animatedPosition;
@@ -144,8 +244,8 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
     print("📦 RAW DATA: ${widget.data}");
 
     final status =
-      widget.data['status_pekerjaan'] ??
-      widget.data['data']?['status_pekerjaan'];
+      getValue('status_pekerjaan') ??
+      getValue('data')?['status_pekerjaan'];
 
     print("📦 Status sekarang: $status");
 
@@ -158,22 +258,30 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
 
 
   void _startTracking() {
-    final idTeknisi = int.parse(widget.data['id_teknisi'].toString());
+    final dynamic rawIdTeknisi = getValue("id_teknisi");
+    final int? idTeknisi = int.tryParse(rawIdTeknisi?.toString() ?? "");
 
-    if (_trackingTimer != null) return;
+    print("🧪 RAW id_teknisi: $rawIdTeknisi (${rawIdTeknisi.runtimeType})");
 
-    _trackingTimer =
-        Timer.periodic(Duration(seconds: trackingIntervalSeconds), (timer) {
-      updateLokasiTeknisi(idTeknisi);
-    });
+    if (idTeknisi == null || idTeknisi == 0) {
+      print("❌ Gagal start tracking, id_teknisi tidak valid: $rawIdTeknisi");
+      return;
+    }
 
-    print("🚀 Tracking ON");
-  }
+    if (_trackingTimer != null) {
+      print("⚠️ Tracking sudah berjalan");
+      return;
+    }
 
-  void _stopTracking() {
-    _trackingTimer?.cancel();
-    _trackingTimer = null;
-    print("🛑 Tracking OFF");
+    _trackingTimer = Timer.periodic(
+      Duration(seconds: trackingIntervalSeconds),
+      (timer) {
+        print("📡 Kirim lokasi teknisi untuk ID: $idTeknisi");
+        updateLokasiTeknisi(idTeknisi);
+      },
+    );
+
+    print("🚀 Tracking ON untuk teknisi: $idTeknisi");
   }
 
   Future<void> _loadToken() async {
@@ -247,7 +355,7 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
 
   Future<void> _fetchTeknisiLocation() async {
     try {
-      final idTeknisi = widget.data['id_teknisi'].toString();
+      final idTeknisi = getValue('id_teknisi').toString();
       final res = await http.get(
         Uri.parse("${BaseUrl.api}/lokasi-teknisi/$idTeknisi"),
       );
@@ -320,7 +428,15 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
 
   Future<void> _handleSampaiLokasi() async {
     try {
-      final int idPemesanan = int.parse(widget.data["id_pemesanan"].toString());
+      final dynamic rawIdPemesanan = getValue("id_pemesanan");
+      print("🧪 RAW id_pemesanan: $rawIdPemesanan (${rawIdPemesanan.runtimeType})");
+
+      final int? idPemesanan = int.tryParse(rawIdPemesanan?.toString() ?? "");
+
+      if (idPemesanan == null || idPemesanan == 0) {
+        _showError("ID pemesanan tidak valid: $rawIdPemesanan");
+        return;
+      }
 
       if (token.isEmpty) {
         _showError("Token tidak ditemukan, silakan login ulang.");
@@ -354,11 +470,12 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
           MaterialPageRoute(
             builder: (_) => SedangBekerjaPage(
               idPemesanan: idPemesanan,
-              token: token,              // ✅ kirim token
-              initialData: dataPemesanan, // ✅ kirim data
+              token: token,
+              initialData: dataPemesanan,
             ),
           ),
         );
+
       } else {
         _showError(result["message"] ?? "Gagal update status pekerjaan");
       }
@@ -508,7 +625,7 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
           ),
 
           // CARD BAWAH (UI asli)
-          _buildBottomCard(data),
+          _buildBottomCard(),
         ],
       ),
     );
@@ -517,7 +634,7 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
   // ------------------
   // Bottom card
   // ------------------
-  Widget _buildBottomCard(data) {
+  Widget _buildBottomCard() {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -527,18 +644,12 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 8),
-          _buildHeaderLokasi(data),
-          const SizedBox(height: 10),
-          _buildUserInfo(data),
-          const SizedBox(height: 10),
-          _buildDetailLayanan(data),
-          const SizedBox(height: 20),
-          _buildTanggalWaktu(data),
-          const SizedBox(height: 20),
-          _buildButton(),
-          const SizedBox(height: 15),
-        ],
+                _buildHeaderLokasi(null),
+                _buildUserInfo(null),
+                _buildDetailLayanan(null),
+                _buildTanggalWaktu(null),
+                _buildButton(),
+              ]
       ),
     );
   }
@@ -554,13 +665,13 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
       child: Column(
         children: [
           Text(
-            data['alamat_lengkap'] ?? "Alamat tidak tersedia",
+            getValue("alamat_lengkap") ?? "Alamat tidak tersedia",
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white, fontSize: 16),
           ),
           const SizedBox(height: 3),
           Text(
-            data['kota'] ?? "",
+            getValue("kota") ?? "",
             style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           const SizedBox(height: 15),
@@ -595,7 +706,7 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              data['nama_pelanggan'] ?? "Nama tidak ada",
+              getValue("nama_pelanggan") ?? "Nama tidak ada",
               style: const TextStyle(
                   fontSize: 16, fontWeight: FontWeight.w600),
             ),
@@ -635,7 +746,7 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              data['nama_Kategori'] ?? "Kategori",
+              getValue("nama_Kategori") ?? "Kategori",
               style: const TextStyle(
                 color: Colors.black54,
                 fontWeight: FontWeight.w500,
@@ -646,13 +757,13 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
               children: [
                 Expanded(
                   child: Text(
-                    data['nama_keahlian'] ?? "-",
+                    getValue("nama_keahlian") ?? "-",
                     style: const TextStyle(
                         fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
                 Text(
-                  formatRupiah(data['harga']),
+                  formatRupiah(getValue("harga")),
                   style: const TextStyle(
                       fontSize: 15, fontWeight: FontWeight.w600),
                 ),
@@ -660,7 +771,7 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
             ),
             const SizedBox(height: 12),
             Text(
-              data['keluhan'] ?? "",
+              getValue("keluhan") ?? "",
               style:
                   const TextStyle(fontSize: 14, color: Colors.black87, height: 1.3),
             ),
@@ -682,7 +793,7 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
                 const Text("Tanggal",
                     style: TextStyle(color: Colors.black54)),
                 Text(
-                  data['tanggal_booking'] ?? "-",
+                  safeString(getValue("tanggal_booking")),
                   style: const TextStyle(
                       fontWeight: FontWeight.w600, fontSize: 15),
                 ),
@@ -696,7 +807,7 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
                 const Text("Waktu",
                     style: TextStyle(color: Colors.black54)),
                 Text(
-                  data['jam_booking'] ?? "-",
+                  safeString(getValue("jam_booking")),
                   style: const TextStyle(
                       fontWeight: FontWeight.w600, fontSize: 15),
                 ),

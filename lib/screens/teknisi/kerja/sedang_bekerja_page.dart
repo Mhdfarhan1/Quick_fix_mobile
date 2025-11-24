@@ -12,6 +12,8 @@ class SedangBekerjaPage extends StatefulWidget {
   // optional: initial data like kode_pemesanan, nama_pelanggan, keluhan, dll
   final Map<String, dynamic>? initialData;
 
+  
+
   const SedangBekerjaPage({
     Key? key,
     required this.idPemesanan,
@@ -34,13 +36,35 @@ class _SedangBekerjaPageState extends State<SedangBekerjaPage> {
   bool loading = false;
   bool uploading = false;
   bool finishing = false;
+  
+
+  Map<String, dynamic>? detail;
 
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
+    fetchDetail();
     fetchBukti();
+  }
+
+  Future fetchDetail() async {
+    final url = Uri.parse("${BaseUrl.api}/pemesanan/${widget.idPemesanan}");
+    final res = await http.get(url, headers: {
+      "Authorization": "Bearer ${widget.token}",
+      "Accept": "application/json",
+    });
+
+    print("DETAIL STATUS: ${res.statusCode}");
+    print("DETAIL BODY: ${res.body}");
+
+    if (res.statusCode == 200) {
+      final body = jsonDecode(res.body);
+      setState(() {
+        detail = body["data"];
+      });
+    }
   }
 
   Future fetchBukti() async {

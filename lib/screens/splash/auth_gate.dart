@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../pengguna/home/home_page.dart';
 import '../auth/login_screen.dart';
+import '../pengguna/home/home_page.dart';
 import '../teknisi/home/Home_page_teknisi.dart';
 
 class AuthGate extends StatefulWidget {
@@ -17,7 +17,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    checkLogin();
+    Future.microtask(checkLogin);
   }
 
   Future<void> checkLogin() async {
@@ -25,23 +25,28 @@ class _AuthGateState extends State<AuthGate> {
     final token = prefs.getString('token');
     final userJson = prefs.getString('user');
 
+    if (!mounted) return;
+
     if (token != null && userJson != null) {
       final user = jsonDecode(userJson);
-      final role = user['role']?.toString().toLowerCase();
+      final role = user['role'].toString().toLowerCase();
 
       if (role == 'teknisi') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeTeknisiPage()),
         );
-      } else if (role == 'pelanggan') {
+      } else {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomePage()),
         );
       }
     } else {
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
     }
   }
 

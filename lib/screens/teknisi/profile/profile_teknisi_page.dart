@@ -39,18 +39,8 @@ class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
 
   /// 🧩 Utility untuk memperbaiki URL agar tidak dobel
   String fixImageUrl(String? url) {
-    if (url == null || url.isEmpty) return '';
-
-    // Kalau URL sudah full, langsung return
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-
-    // Jika hanya kirim nama file
-    return "${BaseUrl.storage}/foto_teknisi/$url";
+    return url ?? '';
   }
-
-  
 
 
   Future<void> fetchTeknisiData() async {
@@ -74,6 +64,7 @@ class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
       debugPrint("📦 [RESPONSE TEKNISI] ${teknisiRes.body}");
       debugPrint("📦 [RESPONSE LAYANAN] ${layananRes.body}");
       debugPrint("📦 [RESPONSE BUKTI] ${buktiRes.body}");
+      
 
       if (teknisiRes.statusCode == 200) {
         teknisi = jsonDecode(teknisiRes.body);
@@ -118,12 +109,18 @@ class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(teknisi!['nama'] ?? 'Profil Teknisi'),
-        backgroundColor: const Color(0x0C4481),
+        title: Text(
+          teknisi!['nama'] ?? 'Profil Teknisi',
+          style: const TextStyle(
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: const Color(0xFF0C4481),
         bottom: TabBar(
           controller: tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          labelColor: const Color.fromARGB(255, 255, 255, 255),
+          unselectedLabelColor: const Color.fromARGB(255, 188, 188, 188),
+          indicatorColor: const Color(0xFFD2F4F9),
           tabs: const [
             Tab(text: 'Profil'),
             Tab(text: 'Layanan'),
@@ -161,7 +158,7 @@ class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
                 child: Text(
                   teknisi!['nama'] ?? '-',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Color.fromARGB(255, 255, 255, 255),
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     shadows: [Shadow(blurRadius: 4, color: Colors.black)],

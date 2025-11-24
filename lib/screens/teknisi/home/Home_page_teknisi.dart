@@ -5,9 +5,14 @@ import '../profile/prof_tek.dart';
 import '../riwayat/riwayat_teknisi_page.dart';
 import '../lainnya/lainnya_page.dart';
 import '../pesan/pesan_teknisi_page.dart';
+import '../kerja/sedang_bekerja_page.dart';
+import '../kerja/menuju_kerja_page.dart';
 import '../home/chat_teknisi_page.dart';
-import '../../teknisi/home/chat_detail_teknisi_page.dart';
 import '../home/notifikasi_page.dart';
+import '../../../services/task_service.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 
 class HomeTeknisiPage extends StatefulWidget {
@@ -18,47 +23,47 @@ class HomeTeknisiPage extends StatefulWidget {
 }
 
 class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
-  List<Task> tasks = []; // ✅ fix: inisialisasi langsung
+  List<Task> tasks = [];
+  List<Task> tugasHariIni = [];
+  List<Task> pesananBaru = [];
+
   bool _isSiapKerja = true;
   int _currentIndex = 0;
+
+  bool _loadingTasks = true;
+  bool _loadingPesananBaru = true;
+
 
   @override
   void initState() {
     super.initState();
-    _loadDummyTasks();
+    _loadPesananBaru();
+    _loadTasksFromAPI();
+    
   }
 
-  void _loadDummyTasks() {
-    final now = DateTime.now();
-    tasks = [
-      Task(
-        id: 1,
-        namaPelanggan: 'Rani Syahrini',
-        deskripsi: 'AC tidak dingin',
-        statusTugas: 'Sedang Dikerjakan',
-        harga: 150000,
-        alamatLengkap: 'Jl. Merpati No. 12',
-        createdAt: now.subtract(const Duration(hours: 1)),
-      ),
-      Task(
-        id: 2,
-        namaPelanggan: 'Mahfuz Hadid',
-        deskripsi: 'Lampu mati total',
-        statusTugas: 'Tugas Baru',
-        harga: 80000,
-        alamatLengkap: 'Jl. Kenari No. 9',
-        createdAt: now,
-      ),
-      Task(
-        id: 3,
-        namaPelanggan: 'Rani Syahrini',
-        deskripsi: 'Pompa air bocor',
-        statusTugas: 'Menunggu Konfirmasi',
-        harga: 120000,
-        alamatLengkap: 'Jl. Melati No. 4',
-        createdAt: now,
-      ),
-    ];
+  Future<void> _loadTasksFromAPI() async {
+    setState(() => _loadingTasks = true);
+
+    final service = TaskService();
+    final data = await service.fetchTasks();
+
+    setState(() {
+      tasks = data;
+      _loadingTasks = false;
+    });
+  }
+
+  Future<void> _loadPesananBaru() async {
+    setState(() => _loadingPesananBaru = true);
+
+    final service = TaskService();
+    final data = await service.fetchPesananBaru();
+
+    setState(() {
+      pesananBaru = data;
+      _loadingPesananBaru = false;
+    });
   }
 
   // --- 🟡 Header AppBar ---
@@ -190,22 +195,41 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
     );
   }
 
+  bool isToday(Task task) {
+    if (task.tanggalBooking == null) return false;
+
+    final now = DateTime.now();
+    final date = task.tanggalBooking!;
+
+    return date.year == now.year &&
+          date.month == now.month &&
+          date.day == now.day;
+  }
+
+
+
   // --- 🔵 BODY ---
   @override
   Widget build(BuildContext context) {
-    final sedang = tasks
-        .where(
-          (t) =>
-              t.statusTugas.toLowerCase().contains("sedang") ||
-              t.statusTugas.toLowerCase().contains("berjalan"),
-        )
-        .toList();
-    final baru = tasks
-        .where((t) => t.statusTugas.toLowerCase() == "tugas baru")
-        .toList();
-    final selesai = tasks
-        .where((t) => t.statusTugas.toLowerCase() == "selesai")
-        .toList();
+    final menunggu = pesananBaru.where((t) =>
+      t.statusPekerjaan.trim().toLowerCase() == "menunggu_diterima"
+    ).toList(); 
+
+    final dijadwalkan = tasks.where((t) =>
+        isToday(t) && t.statusPekerjaan == "dijadwalkan"
+    ).toList();
+
+    final sedang = tasks.where((t) =>
+        isToday(t) &&
+        (t.statusPekerjaan == "menuju_lokasi" ||
+        t.statusPekerjaan == "sedang_bekerja")
+    ).toList();
+
+    final selesai = tasks.where((t) =>
+        isToday(t) &&
+        t.statusPekerjaan == "selesai"
+    ).toList();
+
 
     return Scaffold(
       backgroundColor: const Color(0xfff8f9fd),
@@ -216,7 +240,13 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
           children: [
             _buildProsesBerlangsung(sedang),
             const SizedBox(height: 16),
-            _buildTugasHariIni(baru.length, sedang.length, selesai.length),
+            _buildTugasHariIni(
+              menunggu.length,
+              dijadwalkan.length,
+              sedang.length,
+              selesai.length,
+              menunggu,
+            ),
             const SizedBox(height: 16),
             _buildRiwayatBulanIni(),
           ],
@@ -226,7 +256,56 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
     );
   }
 
-  // --- 🟢 PROSES SEDANG BERLANGSUNG ---
+  Widget shimmerPesananBaru() {
+    return Column(
+      children: List.generate(3, (index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Container(
+              height: 90,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _shimmerProses() {
+    return SizedBox(
+      height: 100,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: 3,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.8,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+
+  // --- 🟢 PROSES SEDANG BERLANGSUNG --- 
   Widget _buildProsesBerlangsung(List<Task> sedang) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -246,92 +325,155 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            height: 100,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: sedang.length,
-              itemBuilder: (context, i) {
-                final t = sedang[i];
-                final screenWidth = MediaQuery.of(context).size.width;
+          _loadingTasks
+              ? _shimmerProses()
+              : SizedBox(
+                  height: 100,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: sedang.length,
+                    itemBuilder: (context, i) {
+                      final t = sedang[i];
+                      final screenWidth = MediaQuery.of(context).size.width;
 
-                return Container(
-                  width:
-                      screenWidth *
-                      0.81, // ✅ lebar 90% layar biar penuh tapi masih bisa geser
-                  margin: EdgeInsets.only(
-                    right: 12,
-                    left: i == 0 ? 16 : 0, // jarak kiri hanya di item pertama
-                  ),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD2F2F7),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 25,
-                        backgroundImage: AssetImage(
-                          'assets/images/teknisi_avatar.png',
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              t.namaPelanggan,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              t.deskripsi,
-                              style: const TextStyle(fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              DateFormat('HH:mm').format(t.createdAt),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade800,
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(12),
+                          onTap: () async {
+
+                            print("CARD DI KLIK: ${t.id} - ${t.statusPekerjaan}");
+
+                            final prefs = await SharedPreferences.getInstance();
+                            final token = prefs.getString("token");
+
+                            if (token == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Token tidak ditemukan, silakan login ulang")),
+                              );
+                              return;
+                            }
+
+                            print("STATUS PEKERJAAN: ${t.statusPekerjaan}");
+
+                            if (t.statusPekerjaan == "sedang_bekerja") {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SedangBekerjaPage(
+                                    idPemesanan: t.id,
+                                    token: token,
+                                    initialData: {
+                                      "kode_pemesanan": t.kodePemesanan,
+                                      "nama_pelanggan": t.namaPelanggan,
+                                      "keluhan": t.deskripsi,
+                                      "tanggal_booking": t.tanggalBooking != null
+                                          ? DateFormat("yyyy-MM-dd").format(t.tanggalBooking!)
+                                          : "-",
+                                      "jam_booking": t.jamBooking ?? "-",
+                                      "harga": t.harga,
+                                      "alamat_lengkap": t.alamatLengkap ?? "-",
+                                      "kota": t.kota ?? "-",
+                                    },
+                                  ),
+                                ),
+                              );
+                            } else if (t.statusPekerjaan == "menuju_lokasi") {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => MenujuKerjaPage.fromTask(task: t),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Status tidak dikenali: ${t.statusPekerjaan}")),
+                              );
+                            }
+                          },
+                          child: Container(
+                            width: screenWidth * 0.81,
+                            margin: EdgeInsets.only(
+                              right: 12,
+                              left: i == 0 ? 16 : 0,
+                            ),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD2F2F7),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const CircleAvatar(
+                                  radius: 25,
+                                  backgroundImage: AssetImage('assets/images/teknisi_avatar.png'),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        t.namaPelanggan,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        t.deskripsi,
+                                        style: const TextStyle(fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        t.jamBooking ??
+                                        (t.createdAt != null
+                                            ? DateFormat('HH:mm').format(t.createdAt!)
+                                            : "--:--"),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade800,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    t.statusPekerjaan == "menuju_lokasi"
+                                        ? "Menuju Lokasi"
+                                        : "Sedang Dikerjakan",
+                                    style: const TextStyle(color: Colors.white, fontSize: 11),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        child: const Text(
-                          "Sedang dikerjakan",
-                          style: TextStyle(color: Colors.white, fontSize: 11),
-                        ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-          ),
+                ),
         ],
       ),
     );
   }
 
   // --- 🟡 TUGAS HARI INI ---
-  Widget _buildTugasHariIni(int baru, int sedang, int selesai) {
+  Widget _buildTugasHariIni(
+      int menungguCount,
+      int dijadwalkanCount,
+      int sedangCount,
+      int selesaiCount,
+      List<Task> menungguList,
+    ){
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -371,10 +513,11 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _statusBox("Dijadwalkan", 2),
-                    _statusBox("Sedang bekerja", 1),
-                    _statusBox("Terlambat", 1),
-                    _statusBox("Selesai", 3),
+                    _statusBox("Dijadwalkan", dijadwalkanCount),
+                    _statusBox("Sedang bekerja", sedangCount),
+                    _statusBox("Terlambat", 0),
+                    _statusBox("Selesai", selesaiCount),
+
                   ],
                 ),
               ),
@@ -393,9 +536,17 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
           ),
         ),
         const SizedBox(height: 10),
-        _pesananBaruCard("Mahfuz Hadid", "Lampu mati total", "19:20"),
-        const SizedBox(height: 8),
-        _pesananBaruCard("Rani Syahrini", "Pompa air bocor", "20:55"),
+        _loadingPesananBaru
+            ? shimmerPesananBaru()
+            : Column(
+                children: menungguList.map((t) => _pesananBaruCard(
+                  t.namaPelanggan,
+                  t.deskripsi,
+                  DateFormat('HH:mm').format(t.createdAt),
+                )).toList(),
+              ),
+
+
       ],
     );
   }
@@ -482,82 +633,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
     );
   }
 
-  Widget _statusCount(String label, int count) => Column(
-    children: [
-      Text(
-        count.toString(),
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
-        ),
-      ),
-      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
-    ],
-  );
-
-  Widget _buildTaskCard(Task t) {
-    Color badgeColor;
-    String badgeText = t.statusTugas;
-    switch (t.statusTugas.toLowerCase()) {
-      case "tugas baru":
-        badgeColor = Colors.green.shade300;
-        break;
-      case "menunggu konfirmasi":
-        badgeColor = Colors.amber.shade300;
-        break;
-      default:
-        badgeColor = Colors.grey.shade400;
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            radius: 25,
-            backgroundImage: AssetImage('assets/images/teknisi_avatar.png'),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  t.namaPelanggan,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  t.deskripsi,
-                  style: const TextStyle(fontSize: 12, color: Colors.black87),
-                ),
-                Text(
-                  DateFormat('HH:mm').format(t.createdAt),
-                  style: const TextStyle(fontSize: 11, color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: badgeColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(badgeText, style: const TextStyle(fontSize: 11)),
-          ),
-        ],
-      ),
-    );
-  }
+  
 
   // --- ⚙️ RIWAYAT BULAN INI ---
   Widget _buildRiwayatBulanIni() {
@@ -659,13 +735,10 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF0C4481),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 6,
-            offset: const Offset(0, -1),
-          ),
+              color: Colors.black12, blurRadius: 6, offset: const Offset(0, -1))
         ],
       ),
       child: Row(
@@ -677,11 +750,11 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
               borderRadius: BorderRadius.circular(12),
               onTap: () => _onNavTap(i),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
                 decoration: BoxDecoration(
-                  color: active
-                      ? highlight.withOpacity(0.12)
-                      : Colors.transparent,
+                  color:
+                      active ? highlight.withOpacity(0.12) : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -695,20 +768,14 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(
-                        item.icon,
-                        color: active ? highlight : Colors.grey,
-                        size: 22,
-                      ),
+                      child: Icon(item.icon,
+                          color: active ? highlight : const Color.fromARGB(255, 255, 255, 255), size: 22),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      item.label,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: active ? highlight : Colors.grey,
-                      ),
-                    ),
+                    Text(item.label,
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: active ? highlight : const Color.fromARGB(255, 255, 255, 255))),
                   ],
                 ),
               ),

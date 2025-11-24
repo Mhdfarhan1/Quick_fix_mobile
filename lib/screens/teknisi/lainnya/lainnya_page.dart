@@ -288,13 +288,10 @@ class _LainnyaPageState extends State<LainnyaPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF0C4481),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 6,
-            offset: const Offset(0, -1),
-          ),
+              color: Colors.black12, blurRadius: 6, offset: const Offset(0, -1))
         ],
       ),
       child: Row(
@@ -306,9 +303,11 @@ class _LainnyaPageState extends State<LainnyaPage> {
               borderRadius: BorderRadius.circular(12),
               onTap: () => _onNavTap(i),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
                 decoration: BoxDecoration(
-                  color: active ? highlight.withOpacity(0.12) : Colors.transparent,
+                  color:
+                      active ? highlight.withOpacity(0.12) : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -317,23 +316,19 @@ class _LainnyaPageState extends State<LainnyaPage> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: active ? highlight.withOpacity(0.18) : Colors.transparent,
+                        color: active
+                            ? highlight.withOpacity(0.18)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(
-                        item.icon,
-                        color: active ? highlight : Colors.grey,
-                        size: 22,
-                      ),
+                      child: Icon(item.icon,
+                          color: active ? highlight : const Color.fromARGB(255, 255, 255, 255), size: 22),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      item.label,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: active ? highlight : Colors.grey,
-                      ),
-                    ),
+                    Text(item.label,
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: active ? highlight : const Color.fromARGB(255, 255, 255, 255))),
                   ],
                 ),
               ),

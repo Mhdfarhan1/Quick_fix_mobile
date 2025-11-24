@@ -1,32 +1,27 @@
+import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
 
 class BaseUrl {
+  // Coba pakai ngrok dulu, kalau offline pakai lokal
   static String get server {
-    // Flutter Web (browser)
-    if (kIsWeb) {
-      return "http://localhost:8000";
-    }
+    const ngrokUrl = "https://85342055a81d.ngrok-free.app";
+    final localIp = "http://10.112.233.178:8000";
 
-    // Android Emulator (default)
-    if (Platform.isAndroid) {
-      //return "http://10.0.2.2:8000"; //
-      return "http://192.168.1.2:8000";
-    }
+    // Flutter Web
+    if (kIsWeb) return "http://localhost:8000";
 
-    // iOS Simulator
-    if (Platform.isIOS) {
-      return "http://10.18.229.247:8000";
-    }
+    // Android Emulator / Device
+    if (Platform.isAndroid) return localIp;
 
-    // Fallback (device fisik)
-    //return "http://10.0.2.2:8000"; 
-    return "http://192.168.1.2:8000";
+    // iOS Simulator / Device
+    if (Platform.isIOS) return localIp;
+
+    return localIp; // fallback
   }
 
-  // API endpoint
   static String get api => "$server/api";
-
-  // Storage (gambar)
   static String get storage => "$server/storage";
 }
+

@@ -85,8 +85,12 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
         children: [
           const CircleAvatar(
             radius: 30,
-            backgroundColor: Colors.grey,
+            backgroundImage: NetworkImage(
+              "https://i.pravatar.cc/300",
+            ),
           ),
+
+
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -203,9 +207,10 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
           margin: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            color: Colors.grey[300],
-            image: const DecorationImage(
-              image: AssetImage('assets/teknisi.jpg'),
+            image: DecorationImage(
+              image: NetworkImage(
+                "https://picsum.photos/400/300?random=$i",
+              ),
               fit: BoxFit.cover,
             ),
           ),
@@ -225,7 +230,12 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CircleAvatar(radius: 20, backgroundColor: Colors.grey),
+          const CircleAvatar(
+            radius: 20,
+            backgroundImage: NetworkImage(
+              "https://i.pravatar.cc/150?img=3",
+            ),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -318,10 +328,14 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
-              child: Image.asset('assets/service.jpg',
-                  height: 90, width: double.infinity, fit: BoxFit.cover)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: Image.network(
+              "https://picsum.photos/400/300?service",
+              height: 90,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(8),
             child: Column(
@@ -376,7 +390,7 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF0C4481),
         boxShadow: [
           BoxShadow(
               color: Colors.black12, blurRadius: 6, offset: const Offset(0, -1))
@@ -410,13 +424,13 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(item.icon,
-                          color: active ? highlight : Colors.grey, size: 22),
+                          color: active ? highlight : const Color.fromARGB(255, 255, 255, 255), size: 22),
                     ),
                     const SizedBox(height: 4),
                     Text(item.label,
                         style: TextStyle(
                             fontSize: 11,
-                            color: active ? highlight : Colors.grey)),
+                            color: active ? highlight : const Color.fromARGB(255, 255, 255, 255))),
                   ],
                 ),
               ),

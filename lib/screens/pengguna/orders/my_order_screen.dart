@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -6,6 +7,7 @@ import 'dart:convert';
 import '../../../config/base_url.dart';
 import '../../../widgets/network_image_with_fallback.dart';
 import '../tugas/detail_tugas_screen.dart';
+
 
 class MyOrderScreen extends StatefulWidget {
   const MyOrderScreen({super.key});
@@ -90,10 +92,13 @@ class _MyOrderScreenState extends State<MyOrderScreen>
     final namaLayanan = order['nama_keahlian'] ?? '-';
     final tanggal = order['tanggal_booking'] ?? '-';
     final alamat = order['alamat_lengkap'] ?? '-';
-    final harga = order['harga'] ?? 0;
-    final status = order['status'] ?? '-';
-    final imageUrl =
-        "${BaseUrl.server}/storage/profil/${order['foto_teknisi'] ?? 'default.png'}";
+    final harga = (order['harga'] is num) ? order['harga'] as num : num.tryParse('${order['harga']}') ?? 0;
+    final status = (order['status'] ?? '-').toString();
+    final imageUrl = order['foto_teknisi_url'] ?? "${BaseUrl.server}/storage/default.png";
+
+    // Format mata uang Indonesia: "Rp 260.000,00"
+    final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 2);
+    final hargaFormatted = formatter.format(harga);
 
     Color color;
     switch (status.toLowerCase()) {
@@ -107,134 +112,159 @@ class _MyOrderScreenState extends State<MyOrderScreen>
         color = Colors.orange;
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Material(
-        elevation: 5,
-        borderRadius: BorderRadius.circular(20),
-        shadowColor: Colors.black26,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => OrderDetailScreen(
-                  name: namaTeknisi,
-                  service: namaLayanan,
-                  estimate: tanggal,
-                  price: "Rp $harga",
-                  imageUrl: imageUrl,
-                ),
-              ),
-            );
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: Colors.white,
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(50),
-                  child: NetworkImageWithFallback(
-                    imageUrl: imageUrl,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 420; // threshold untuk hp besar
+        final imageSize = isWide ? 84.0 : 68.0;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Material(
+            elevation: 4,
+            shadowColor: Colors.black26,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OrderDetailScreen(
+                      name: namaTeknisi,
+                      service: namaLayanan,
+                      estimate: tanggal,
+                      price: hargaFormatted,
+                      imageUrl: imageUrl,
+                    ),
                   ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        namaTeknisi,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // FOTO
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: NetworkImageWithFallback(
+                        imageUrl: imageUrl,
+                        width: imageSize,
+                        height: imageSize,
+                        fit: BoxFit.cover,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        namaLayanan,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: Color(0xFF0C4481),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.calendar_today,
-                              size: 13, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Text(
-                            tanggal,
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.black54),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // TEKS UTAMA (flex)
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.location_on,
-                              size: 13, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Expanded(
+                          // bar nama + harga (nama kiri, harga kanan)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  namaTeknisi,
+                                  style: TextStyle(
+                                    fontSize: isWide ? 18 : 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Harga di kanan atas
+                              Text(
+                                hargaFormatted,
+                                style: TextStyle(
+                                  fontSize: isWide ? 16 : 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[700],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          // layanan
+                          Text(
+                            namaLayanan,
+                            style: TextStyle(
+                              fontSize: isWide ? 15 : 14,
+                              color: const Color(0xFF0C4481),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // tanggal dan alamat (ikon kecil)
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                              const SizedBox(width: 6),
+                              Text(
+                                tanggal,
+                                style: TextStyle(fontSize: 12.5, color: Colors.black54),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  alamat,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12.5, color: Colors.black54, height: 1.2),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          // status chip di bawah (tidak menekan baris lain)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Text(
-                              alamat,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              status.replaceAll('_', ' ').toUpperCase(),
+                              style: TextStyle(
+                                color: color,
+                                fontWeight: FontWeight.bold,
                                 fontSize: 12,
-                                color: Colors.black54,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          status.toUpperCase(),
-                          style: TextStyle(
-                            color: color,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                Text(
-                  "Rp $harga",
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

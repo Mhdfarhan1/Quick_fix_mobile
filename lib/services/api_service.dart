@@ -36,6 +36,7 @@ class ApiService {
         // 🟢 Simpan token
         await prefs.setString('token', data['token']);
 
+
         // 🟢 Simpan user info lengkap
         if (data['user'] != null) {
           final user = data['user'];
@@ -102,6 +103,7 @@ class ApiService {
   }
 
   // ─────────────── REGISTER ───────────────
+  // ─────────────── REGISTER (OTP REQUEST) ───────────────
   static Future<Map<String, dynamic>> register({
     required String nama,
     required String email,
@@ -110,14 +112,27 @@ class ApiService {
     String? noHp,
     BuildContext? context,
   }) async {
-    final url = Uri.parse('${BaseUrl.api}/auth/register');
-    OverlayEntry? loader;
-    if (context != null) loader = UIHelper.showLoading(context, text: 'Register...');
+    final url = Uri.parse('${BaseUrl.api}/auth/register-request');
+
+    print("===== REGISTER REQUEST (OTP) =====");
+    print("URL: $url");
+    print("Body:");
+    print({
+      'nama': nama,
+      'email': email,
+      'password': password,
+      'role': role,
+      'no_hp': noHp ?? '',
+    });
+    print("==================================");
 
     try {
       final response = await http.post(
         url,
-        headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
         body: jsonEncode({
           'nama': nama,
           'email': email,
@@ -127,14 +142,94 @@ class ApiService {
         }),
       );
 
-      final data = jsonDecode(response.body);
+      print("===== REGISTER RESPONSE (OTP) =====");
+      print("Status Code: ${response.statusCode}");
+      print("Raw Body: ${response.body}");
+      print("==================================");
+
+      Map<String, dynamic> data = {};
+      try {
+        data = jsonDecode(response.body);
+      } catch (e) {
+        print("❌ JSON ERROR: $e");
+        print("❌ BODY: ${response.body}");
+      }
+
       return {'statusCode': response.statusCode, 'data': data};
     } catch (e) {
-      return {'statusCode': 500, 'data': {'status': false, 'message': 'Error: $e'}};
-    } finally {
-      loader?.remove();
+      print("❌ REGISTER ERROR BESAR: $e");
+      return {
+        'statusCode': 500,
+        'data': {'status': false, 'message': 'Error: $e'}
+      };
     }
   }
+
+  static Future<Map<String, dynamic>> verifyOtp({
+    required String email,
+    required String otp,
+  }) async {
+    final url = Uri.parse('${BaseUrl.api}/auth/verify-otp');
+
+
+    try {
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'otp': otp}),
+      );
+
+      print("STATUS CODE: ${res.statusCode}");
+      print("RESPONSE BODY: ${res.body}");
+      print("FULL URL: ${BaseUrl.api}/auth/verify-otp");
+
+
+
+      // CEK kalau bukan JSON
+      if (!res.headers['content-type']!.contains('application/json')) {
+        return {
+          'statusCode': res.statusCode,
+          'data': {
+            'status': false,
+            'message': 'Server tidak mengirim JSON. HTML dikembalikan.',
+            'raw': res.body,
+          }
+        };
+      }
+
+      return {
+        'statusCode': res.statusCode,
+        'data': jsonDecode(res.body),
+      };
+    } catch (e) {
+      return {
+        'statusCode': 500,
+        'data': {'message': 'Kesalahan koneksi: $e'},
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> resendOtp({required String email}) async {
+    final url = Uri.parse('${BaseUrl.api}/auth/resend-otp');
+
+    try {
+      final response = await http.post(
+        url,
+        body: {"email": email},
+      );
+
+      return {
+        "statusCode": response.statusCode,
+        "data": jsonDecode(response.body),
+      };
+    } catch (e) {
+      return {
+        "statusCode": 500,
+        "data": {"status": false, "message": "Gagal terhubung ke server: $e"},
+      };
+    }
+  } 
+
 
   // ─────────────── AMBIL BUKTI PEKERJAAN BERDASARKAN ID TEKNISI ───────────────
   static Future<List<dynamic>> getBuktiByTeknisi(int idTeknisi) async {

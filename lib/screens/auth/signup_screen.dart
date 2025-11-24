@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../services/api_service.dart';
 import 'login_screen.dart';
-
+import 'otp_screen.dart';
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -60,30 +60,53 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       final statusCode = response['statusCode'];
-      final data = response['data'];
+      final data = response['data'] ?? {};
+      
 
       if (statusCode == 200 || statusCode == 201) {
-        _showSnackBar('Registrasi berhasil! Silakan login.', Colors.green);
+        final status = data['status'] ?? false;
+        final serverEmail = data['email'];
+
+        if (status != true) {
+          final msg = data['message'] ?? 'Registrasi gagal.';
+          _showSnackBar(msg, Colors.red);
+          return;
+        }
+
+        final emailResponse = (serverEmail is String && serverEmail.isNotEmpty)
+            ? serverEmail
+            : email;
+
+        print("📩 Email untuk OTP: $emailResponse");
+        print("🔍 DATA SERVER: $data");
+
+        _showSnackBar('Registrasi berhasil! OTP telah dikirim.', Colors.green);
+
         Future.delayed(const Duration(seconds: 1), () {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            MaterialPageRoute(
+              builder: (_) => OtpScreen(email: emailResponse),
+            ),
           );
         });
-      } 
+      }
       else if (statusCode == 422 && data['errors'] != null) {
-        // 🧩 tampilkan semua error validasi Laravel
-        final errors = data['errors'];
+        final errors = data['errors'] as Map<String, dynamic>;
         String errorMsg = '';
         errors.forEach((key, value) {
-          errorMsg += '${value[0]}\n';
+          if (value != null && value is List && value.isNotEmpty) {
+            errorMsg += '${value[0]}\n';
+          }
         });
         _showSnackBar(errorMsg.trim(), Colors.red);
-      } 
+      }
+
       else {
         final message = data['message'] ?? 'Terjadi kesalahan server.';
         _showSnackBar(message, Colors.red);
       }
+
     } catch (e) {
       _showSnackBar('Terjadi kesalahan koneksi: $e', Colors.red);
     } finally {

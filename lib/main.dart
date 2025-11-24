@@ -9,6 +9,7 @@ import 'screens/splash/auth_gate.dart';
 import 'screens/pengguna/Pembayaran/struk_page.dart';
 import 'screens/pengguna/home/home_page.dart';
 import 'utils/ui_helper.dart';
+import 'screens/auth/login_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -35,6 +36,8 @@ class MyApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       routes: {
+        '/login': (_) => const LoginScreen(),
+
         '/halaman_struk': (_) => const StrukPage(
               kodePemesanan: 'default',
               namaLayanan: 'default',
@@ -58,28 +61,40 @@ class SplashScreenWrapper extends StatefulWidget {
 }
 
 class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
-  bool _isLoggedIn = false;
-  bool _isLoading = true;
+  late Future<bool> loginFuture;
 
   @override
   void initState() {
     super.initState();
-    _checkLoginStatus();
+    loginFuture = _checkLoginStatus();
   }
 
-  Future<void> _checkLoginStatus() async {
+  Future<bool> _checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+
+    print("===== CHECK TOKEN =====");
+    print("Token from SharedPreferences: $token");
+    print("========================");
+
+    // delay splash 2 detik
     await Future.delayed(const Duration(seconds: 2));
-    setState(() {
-      _isLoggedIn = token != null;
-      _isLoading = false;
-    });
+
+    return token != null;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const SplashScreen();
-    return _isLoggedIn ? const AuthGate() : const SplashScreen();
+    return FutureBuilder<bool>(
+      future: loginFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SplashScreen();
+        }
+
+        return snapshot.data! ? const AuthGate() : const LoginScreen();
+      },
+    );
   }
 }
+

@@ -162,13 +162,13 @@ class _TambahAlamatMapState extends State<TambahAlamatMap>
     if (saving) return;
     setState(() => saving = true);
 
-    // Ambil token dari local storage
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token'); // pastikan ini diset waktu login
+    final token = prefs.getString('token');
+    print("TOKEN DARI STORAGE: ${prefs.getString('token')}");
 
     if (token == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Kamu belum login")),
+        const SnackBar(content: Text("Kamu belum login / token kosong")),
       );
       setState(() => saving = false);
       return;
@@ -182,34 +182,42 @@ class _TambahAlamatMapState extends State<TambahAlamatMap>
       "is_default": 0
     };
 
+    print("📤 KIRIM DATA: $body");
+    print("🔑 TOKEN: $token");
+
     final res = await http.post(
       Uri.parse("${BaseUrl.api}/alamat"),
       headers: {
+        "Accept": "application/json",
         "Content-Type": "application/json",
-        "Authorization": "Bearer $token" // penting untuk auth:sanctum
+        "Authorization": "Bearer $token"
       },
       body: jsonEncode(body),
     );
 
+    print("📥 STATUS CODE: ${res.statusCode}");
+    print("📥 RESPONSE: ${res.body}");
+
     if (!mounted) return;
     setState(() => saving = false);
 
-    if (res.statusCode == 201) {
+    if (res.statusCode == 201 || res.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Alamat berhasil disimpan")),
+        const SnackBar(content: Text("Alamat berhasil disimpan ✅")),
       );
       Navigator.pop(context, true);
     } else {
-      print("Gagal simpan alamat: ${res.body}");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal menyimpan alamat: ${res.statusCode}")),
+        SnackBar(content: Text("Gagal: ${res.statusCode}\n${res.body}")),
       );
     }
   }
+  
 
 
   @override
   Widget build(BuildContext context) {
+    
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(

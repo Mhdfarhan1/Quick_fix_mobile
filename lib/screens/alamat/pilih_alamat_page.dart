@@ -27,6 +27,9 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
+    print("TOKEN: $token");
+
+
     try {
       final res = await http.get(
         Uri.parse("${BaseUrl.api}/alamat"),
@@ -72,17 +75,50 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
           : RefreshIndicator(
               onRefresh: _loadAlamat,
               child: alamat.isEmpty
-                  ? ListView(
-                      children: [
-                        const SizedBox(height: 200),
-                        const Center(
-                          child: Text(
-                            "Belum ada alamat tersimpan",
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                ? ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      const SizedBox(height: 120),
+
+                      const Icon(
+                        Icons.location_off,
+                        size: 80,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 16),
+
+                      const Center(
+                        child: Text(
+                          "Belum ada alamat tersimpan",
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const TambahAlamatMap(),
+                            ),
+                          );
+                          _loadAlamat();
+                        },
+                        icon: const Icon(Icons.add_location_alt),
+                        label: const Text("Tambah Alamat Baru"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                      ],
-                    )
+                      ),
+                    ],
+                  )
                   : ListView.separated(
                       padding: const EdgeInsets.all(12),
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
