@@ -7,6 +7,8 @@ import '../../../config/base_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../alamat/pilih_alamat_page.dart';
 import '../Pembayaran/konfirmasi_pembayaran_page.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../services/api_service.dart';
 
 class FormPemesanan extends StatefulWidget {
   final int idPelanggan;
@@ -38,6 +40,8 @@ class _FormPemesananState extends State<FormPemesanan> {
   static const int PROP_LAIN = 100000;
 
   final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
+
 
   // ====== State ======
   DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
@@ -79,7 +83,8 @@ class _FormPemesananState extends State<FormPemesanan> {
     }
 
     try {
-      final token = prefs.getString('token');
+      final token = await ApiService.storage.read(key: 'token');
+
       final res = await http.get(
         Uri.parse("${BaseUrl.api}/alamat"),
         headers: {"Authorization": "Bearer $token"},

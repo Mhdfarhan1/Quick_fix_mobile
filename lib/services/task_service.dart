@@ -3,14 +3,19 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/base_url.dart';
 import '../models/task_model.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TaskService {
   final String baseUrl = BaseUrl.api;
 
   Future<List<Task>> fetchTasks() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+      final storage = FlutterSecureStorage(
+        aOptions: AndroidOptions(encryptedSharedPreferences: true),
+      );
+
+      final token = await storage.read(key: 'token');
+
 
       if (token == null) {
         print('❌ Token tidak ditemukan, user belum login');
@@ -50,8 +55,11 @@ class TaskService {
 
   Future<List<Task>> fetchPesananBaru() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+      final storage = FlutterSecureStorage(
+        aOptions: AndroidOptions(encryptedSharedPreferences: true),
+      );
+
+      final token = await storage.read(key: 'token');
 
       if (token == null) {
         print("❌ Token tidak ditemukan");

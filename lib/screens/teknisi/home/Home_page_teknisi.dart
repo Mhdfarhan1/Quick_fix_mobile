@@ -12,6 +12,8 @@ import '../home/notifikasi_page.dart';
 import '../../../services/task_service.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../services/api_service.dart';
 
 
 
@@ -58,7 +60,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
     setState(() => _loadingPesananBaru = true);
 
     final service = TaskService();
-    final data = await service.fetchPesananBaru();
+    final data = await service.fetchPesananBaru(  );
 
     setState(() {
       pesananBaru = data;
@@ -159,7 +161,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
-                        "Siap Kerja",
+                        "Istirahat dulu, ",
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -178,7 +180,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                         },
                       ),
                       const Text(
-                        "Istirahat",
+                        "Siap Kerja",
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -195,17 +197,6 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
     );
   }
 
-  bool isToday(Task task) {
-    if (task.tanggalBooking == null) return false;
-
-    final now = DateTime.now();
-    final date = task.tanggalBooking!;
-
-    return date.year == now.year &&
-          date.month == now.month &&
-          date.day == now.day;
-  }
-
 
 
   // --- 🔵 BODY ---
@@ -216,17 +207,17 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
     ).toList(); 
 
     final dijadwalkan = tasks.where((t) =>
-        isToday(t) && t.statusPekerjaan == "dijadwalkan"
+        t.statusPekerjaan == "dijadwalkan"
     ).toList();
 
     final sedang = tasks.where((t) =>
-        isToday(t) &&
+        
         (t.statusPekerjaan == "menuju_lokasi" ||
         t.statusPekerjaan == "sedang_bekerja")
     ).toList();
 
     final selesai = tasks.where((t) =>
-        isToday(t) &&
+        
         t.statusPekerjaan == "selesai"
     ).toList();
 
@@ -344,8 +335,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
 
                             print("CARD DI KLIK: ${t.id} - ${t.statusPekerjaan}");
 
-                            final prefs = await SharedPreferences.getInstance();
-                            final token = prefs.getString("token");
+                            final token = await ApiService.storage.read(key: 'token');
 
                             if (token == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -490,7 +480,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
                   Text(
-                    "Tugas Anda Hari Ini",
+                    "Tugas Anda",
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

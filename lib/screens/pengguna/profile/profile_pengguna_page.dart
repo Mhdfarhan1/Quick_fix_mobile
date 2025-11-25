@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../services/api_service.dart';
 
 import '../../auth/login_screen.dart';
 import 'profile_edit_pengguna_page.dart';
@@ -21,6 +23,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
   Map<String, dynamic>? user;
   bool isLoading = true;
   bool isUploading = false;
+  
 
   @override
   void initState() {
@@ -30,8 +33,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
 
   // ====================== MUAT DATA USER DARI API ======================
   Future<void> _loadUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final token = await ApiService.storage.read(key: 'token');
 
     if (token == null) {
       Navigator.pushReplacement(
@@ -96,8 +98,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
     setState(() => isUploading = true);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+      final token = await ApiService.storage.read(key: 'token');
       final userId = user?['id_user'];
 
       if (token == null || userId == null) return;
@@ -143,7 +144,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
   // ====================== LOGOUT ======================
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
+    await ApiService.storage.delete(key: 'token');
     await prefs.remove('user');
     await prefs.remove("id_user");
     await prefs.clear();

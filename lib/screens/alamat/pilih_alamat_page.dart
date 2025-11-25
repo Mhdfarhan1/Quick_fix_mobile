@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../config/base_url.dart';
 import 'tambah_alamat_map.dart';
+import '../../services/api_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class PilihAlamatPage extends StatefulWidget {
   const PilihAlamatPage({super.key});
@@ -16,6 +18,9 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
   bool loading = true;
   List<Map<String, dynamic>> alamat = [];
 
+  final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
+
+
   @override
   void initState() {
     super.initState();
@@ -25,7 +30,8 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
   Future<void> _loadAlamat() async {
     setState(() => loading = true);
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final token = await ApiService.storage.read(key: 'token');
+
 
     print("TOKEN: $token");
 

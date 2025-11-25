@@ -10,6 +10,7 @@ import 'screens/pengguna/Pembayaran/struk_page.dart';
 import 'screens/pengguna/home/home_page.dart';
 import 'utils/ui_helper.dart';
 import 'screens/auth/login_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -70,17 +71,15 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
   }
 
   Future<bool> _checkLoginStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final storage = const FlutterSecureStorage();
+    final token = await storage.read(key: 'token');
 
-    print("===== CHECK TOKEN =====");
-    print("Token from SharedPreferences: $token");
-    print("========================");
+    print("===== CHECK TOKEN (Splash) =====");
+    print("Token from SecureStorage: $token");
+    print("================================");
 
-    // delay splash 2 detik
     await Future.delayed(const Duration(seconds: 2));
-
-    return token != null;
+    return token != null && token.isNotEmpty;
   }
 
   @override
@@ -88,11 +87,14 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
     return FutureBuilder<bool>(
       future: loginFuture,
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const SplashScreen();
+
+        // Saat loading: tampilkan splash saja
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const SplashScreen(); // atau loading screen
         }
 
-        return snapshot.data! ? const AuthGate() : const LoginScreen();
+        // Jika sudah selesai:
+        return const AuthGate();   // biarkan AuthGate yang menentukan login
       },
     );
   }

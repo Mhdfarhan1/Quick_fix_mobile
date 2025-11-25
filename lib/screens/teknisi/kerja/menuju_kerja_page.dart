@@ -7,7 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../../../services/api_service.dart';
 
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -285,8 +285,8 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
   }
 
   Future<void> _loadToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedToken = prefs.getString("token");
+    final savedToken = await ApiService.storage.read(key: 'token');
+
 
     if (savedToken != null && savedToken.isNotEmpty) {
       setState(() {
@@ -294,7 +294,7 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
       });
       print("✅ Token dari storage: $token");
     } else {
-      print("❌ Token tidak ditemukan di SharedPreferences");
+      print("❌ Token tidak ditemukan di SecureStorage");
     }
   }
 
@@ -835,7 +835,7 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
           child: const Text(
             "Sampai lokasi",
             style: TextStyle(
-                color: Colors.white,
+                color: Color.fromARGB(255, 0, 0, 0),
                 fontSize: 16,
                 fontWeight: FontWeight.w600),
           ),

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../../../services/api_service.dart';
 // IMPORT HALAMAN LAIN
 import 'package:quick_fix/screens/teknisi/riwayat/riwayat_teknisi_page.dart';
 import '../home/Home_page_teknisi.dart';
@@ -84,15 +84,22 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage>
   //  AMBIL TOKEN SharedPreferences
   // ====================================================
   Future<void> loadToken() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    token = prefs.getString("token") ?? "";
+    token = await ApiService.storage.read(key: 'token') ?? "";
+
+    print("🔑 TOKEN TERBACA DI PesananTeknisiPage: $token");
   }
+
 
   // ====================================================
   //  LOAD PESANAN
   // ====================================================
   Future<void> loadPesanan() async {
     await loadToken();
+
+    if (token.isEmpty) {
+      print("❌ Token kosong! Tidak bisa fetch pesanan");
+      return;
+    }
 
     final baru = await fetchPesanan("${BaseUrl.api}/teknisi/pesanan/baru");
     final jadwal = await fetchPesanan("${BaseUrl.api}/teknisi/pesanan/dijadwalkan");
@@ -411,8 +418,12 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage>
                         else if (orderData["status_pekerjaan"] == "sedang_bekerja") {
 
                           // jika token diambil dari sharedprefs
-                          SharedPreferences prefs = await SharedPreferences.getInstance();
-                          final token = prefs.getString("token") ?? "";
+                          final token = await ApiService.storage.read(key: 'token');
+
+                          if (token == null) {
+                            print("TOKEN NULL! Tidak bisa buka halaman.");
+                            return;
+                          }
 
                           Navigator.push(
                             context,
@@ -420,7 +431,7 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage>
                               builder: (_) => SedangBekerjaPage(
                                 idPemesanan: int.parse(orderData["id_pemesanan"].toString()),
                                 token: token,
-                                initialData: orderData, // optional
+                                initialData: orderData,
                               ),
                             ),
                           );

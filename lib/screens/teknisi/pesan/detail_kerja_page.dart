@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../config/base_url.dart';
 import '../kerja/menuju_kerja_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../services/api_service.dart';
 
 class DetailKerjaPage extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -25,8 +25,7 @@ class DetailKerjaPage extends StatelessWidget {
   }
 
   Future<void> mulaiKerja(BuildContext context) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString("token");
+    String? token = await ApiService.storage.read(key: "token");
 
     final url = Uri.parse(
       '${BaseUrl.api}/teknisi/pemesanan/${data['id_pemesanan']}/mulai'
@@ -236,6 +235,7 @@ class DetailKerjaPage extends StatelessWidget {
               onPressed: () => mulaiKerja(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primary,
+                foregroundColor: const Color.fromARGB(255, 255, 255, 255)
               ),
               child: const Text("Mulai"),
             ),
