@@ -4,6 +4,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/base_url.dart';
 import '../utils/ui_helper.dart';
+import 'dart:io';
+import 'package:mime/mime.dart';
+import 'package:http_parser/http_parser.dart';
 
 class ApiService {
   static void log(String message) {
@@ -323,4 +326,249 @@ class ApiService {
     // kirim body kosong (atau bisa dikirim alasan/metadata)
     return await post(endpoint: endpoint, data: {}, context: context);
   }
+  // ---------------------
+// NEW: Ambil daftar keahlian
+// ---------------------
+static Future<Map<String, dynamic>> fetchKeahlian({int? kategoriId}) async {
+  final uri = kategoriId == null
+      ? Uri.parse('${BaseUrl.api}/keahlian')
+      : Uri.parse('${BaseUrl.api}/keahlian?kategori_id=$kategoriId');
+  try {
+    final response = await http.get(uri, headers: {'Accept': 'application/json'});
+    final body = response.body;
+    Map<String, dynamic> parsed = {};
+    try {
+      parsed = jsonDecode(body);
+    } catch (e) {
+      return {'statusCode': response.statusCode, 'data': {'status': false, 'message': 'Response bukan JSON', 'raw': body}};
+    }
+    return {'statusCode': response.statusCode, 'data': parsed};
+  } catch (e) {
+    return {'statusCode': 500, 'data': {'status': false, 'message': 'Gagal koneksi: $e'}};
+  }
+}
+
+// ---------------------
+// Fetch kategori
+// ---------------------
+static Future<Map<String, dynamic>> fetchKategori() async {
+  final url = Uri.parse('${BaseUrl.api}/kategori');
+  try {
+    final response = await http.get(url, headers: {'Accept': 'application/json'});
+    final body = response.body;
+    Map<String, dynamic> parsed = {};
+    try {
+      parsed = jsonDecode(body);
+    } catch (e) {
+      return {'statusCode': response.statusCode, 'data': {'success': false, 'message': 'Response bukan JSON', 'raw': body}};
+    }
+    return {'statusCode': response.statusCode, 'data': parsed};
+  } catch (e) {
+    return {'statusCode': 500, 'data': {'success': false, 'message': 'Gagal koneksi: $e'}};
+  }
+}
+
+// ---------------------
+// NEW: Upload keahlian teknisi (multipart/form-data)
+// ---------------------
+static Future<Map<String, dynamic>> uploadKeahlianTeknisi({
+  int? idKeahlian,
+  String? nama,
+  int? hargaMin,
+  int? hargaMax,
+  String? deskripsi,
+  File? gambarFile,
+  BuildContext? context,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('token');
+
+  OverlayEntry? loader;
+  if (context != null) loader = UIHelper.showLoading(context, text: 'Mengunggah layanan...');
+
+  try {
+    final uri = Uri.parse('${BaseUrl.api}/teknisi/keahlian');
+    final request = http.MultipartRequest('POST', uri);
+
+    // headers
+    request.headers.addAll({
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    });
+
+    // fields
+    if (idKeahlian != null) request.fields['id_keahlian'] = idKeahlian.toString();
+    if (nama != null) request.fields['nama'] = nama;
+    if (hargaMin != null) request.fields['harga_min'] = hargaMin.toString();
+    if (hargaMax != null) request.fields['harga_max'] = hargaMax.toString();
+    if (deskripsi != null && deskripsi.isNotEmpty) request.fields['deskripsi'] = deskripsi;
+
+    // file
+    if (gambarFile != null) {
+      final mimeType = lookupMimeType(gambarFile.path) ?? 'image/jpeg';
+      final multipartFile = await http.MultipartFile.fromPath('gambar_layanan', gambarFile.path,
+          contentType: MediaType.parse(mimeType));
+      request.files.add(multipartFile);
+    }
+
+    // send
+    final streamed = await request.send();
+    final respStr = await streamed.stream.bytesToString();
+    final statusCode = streamed.statusCode;
+
+    // parse response body
+    dynamic data;
+    try {
+      data = jsonDecode(respStr);
+    } catch (e) {
+      data = {'status': false, 'message': 'Response bukan JSON', 'raw': respStr};
+    }
+
+    return {'statusCode': statusCode, 'data': data};
+  } catch (e) {
+    return {'statusCode': 500, 'data': {'status': false, 'message': 'Error: $e'}};
+  } finally {
+    loader?.remove();
+  }
+}
+
+// ---------------------
+// Fetch layanan teknisi
+// ---------------------
+static Future<Map<String, dynamic>> getLayananTeknisi({
+  BuildContext? context,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('token');
+
+  try {
+    final url = Uri.parse('${BaseUrl.api}/teknisi/keahlian');
+    final response = await http.get(
+      url,
+      headers: {
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    final body = response.body;
+    Map<String, dynamic> parsed = {};
+    try {
+      parsed = jsonDecode(body);
+    } catch (e) {
+      return {'statusCode': response.statusCode, 'data': {'success': false, 'message': 'Response bukan JSON', 'raw': body}};
+    }
+    return {'statusCode': response.statusCode, 'data': parsed};
+  } catch (e) {
+    return {'statusCode': 500, 'data': {'success': false, 'message': 'Gagal koneksi: $e'}};
+  }
+}
+
+// ---------------------
+// Update layanan teknisi
+// ---------------------
+static Future<Map<String, dynamic>> updateLayananTeknisi({
+  required int id,
+  int? idKeahlian,
+  String? nama,
+  int? hargaMin,
+  int? hargaMax,
+  String? deskripsi,
+  File? gambarFile,
+  BuildContext? context,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('token');
+
+  OverlayEntry? loader;
+  if (context != null) loader = UIHelper.showLoading(context, text: 'Memperbarui layanan...');
+
+  try {
+    final uri = Uri.parse('${BaseUrl.api}/teknisi/keahlian/$id');
+    final request = http.MultipartRequest('POST', uri);
+
+    // method spoofing untuk PUT
+    request.fields['_method'] = 'PUT';
+
+    // headers
+    request.headers.addAll({
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    });
+
+    // fields
+    if (idKeahlian != null) request.fields['id_keahlian'] = idKeahlian.toString();
+    if (nama != null) request.fields['nama'] = nama;
+    if (hargaMin != null) request.fields['harga_min'] = hargaMin.toString();
+    if (hargaMax != null) request.fields['harga_max'] = hargaMax.toString();
+    if (deskripsi != null && deskripsi.isNotEmpty) request.fields['deskripsi'] = deskripsi;
+
+    // file
+    if (gambarFile != null) {
+      final mimeType = lookupMimeType(gambarFile.path) ?? 'image/jpeg';
+      final multipartFile = await http.MultipartFile.fromPath('gambar_layanan', gambarFile.path,
+          contentType: MediaType.parse(mimeType));
+      request.files.add(multipartFile);
+    }
+
+    // send
+    final streamed = await request.send();
+    final respStr = await streamed.stream.bytesToString();
+    final statusCode = streamed.statusCode;
+
+    // parse response body
+    dynamic data;
+    try {
+      data = jsonDecode(respStr);
+    } catch (e) {
+      data = {'success': false, 'message': 'Response bukan JSON', 'raw': respStr};
+    }
+
+    return {'statusCode': statusCode, 'data': data};
+  } catch (e) {
+    return {'statusCode': 500, 'data': {'success': false, 'message': 'Error: $e'}};
+  } finally {
+    loader?.remove();
+  }
+}
+
+// ---------------------
+// Delete layanan teknisi
+// ---------------------
+static Future<Map<String, dynamic>> deleteLayananTeknisi({
+  required int id,
+  BuildContext? context,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('token');
+
+  OverlayEntry? loader;
+  if (context != null) loader = UIHelper.showLoading(context, text: 'Menghapus layanan...');
+
+  try {
+    final url = Uri.parse('${BaseUrl.api}/teknisi/keahlian/$id');
+    final response = await http.delete(
+      url,
+      headers: {
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    final body = response.body;
+    Map<String, dynamic> parsed = {};
+    try {
+      parsed = jsonDecode(body);
+    } catch (e) {
+      return {'statusCode': response.statusCode, 'data': {'success': false, 'message': 'Response bukan JSON', 'raw': body}};
+    }
+
+    return {'statusCode': response.statusCode, 'data': parsed};
+  } catch (e) {
+    return {'statusCode': 500, 'data': {'success': false, 'message': 'Error: $e'}};
+  } finally {
+    loader?.remove();
+  }
+}
+
 }

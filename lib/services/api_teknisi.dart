@@ -1,19 +1,15 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'api_service.dart';
+import 'teknisi_service.dart';
 
 class ApiTeknisi {
-  final ApiService _api = ApiService();
+  final TeknisiService _svc = TeknisiService();
 
   // Ambil semua teknisi
   Future<List<dynamic>> getListTeknisi() async {
-    final response = await _api.get('get_teknisi_list');
-    return response;
+    return await _svc.getTeknisiList();
   }
 
   // Ambil detail teknisi berdasarkan ID
-  Future<Map<String, dynamic>> getTeknisiById(int id) async {
-    final response = await _api.get('get_teknisi?id=$id');
-    return response;
+  Future<Map<String, dynamic>?> getTeknisiById(int id) async {
+    return await _svc.getTeknisiById(id);
   }
 }

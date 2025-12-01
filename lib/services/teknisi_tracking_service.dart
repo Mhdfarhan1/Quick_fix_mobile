@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/base_url.dart';
 
@@ -11,27 +12,26 @@ class TeknisiTrackingService {
 
     await service.configure(
       androidConfiguration: AndroidConfiguration(
+        autoStart: false,
         onStart: onStart,
         isForegroundMode: true,
-        autoStart: false,
-        notificationTitle: "Tracking Teknisi",
-        notificationText: "Sedang mengirim lokasi...",
-        notificationId: 888,
+        notificationChannelId: 'tracking_channel',
+        initialNotificationTitle: 'Tracking Teknisi',
+        initialNotificationContent: 'Sedang mengirim lokasi...',
       ),
       iosConfiguration: IosConfiguration(
         onForeground: onStart,
-        onBackground: (_) async => true,
+        autoStart: false,
       ),
     );
   }
 
   static void onStart(ServiceInstance service) async {
-    Timer.periodic(Duration(seconds: 5), (timer) async {
+    Timer.periodic(const Duration(seconds: 5), (timer) async {
+      final prefs = await SharedPreferences.getInstance();
 
-      final result = await service.getSharedPreferences();
-
-      final idTeknisi = result?.getInt("id_teknisi");
-      final status = result?.getString("status");
+      final idTeknisi = prefs.getInt("id_teknisi");
+      final status = prefs.getString("status");
 
       if (idTeknisi == null) return;
 
