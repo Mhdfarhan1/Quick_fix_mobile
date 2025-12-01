@@ -17,6 +17,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
   int totalItem = 0;
   int totalHarga = 0;
   bool isLoading = true;
+  
 
 
   String formatRupiah(int number) {

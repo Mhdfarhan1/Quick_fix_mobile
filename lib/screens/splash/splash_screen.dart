@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/login_screen.dart';
 import '../../screens/pengguna/home/home_page.dart';
 import '../../screens/teknisi/home/Home_page_teknisi.dart'; 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -62,16 +63,24 @@ class _SplashScreenState extends State<SplashScreen>
 
   /// 🔍 Cek apakah user sudah login & arahkan sesuai role
   Future<void> _checkLoginStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    final userJson = prefs.getString('user');
+    final storage = const FlutterSecureStorage();
 
-    if (token != null && userJson != null) {
+    final token = await storage.read(key: 'token');   // ✔ baca token yg benar
+
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = prefs.getString('user');         // user tetap dari SharedPrefs
+
+    print("[SPLASH] Mulai cek login");
+    print("[SPLASH] Token dari SecureStorage: $token");
+    print("[SPLASH] UserJson dari SharedPrefs: $userJson");
+    
+
+
+    if (token != null && token.trim().isNotEmpty && userJson != null) {
       try {
         final user = jsonDecode(userJson);
         final role = user['role']?.toString().toLowerCase();
 
-        // ✅ Arahkan berdasarkan role
         if (role == 'teknisi') {
           Navigator.pushReplacement(
             context,
@@ -84,14 +93,14 @@ class _SplashScreenState extends State<SplashScreen>
           );
         }
       } catch (e) {
-        // Jika parsing JSON gagal, fallback ke login
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
+        print("[SPLASH] ERROR decode user: $e");
+
       }
     } else {
-      // Belum login → ke LoginScreen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),

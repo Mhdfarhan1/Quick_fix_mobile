@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/base_url.dart';
 import 'dart:convert';
+import '../../../services/api_service.dart';
 
 
 class DetailPesananPage extends StatefulWidget {
@@ -93,8 +94,7 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
     print("ID Pesanan: $orderId");
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token") ?? "";
+      String? token = await ApiService.storage.read(key: "token");
 
       final response = await http.post(
         Uri.parse("${BaseUrl.api}/pemesanan/$orderId/terima"),

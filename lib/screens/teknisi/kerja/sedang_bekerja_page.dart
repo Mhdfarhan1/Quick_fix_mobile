@@ -335,7 +335,7 @@ class _SedangBekerjaPageState extends State<SedangBekerjaPage> {
                 onPressed: uploading ? null : uploadBukti,
                 icon: uploading ? const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2,)) : const Icon(Icons.cloud_upload),
                 label: Text(uploading ? "Mengupload..." : "Upload Bukti"),
-                style: ElevatedButton.styleFrom(backgroundColor: primary),
+                style: ElevatedButton.styleFrom(backgroundColor: primary, foregroundColor: Colors.white),
               ),
               const SizedBox(width: 10),
               OutlinedButton(
@@ -386,6 +386,7 @@ class _SedangBekerjaPageState extends State<SedangBekerjaPage> {
       appBar: AppBar(
         backgroundColor: primary,
         title: const Text("Sedang Bekerja"),
+        foregroundColor: Colors.white,
         centerTitle: true,
       ),
       backgroundColor: Colors.grey[100],
@@ -408,7 +409,7 @@ class _SedangBekerjaPageState extends State<SedangBekerjaPage> {
                       },
                       icon: const Icon(Icons.camera_alt),
                       label: const Text("Kamera"),
-                      style: ElevatedButton.styleFrom(backgroundColor: primary),
+                      style: ElevatedButton.styleFrom(backgroundColor: primary, foregroundColor: const Color.fromARGB(255, 255, 255, 255)),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -438,7 +439,8 @@ class _SedangBekerjaPageState extends State<SedangBekerjaPage> {
                 child: ElevatedButton(
                   onPressed: canFinish && !finishing ? selesaikanPekerjaan : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: canFinish ? primary : Colors.grey,
+                    backgroundColor: canFinish ? Color(0xFFFFCC33) : Colors.grey,
+                    foregroundColor: const Color.fromARGB(255, 0, 0, 0),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),

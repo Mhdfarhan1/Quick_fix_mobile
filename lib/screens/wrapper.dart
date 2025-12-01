@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/pengguna/home/home_page.dart';
 import '../screens/teknisi/home/Home_page_teknisi.dart';
 import '../screens/auth/login_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../services/api_service.dart';
 
 class Wrapper extends StatefulWidget {
   const Wrapper({super.key});
@@ -16,6 +18,8 @@ class _WrapperState extends State<Wrapper> {
   bool _isLoading = true;
   Widget? _nextPage;
 
+  final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
+
   @override
   void initState() {
     super.initState();
@@ -24,7 +28,7 @@ class _WrapperState extends State<Wrapper> {
 
   Future<void> _checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final token = await ApiService.storage.read(key: 'token');
     final userJson = prefs.getString('user');
 
     if (token != null && userJson != null) {

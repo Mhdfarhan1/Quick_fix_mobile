@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
-import '../../screens/pengguna/home/home_page.dart';
 import 'signup_screen.dart';
-import '../../screens/teknisi/home/Home_page_teknisi.dart';
 import '../auth/reset_password_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../teknisi/home/Home_page_teknisi.dart';
+import '../pengguna/home/home_page.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
 
   @override
   void dispose() {
@@ -61,44 +63,27 @@ class _LoginScreenState extends State<LoginScreen> {
           print("From server user data: $user");
           print("Correct id_user: ${user['id_user']}");
 
-          // ✅ SIMPAN DATA DI PREFS
+          // 🔐 SIMPAN TOKEN DI SECURE STORAGE
+          await ApiService.storage.write(key: "token", value: token);
+          await Future.delayed(const Duration(milliseconds: 200));
+
+
+          print("TOKEN DISIMPAN DI SECURE STORAGE: $token");
+
+          // ⭐ SIMPAN DATA USER DI SHARED PREFS
           final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('token', token);
-            await prefs.setString('user', jsonEncode(user));
-            await prefs.setInt('id_user', user['id_user']);
-
-            // Pastikan alamat_default tidak null & tipe datanya benar
-            final alamatDefault = user['alamat_default'];
-            final idAlamatDefault = user['id_alamat_default'];
-
-            print("Dari API -> alamat_default: $alamatDefault, id_alamat_default: $idAlamatDefault");
-
-            if (alamatDefault != null && alamatDefault.toString().isNotEmpty) {
-              await prefs.setString('alamat_default', alamatDefault.toString());
-              if (idAlamatDefault != null) {
-                await prefs.setInt('id_alamat_default', idAlamatDefault is int
-                    ? idAlamatDefault
-                    : int.tryParse(idAlamatDefault.toString()) ?? 0);
-              }
-            }
-
-          print("✅ prefs cek id_user: ${prefs.getInt('id_user')}");
-          print("✅ prefs cek alamat_default: ${prefs.getString('alamat_default')}");
-          print("Login response data: $data");
-          print("User map: ${data['user']}");
-          print("Alamat default dari server: ${data['user']['alamat_default']}");
-          print("ID alamat default dari server: ${data['user']['id_alamat_default']}");
+          await prefs.setString('user', jsonEncode(user));
+          await prefs.setInt('id_user', user['id_user']);
+          await prefs.setString('role', user['role'].toString().toLowerCase()); // <-- WAJIB
 
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message'] ?? 'Login berhasil!'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          
 
-          // 🔥 Arahkan halaman berdasarkan role
-          final role = user['role']?.toString().toLowerCase();
+          // 🎯 ARAHKAN KE HALAMAN SESUAI ROLE
+          final role = user['role'].toString().toLowerCase();
+
+
+          if (!mounted) return;
 
           if (role == 'teknisi') {
             Navigator.pushReplacement(
@@ -112,6 +97,21 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }
 
+
+          // Pastikan alamat_default benar
+          final alamatDefault = user['alamat_default'];
+          final idAlamatDefault = user['id_alamat_default'];
+
+          if (alamatDefault != null && alamatDefault.toString().isNotEmpty) {
+            await prefs.setString('alamat_default', alamatDefault.toString());
+
+            if (idAlamatDefault != null) {
+              await prefs.setInt(
+                'id_alamat_default',
+                idAlamatDefault is int ? idAlamatDefault : int.tryParse(idAlamatDefault.toString()) ?? 0,
+              );
+            }
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

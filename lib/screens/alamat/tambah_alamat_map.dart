@@ -8,6 +8,8 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/base_url.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../services/api_service.dart';
 
 class TambahAlamatMap extends StatefulWidget {
   const TambahAlamatMap({super.key});
@@ -24,6 +26,9 @@ class _TambahAlamatMapState extends State<TambahAlamatMap>
   String label = "";
   String? countryCode; // <- Tambahan untuk filter negara
   bool saving = false;
+
+  final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
+
 
   final TextEditingController searchC = TextEditingController();
   final mapController = MapController();
@@ -163,7 +168,8 @@ class _TambahAlamatMapState extends State<TambahAlamatMap>
     setState(() => saving = true);
 
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final token = await ApiService.storage.read(key: 'token');
+
     print("TOKEN DARI STORAGE: ${prefs.getString('token')}");
 
     if (token == null) {

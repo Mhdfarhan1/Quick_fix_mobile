@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/base_url.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class KeranjangService {
   Future<List<dynamic>> getKeranjang() async {
@@ -26,6 +27,11 @@ class KeranjangService {
       required int harga,
     }) async {
       try {
+        final storage = FlutterSecureStorage(
+          aOptions: AndroidOptions(encryptedSharedPreferences: true),
+        );
+        final token = await storage.read(key: 'token');
+
         SharedPreferences prefs = await SharedPreferences.getInstance();
         int? idUser = prefs.getInt('id_user');
 
@@ -37,7 +43,11 @@ class KeranjangService {
         final url = Uri.parse("${BaseUrl.api}/keranjang/add");
         final response = await http.post(
           url,
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
           body: jsonEncode({
             "id_pelanggan": idUser,
             "id_teknisi": idTeknisi,
