@@ -65,6 +65,8 @@ class DetailKerjaPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print("DATA DETAIL: $data");
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
       body: SafeArea(

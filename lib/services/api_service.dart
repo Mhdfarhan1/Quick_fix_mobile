@@ -5,8 +5,49 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/base_url.dart';
 import '../utils/ui_helper.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
 
 class ApiService {
+  
+
+  static final Dio dio = Dio();
+
+  static void setToken(String? token){
+    if (token != null && token.isNotEmpty) {
+      dio.options.headers['Authorization'] = 'Bearer $token';
+    }
+  }
+
+
+
+  static Future<Map<String, dynamic>> postMultipart(String endpoint, FormData data) async {
+    final url = "${BaseUrl.api}/$endpoint";
+
+    try {
+      print("URL => $url");
+
+      final response = await dio.post(
+        url,
+        data: data,
+        options: Options(headers: await _buildHeaders(json: false)),
+      );
+
+      print("RESPONSE => ${response.data}");
+
+      return {
+        'statusCode': response.statusCode,
+        'data': response.data,
+      };
+    } catch(e) {
+      print("ERROR => $e");
+      rethrow;
+    }
+  }
+
+
+
+
+
   static void log(String message) {
     print('[ApiService] $message');
   }
@@ -67,57 +108,64 @@ class ApiService {
   }
 
   // Generic request helper (ke semua method agar konsisten)
-  static Future<Map<String, dynamic>> _request({
-    required String method,
-    required String endpoint,
-    Map<String, dynamic>? body,
-    BuildContext? context,
-    bool jsonBody = true,
-    Duration timeout = const Duration(seconds: 30),
-  }) async {
-    final url = Uri.parse('${BaseUrl.api}$endpoint');
-    OverlayEntry? loader;
-    if (context != null) loader = UIHelper.showLoading(context);
+    static Future<Map<String, dynamic>> request({
+      required String method,
+      required String endpoint,
+      Map<String, dynamic>? body,
+      BuildContext? context,
+      bool jsonBody = true,
+      Duration timeout = const Duration(seconds: 30),
+    }) async {
 
-    try {
-      final headers = await _buildHeaders(json: jsonBody, includeAuthIfExists: true);
-      http.Response res;
+      // ============================
+      // FIX URL — TANPA /apichat !!!
+      // ============================
+      final fullUrl = "${BaseUrl.api}/$endpoint";
 
-      log('$method $url');
-      log('Headers: $headers');
-      if (body != null) log('Body: $body');
+      OverlayEntry? loader;
+      if (context != null) loader = UIHelper.showLoading(context);
 
-      if (method == 'GET') {
-        res = await http.get(url, headers: headers).timeout(timeout);
-      } else if (method == 'POST') {
-        final encoded = jsonBody ? jsonEncode(body ?? {}) : (body?['raw'] ?? '');
-        res = await http.post(url, headers: headers, body: encoded).timeout(timeout);
-      } else if (method == 'PUT') {
-        final encoded = jsonBody ? jsonEncode(body ?? {}) : (body?['raw'] ?? '');
-        res = await http.put(url, headers: headers, body: encoded).timeout(timeout);
-      } else if (method == 'DELETE') {
-        res = await http.delete(url, headers: headers).timeout(timeout);
-      } else {
-        throw UnsupportedError('HTTP method $method not supported');
+      try {
+        final headers = await _buildHeaders(
+          json: jsonBody,
+          includeAuthIfExists: true,
+        );
+
+        log('$method $fullUrl');
+        log('Headers: $headers');
+        if (body != null) log('Body: $body');
+
+        // ============================
+        // PAKAI URL YANG SUDAH FIX
+        // ============================
+        final response = await dio.request(
+          fullUrl,
+          data: body,
+          options: Options(
+            method: method,
+            headers: headers,
+          ),
+        );
+
+        log("RESPONSE STATUS: ${response.statusCode}");
+        log("RESPONSE DATA: ${response.data}");
+
+        return {
+          "statusCode": response.statusCode,
+          "data": response.data,
+        };
+
+      } catch (e) {
+        log("REQUEST ERROR: $e");
+        return {
+          "statusCode": 500,
+          "data": {"status": false, "message": "Error: $e"},
+        };
+      } finally {
+        loader?.remove();
       }
-
-      final parsed = _safeDecode(res.body);
-      log('Response ${res.statusCode}: ${res.body}');
-
-      return {
-        'statusCode': res.statusCode,
-        'data': parsed,
-      };
-    } catch (e) {
-      log('Request error: $e');
-      return {
-        'statusCode': 500,
-        'data': {'status': false, 'message': 'Error: $e'},
-      };
-    } finally {
-      loader?.remove();
     }
-  }
+
 
   // -----------------------
   // Public methods (preserve original signatures)
@@ -153,8 +201,7 @@ class ApiService {
         final token = data['token'] as String?;
         if (token != null) {
           await storage.write(key: 'token', value: token);
-          log("[LOGIN] Token diterima dari server: $token");
-          log("[LOGIN] Menyimpan token ke SecureStorage...");
+          ApiService.setToken(token);  // <── WAJIB TAMBAH
         }
 
         // simpan user ke shared prefs (seperti sebelumnya)
@@ -170,12 +217,8 @@ class ApiService {
             await prefs.setString('role', user['role'].toString().toLowerCase());
           }
           log("User disimpan: $user");
-        }
-
+        }    
         
-        
-        
-
         log('✅ Login berhasil. Role: ${data['user']?['role']} | ID: ${data['user']?['id_user']}');
       } else {
         log('⚠️ Login gagal: ${data is Map ? data['message'] : data}');
@@ -198,7 +241,7 @@ class ApiService {
 
   // Generic GET wrapper (preserve function name get)
   static Future<Map<String, dynamic>> get(String endpoint) async {
-    return await _request(method: 'GET', endpoint: endpoint);
+    return await request(method: 'GET', endpoint: endpoint);
   }
 
   // POST generik (preserve signature)
@@ -207,7 +250,7 @@ class ApiService {
     required Map<String, dynamic> data,
     BuildContext? context,
   }) async {
-    return await _request(method: 'POST', endpoint: endpoint, body: data, context: context);
+    return await request(method: 'POST', endpoint: endpoint, body: data, context: context);
   }
 
   // -----------------------
@@ -367,4 +410,41 @@ class ApiService {
       log('Logout error: $e');
     }
   }
+
+  static Future<Map<String, dynamic>> delete(String endpoint) async {
+    try {
+      final token = await _getToken(); // ambil token dulu
+      final url = "${BaseUrl.api}$endpoint";
+
+      print("API DELETE: $url");
+
+      final res = await Dio().delete(
+        url,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Accept": "application/json",
+          },
+        ),
+      );
+
+      print("DELETE STATUS: ${res.statusCode}");
+      print("DELETE RESP: ${res.data}");
+
+      return {
+        'statusCode': res.statusCode,
+        'data': res.data,
+      };
+
+    } catch (e) {
+      print("❌ DELETE ERROR: $e");
+      return {
+        'statusCode': null,
+        'data': null,
+      };
+    }
+  }
+
+  
+
 }

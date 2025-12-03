@@ -7,6 +7,7 @@ import 'dart:convert';
 import '../../../config/base_url.dart';
 import '../../../widgets/network_image_with_fallback.dart';
 import '../tugas/detail_tugas_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 
 class MyOrderScreen extends StatefulWidget {
@@ -33,7 +34,22 @@ class _MyOrderScreenState extends State<MyOrderScreen>
 
   Future<void> fetchPesanan() async {
     debugPrint("📦 [MyOrderScreen] Mulai ambil pesanan...");
+
     try {
+      final storage = FlutterSecureStorage(
+        aOptions: AndroidOptions(encryptedSharedPreferences: true),
+      );
+
+      final token = await storage.read(key: 'token');
+
+      if (token == null) {
+        debugPrint("❌ TOKEN NULL di FlutterSecureStorage");
+        setState(() => isLoading = false);
+        return;
+      }
+
+      debugPrint("🔐 TOKEN TERBACA: $token");
+
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int? idUser = prefs.getInt('id_user');
       String? role = prefs.getString('role');
@@ -43,43 +59,38 @@ class _MyOrderScreenState extends State<MyOrderScreen>
         return;
       }
 
-      String url = "${BaseUrl.server}/api/get_pemesanan?";
-      if (role == 'pelanggan') {
-        url += "id_pelanggan=$idUser";
-      } else if (role == 'teknisi') {
-        url += "id_teknisi=$idUser";
-      }
+      final response = await http.get(
+        Uri.parse("${BaseUrl.server}/api/get_pemesanan_by_user"),
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
 
-      debugPrint("🌐 Fetch URL: $url");
-      final response = await http.get(Uri.parse(url));
+      debugPrint("📥 STATUS CODE: ${response.statusCode}");
+      debugPrint("📥 BODY: ${response.body}");
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        debugPrint("🧩 Response dari API: $body");
+        final List<dynamic> data = jsonDecode(response.body);
 
-        if (body['status'] == true && body['data'] != null) {
-          final List<dynamic> data = body['data'];
+        setState(() {
+          ongoingOrders = data.where((p) => p['status'] != 'selesai').toList();
+          completedOrders = data.where((p) => p['status'] == 'selesai').toList();
+          isLoading = false;
+        });
 
-          setState(() {
-            ongoingOrders =
-                data.where((p) => p['status'] != 'selesai').toList();
-            completedOrders =
-                data.where((p) => p['status'] == 'selesai').toList();
-            isLoading = false;
-          });
-        } else {
-          debugPrint("⚠️ Data tidak ditemukan di response");
-          setState(() => isLoading = false);
-        }
-      } else {
-        debugPrint("❌ HTTP Error: ${response.statusCode}");
-        setState(() => isLoading = false);
+        return;
       }
+
+
+      setState(() => isLoading = false);
     } catch (e) {
       debugPrint("💥 Error fetchPesanan: $e");
       setState(() => isLoading = false);
     }
   }
+
+
 
   @override
   void dispose() {
@@ -94,179 +105,126 @@ class _MyOrderScreenState extends State<MyOrderScreen>
     final alamat = order['alamat_lengkap'] ?? '-';
     final harga = (order['harga'] is num) ? order['harga'] as num : num.tryParse('${order['harga']}') ?? 0;
     final status = (order['status'] ?? '-').toString();
-    final imageUrl = order['foto_teknisi_url'] ?? "${BaseUrl.server}/storage/default.png";
+    final imageUrl = order['foto_teknisi'] != null 
+        ? "${BaseUrl.server}/storage/foto/foto_teknisi/${order['foto_teknisi']}"
+        : "${BaseUrl.server}/storage/default.png";
 
-    // Format mata uang Indonesia: "Rp 260.000,00"
-    final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 2);
+
+    final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final hargaFormatted = formatter.format(harga);
 
-    Color color;
-    switch (status.toLowerCase()) {
-      case 'selesai':
-        color = Colors.green;
-        break;
-      case 'diproses':
-        color = Colors.blue;
-        break;
-      default:
-        color = Colors.orange;
-    }
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Material(
+        elevation: 3,
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => OrderDetailScreen(order: Map<String, dynamic>.from(order)),
+              ),
+            );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 420; // threshold untuk hp besar
-        final imageSize = isWide ? 84.0 : 68.0;
 
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Material(
-            elevation: 4,
-            shadowColor: Colors.black26,
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => OrderDetailScreen(
-                      name: namaTeknisi,
-                      service: namaLayanan,
-                      estimate: tanggal,
-                      price: hargaFormatted,
-                      imageUrl: imageUrl,
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // FOTO BULAT
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(50),
+                  child: NetworkImageWithFallback(
+                    imageUrl: imageUrl,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+
+                const SizedBox(width: 14),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Nama teknisi
+                      Text(
+                        namaTeknisi,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      // Nama layanan
+                      Text(
+                        namaLayanan,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0A4CA7),
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      // Status kecil warna hijau
+                      Text(
+                        status.replaceAll("_", " "),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // harga
+                      Text(
+                        hargaFormatted,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 6),
+
+                // Tombol status
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xffFFCB00),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    "Lihat Status",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
                     ),
                   ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // FOTO
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: NetworkImageWithFallback(
-                        imageUrl: imageUrl,
-                        width: imageSize,
-                        height: imageSize,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    // TEKS UTAMA (flex)
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // bar nama + harga (nama kiri, harga kanan)
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  namaTeknisi,
-                                  style: TextStyle(
-                                    fontSize: isWide ? 18 : 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              // Harga di kanan atas
-                              Text(
-                                hargaFormatted,
-                                style: TextStyle(
-                                  fontSize: isWide ? 16 : 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green[700],
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 6),
-
-                          // layanan
-                          Text(
-                            namaLayanan,
-                            style: TextStyle(
-                              fontSize: isWide ? 15 : 14,
-                              color: const Color(0xFF0C4481),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          // tanggal dan alamat (ikon kecil)
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-                              const SizedBox(width: 6),
-                              Text(
-                                tanggal,
-                                style: TextStyle(fontSize: 12.5, color: Colors.black54),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 6),
-
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  alamat,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 12.5, color: Colors.black54, height: 1.2),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          // status chip di bawah (tidak menekan baris lain)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              status.replaceAll('_', ' ').toUpperCase(),
-                              style: TextStyle(
-                                color: color,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
+
 
   Widget buildTab(String title, int count) {
     return Tab(

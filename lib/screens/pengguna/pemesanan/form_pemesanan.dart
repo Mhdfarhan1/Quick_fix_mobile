@@ -9,6 +9,9 @@ import '../../alamat/pilih_alamat_page.dart';
 import '../Pembayaran/konfirmasi_pembayaran_page.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../services/api_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+
 
 class FormPemesanan extends StatefulWidget {
   final int idPelanggan;
@@ -42,10 +45,20 @@ class _FormPemesananState extends State<FormPemesanan> {
   final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
 
+  bool isFormValid() {
+    return alamatDipilih != null &&
+          keluhan.trim().isNotEmpty &&
+          imageKeluhan != null;
+  }
+
+
 
   // ====== State ======
   DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay selectedTime = const TimeOfDay(hour: 9, minute: 0);
+
+  XFile? imageKeluhan;
+
 
   String keluhan = "";
   String selectedPayment = "transfer";
@@ -149,6 +162,66 @@ class _FormPemesananState extends State<FormPemesanan> {
     if (t != null) setState(() => selectedTime = t);
   }
 
+  // pilih gambar dari source (camera / gallery)
+  Future<void> pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source, imageQuality: 80); // compress ringan
+
+      if (picked != null) {
+        setState(() => imageKeluhan = picked);
+      }
+    } catch (e) {
+      debugPrint("Error pickImage: $e");
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gagal memilih gambar")));
+    }
+  }
+
+  // hapus gambar yang sudah dipilih
+  void removeImage() {
+    setState(() => imageKeluhan = null);
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Pilih dari Galeri'),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Ambil Foto (Kamera)'),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: const Text('Batal'),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
+
+
+
   Future<void> submitPemesanan() async {
     if (keluhan.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -157,47 +230,80 @@ class _FormPemesananState extends State<FormPemesanan> {
       return;
     }
 
+    if (alamatDipilih == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Silakan pilih alamat terlebih dahulu")),
+      );
+      return;
+    }
+
+    if (keluhan.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Deskripsi masalah wajib diisi")),
+      );
+      return;
+    }
+
+    if (imageKeluhan == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Foto keluhan wajib diupload")),
+      );
+      return;
+    }
+
+
     setState(() => sending = true);
 
-    // ✅ Pisahkan tanggal dan jam secara eksplisit
     final tanggalBooking = DateFormat('yyyy-MM-dd').format(selectedDate);
     final jamBooking = DateFormat('HH:mm:ss').format(
       DateTime(0, 1, 1, selectedTime.hour, selectedTime.minute),
     );
 
-    final body = {
-      "id_pelanggan": widget.idPelanggan,
-      "id_teknisi": widget.idTeknisi,
-      "id_keahlian": widget.idKeahlian,
-      "tanggal_booking": tanggalBooking, // contoh: 2025-11-11
-      "jam_booking": jamBooking,         // contoh: 09:00:00
-      "keluhan": keluhan,
-      "harga": totalPembayaran,
-      if (alamatDipilih?['id_alamat'] != null) "id_alamat": alamatDipilih!['id_alamat'],
-      "metode_pembayaran": selectedPayment,
-      "jenis_properti": selectedProperty,
-    };
-
     try {
-      final res = await http.post(
+      var request = http.MultipartRequest(
+        'POST',
         Uri.parse("${BaseUrl.api}/add_pemesanan"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(body),
       );
+
+      request.fields.addAll({
+        "id_pelanggan": widget.idPelanggan.toString(),
+        "id_teknisi": widget.idTeknisi.toString(),
+        "id_keahlian": widget.idKeahlian.toString(),
+        "tanggal_booking": tanggalBooking,
+        "jam_booking": jamBooking,
+        "keluhan": keluhan,
+        "harga": totalPembayaran.toString(),
+      });
+
+      if (alamatDipilih?['id_alamat'] != null) {
+        request.fields['id_alamat'] = alamatDipilih!['id_alamat'].toString();
+      }
+
+      // === UPLOAD FOTO ===
+      if (imageKeluhan != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'foto_keluhan',
+            imageKeluhan!.path,
+          ),
+        );
+      }
+
+      var response = await request.send();
+      var res = await http.Response.fromStream(response);
 
       setState(() => sending = false);
 
-      print("Body dikirim: ${jsonEncode(body)}");
       print("Response: ${res.statusCode} ${res.body}");
 
       if (res.statusCode == 200 || res.statusCode == 201) {
         final data = jsonDecode(res.body);
-        final kode = data['data']?['kode_pemesanan'] ?? '-';
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => KonfirmasiPembayaranPage(
-              kodePemesanan: kode,
+              kodePemesanan: data['data']['kode_pemesanan'],
               metodePembayaran: selectedPayment,
               totalPembayaran: totalPembayaran,
               namaTeknisi: widget.namaTeknisi,
@@ -205,26 +311,17 @@ class _FormPemesananState extends State<FormPemesanan> {
               keluhan: keluhan,
               tanggalBooking: tanggalBooking,
               jamBooking: jamBooking,
-              alamat: alamatDipilih?['alamat_lengkap'] ?? "Alamat belum diatur", // ✅ kirim alamat
+              alamat: alamatDipilih?['alamat_lengkap'] ?? "",
             ),
           ),
-        );
-
-
-
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal membuat pesanan (${res.statusCode})")),
         );
       }
     } catch (e) {
       setState(() => sending = false);
-      print("Error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Terjadi kesalahan jaringan")),
-      );
+      print(e);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -233,11 +330,13 @@ class _FormPemesananState extends State<FormPemesanan> {
         title: const Text("Pesanan"),
         backgroundColor: const Color(0xFF0C4481),
       ),
+      
       bottomNavigationBar: Container(
+        
         color: Colors.transparent,
         padding: const EdgeInsets.all(16),
         child: ElevatedButton(
-          onPressed: sending ? null : submitPemesanan,
+          onPressed: (!isFormValid() || sending) ? null : submitPemesanan,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFFFCC33),
             foregroundColor: Colors.black,
@@ -368,14 +467,100 @@ class _FormPemesananState extends State<FormPemesanan> {
       );
 
   Widget _deskripsiMasalah() => Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.all(12),
-        child: TextField(
-          maxLines: 4,
-          decoration: const InputDecoration(border: InputBorder.none, hintText: "Deskripsi Masalah"),
-          onChanged: (v) => keluhan = v,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    padding: const EdgeInsets.all(12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Row: TextField (expanded) + icon camera sejajar
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextField(
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: "Deskripsi Masalah",
+                ),
+                onChanged: (v) => setState(() => keluhan = v),
+              ),
+            ),
+
+            // icon camera kecil di sebelah kanan
+            const SizedBox(width: 8),
+            Column(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.camera_alt_outlined),
+                  onPressed: _showImageSourceSheet,
+                  tooltip: 'Pilih foto (kamera/galeri)',
+                ),
+                // label kecil di bawah icon supaya balance
+                const SizedBox(height: 4),
+                const Text(
+                  "Lampirkan",
+                  style: TextStyle(fontSize: 11, color: Colors.black54),
+                ),
+              ],
+            ),
+          ],
         ),
-      );
+
+        const SizedBox(height: 12),
+
+        // Preview gambar + tombol hapus
+        if (imageKeluhan != null)
+          Stack(
+            children: [
+              Container(
+                height: 160,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[200],
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: Image.file(
+                  File(imageKeluhan!.path),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black45,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white, size: 18),
+                    onPressed: removeImage,
+                    tooltip: 'Hapus foto',
+                  ),
+                ),
+              ),
+            ],
+          )
+        else
+          // hint kecil saat belum ada gambar
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: const Text(
+              'Belum ada foto. Tekan ikon kamera di samping untuk menambahkan.',
+              style: TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+          ),
+      ],
+    ),
+  );
+
+
 
   Widget _propertiPilihan() => Container(
         padding: const EdgeInsets.all(12),

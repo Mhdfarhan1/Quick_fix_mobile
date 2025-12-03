@@ -272,11 +272,6 @@ class _RiwayatTeknisiPageState extends State<RiwayatTeknisiPage> {
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  const Text(
-                                    "Durasi tidak tersedia",
-                                    style: TextStyle(
-                                        fontSize: 13, color: Colors.black54),
-                                  )
                                 ],
                               )
                             ],

@@ -7,6 +7,7 @@ import '../auth/login_screen.dart';
 import '../../screens/pengguna/home/home_page.dart';
 import '../../screens/teknisi/home/Home_page_teknisi.dart'; 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../services/api_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -63,9 +64,8 @@ class _SplashScreenState extends State<SplashScreen>
 
   /// 🔍 Cek apakah user sudah login & arahkan sesuai role
   Future<void> _checkLoginStatus() async {
-    final storage = const FlutterSecureStorage();
 
-    final token = await storage.read(key: 'token');   // ✔ baca token yg benar
+    final token = await ApiService.storage.read(key: 'token');   // ✔ baca token yg benar
 
     final prefs = await SharedPreferences.getInstance();
     final userJson = prefs.getString('user');         // user tetap dari SharedPrefs

@@ -12,8 +12,9 @@ import '../home/notifikasi_page.dart';
 import '../../../services/task_service.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../services/api_service.dart';
+import '../verifikasi/verifikasi_teknisi_page.dart';
+import '../../chat/chat_list_page.dart';
 
 
 
@@ -116,7 +117,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                               context,
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    const ChatTeknisiPage(), // arah ke halaman chat
+                                    ChatListPage(), // arah ke halaman chat
                               ),
                             );
                           },
@@ -296,8 +297,10 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
   }
 
 
+
   // --- 🟢 PROSES SEDANG BERLANGSUNG --- 
   Widget _buildProsesBerlangsung(List<Task> sedang) {
+    if (sedang.isEmpty && !_loadingTasks) return SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(

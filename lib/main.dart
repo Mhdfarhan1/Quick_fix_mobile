@@ -11,14 +11,40 @@ import 'screens/pengguna/home/home_page.dart';
 import 'utils/ui_helper.dart';
 import 'screens/auth/login_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
+import 'providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:timeago/timeago.dart' as timeago;
+
+
+
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
 
+  final auth = AuthProvider();
+  await auth.loadFromStorage();   // ← WAJIB!
+
+  timeago.setLocaleMessages('id', timeago.IdMessages());
+  timeago.setLocaleMessages('id', timeago.IdShortMessages());
+
+
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => auth),
+      ],
+      child: MyApp(),
+    ),
+  );
 }
+
+
+
 
 /// 🔗 Listener deep link seperti: 
 

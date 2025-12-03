@@ -25,6 +25,18 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
   double minHarga = 0;
   double maxHarga = 2000000;
 
+  List kategoriList = [];
+  List subKategoriList = [];
+
+  int? selectedKategoriId;
+  int? selectedSubKategoriId;
+
+  TextEditingController minHargaController = TextEditingController();
+  TextEditingController maxHargaController = TextEditingController();
+
+  bool onlyOnline = false;
+
+
   bool _isLoading = false;
   bool _isLoadMore = false;
   int page = 1;
@@ -117,11 +129,43 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     }
   }
 
+  Future<void> fetchKategori() async {
+    try {
+      final response = await http.get(Uri.parse("${BaseUrl.api}/kategori"));
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        setState(() {
+          kategoriList = body['data'];
+        });
+      }
+    } catch (e) {
+      debugPrint("Error kategori: $e");
+    }
+  }
+
+  Future<void> fetchSubKategori(int kategoriId) async {
+    try {
+      final response = await http.get(Uri.parse(
+          "${BaseUrl.api}/sub-kategori?kategori_id=$kategoriId"));
+
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        setState(() {
+          subKategoriList = body['data'];
+        });
+      }
+    } catch (e) {
+      debugPrint("Error sub kategori: $e");
+    }
+  }
+
+
   void resetAndFetch() {
     page = 1;
     teknisiList.clear();
     hasMore = true;
     fetchTeknisi();
+    fetchKategori();
   }
 
   @override
@@ -241,77 +285,167 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
   void _showFilterSheet() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setModalState) {
-          return Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Filter Pencarian",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 20),
-                const Text("Kategori"),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  children: _categories.map((cat) {
-                    final selected = _selectedCategory == cat;
-                    return ChoiceChip(
-                      label: Text(cat),
-                      selected: selected,
-                      onSelected: (v) {
-                        setModalState(() => _selectedCategory = cat);
-                      },
-                      selectedColor: const Color(0xFF0C4481),
-                      labelStyle: TextStyle(
-                        color: selected ? Colors.white : Colors.black87,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(16),
+              height: MediaQuery.of(context).size.height * 0.9,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  // HEADER
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Semua Filter",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      TextButton(
+                        onPressed: () {
+                          setModalState(() {
+                            selectedKategoriId = null;
+                            selectedSubKategoriId = null;
+                            minHargaController.clear();
+                            maxHargaController.clear();
+                            onlyOnline = false;
+                          });
+                        },
+                        child: const Text("Hapus Semua"),
+                      )
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  /// KATEGORI
+                  const Text("Kategori", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: kategoriList.map((e) {
+                      bool selected = selectedKategoriId == e['id'];
+
+                      return ChoiceChip(
+                        label: Text(e['nama']),
+                        selected: selected,
+                        onSelected: (_) {
+                          setModalState(() {
+                            selectedKategoriId = e['id'];
+                            selectedSubKategoriId = null;
+                            fetchSubKategori(e['id']);
+                          });
+                        },
+                        selectedColor: const Color(0xFF0C4481),
+                        labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  /// SUB KATEGORI
+                  const Text("Sub Kategori", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: subKategoriList.map((e) {
+                      bool selected = selectedSubKategoriId == e['id'];
+
+                      return ChoiceChip(
+                        label: Text(e['nama']),
+                        selected: selected,
+                        onSelected: (_) {
+                          setModalState(() => selectedSubKategoriId = e['id']);
+                        },
+                        selectedColor: const Color(0xFF0C4481),
+                        labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  /// HARGA
+                  const Text("Jangkauan Harga", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: minHargaController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: "Rp50.000",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
                       ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 20),
-                const Text("Rentang Harga"),
-                RangeSlider(
-                  values: RangeValues(minHarga, maxHarga),
-                  min: 0,
-                  max: 5000000,
-                  divisions: 50,
-                  activeColor: const Color(0xFF0C4481),
-                  labels: RangeLabels(
-                    "Rp${minHarga.toInt()}",
-                    "Rp${maxHarga.toInt()}",
+                      const SizedBox(width: 10),
+                      const Text("-"),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: maxHargaController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: "Rp100.000",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      )
+                    ],
                   ),
-                  onChanged: (values) {
-                    setModalState(() {
-                      minHarga = values.start;
-                      maxHarga = values.end;
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0C4481)),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      resetAndFetch();
-                    },
-                    child: const Text("Terapkan", style: TextStyle(color: Colors.white)),
+
+                  const SizedBox(height: 20),
+
+                  /// ONLINE
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Penjual sedang online",
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      Switch(
+                        value: onlyOnline,
+                        activeColor: const Color(0xFF0C4481),
+                        onChanged: (val) {
+                          setModalState(() => onlyOnline = val);
+                        },
+                      )
+                    ],
                   ),
-                )
-              ],
-            ),
-          );
-        });
+
+                  const Spacer(),
+
+                  /// BUTTON TERAPKAN
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0C4481),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        resetAndFetch();
+                      },
+                      child: const Text("Terapkan", style: TextStyle(color: Colors.white)),
+                    ),
+                  )
+                ],
+              ),
+            );
+          },
+        );
       },
     );
   }

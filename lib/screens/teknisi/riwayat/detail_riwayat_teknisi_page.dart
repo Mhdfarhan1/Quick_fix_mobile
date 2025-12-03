@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 class DetailRiwayatTeknisiPage extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -6,9 +8,21 @@ class DetailRiwayatTeknisiPage extends StatelessWidget {
   const DetailRiwayatTeknisiPage({Key? key, required this.data})
       : super(key: key);
 
+  Future<void> callCustomer(String phoneNumber) async {
+    final Uri url = Uri(scheme: 'tel', path: phoneNumber);
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      throw 'Tidak bisa membuka aplikasi telepon';
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    final bool isSelesai = data["status"] == "Selesai";
+    final bool isSelesai = data["status_pekerjaan"] == "selesai";
+
     const highlight = Color(0xFFFFCC33);
 
     return Scaffold(
@@ -74,12 +88,12 @@ class DetailRiwayatTeknisiPage extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(data["nama"],
+                                Text(data["nama_pelanggan"] ?? "-",
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 15)),
                                 const SizedBox(height: 4),
-                                Text(data["layanan"],
+                                Text(data["nama_keahlian"] ?? "-",
                                     style: const TextStyle(fontSize: 14)),
                               ],
                             ),
@@ -94,7 +108,7 @@ class DetailRiwayatTeknisiPage extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                data["status"],
+                                data["status_pekerjaan"] ?? "-",
                                 style: TextStyle(
                                     color: isSelesai
                                         ? Colors.green[800]
@@ -108,10 +122,10 @@ class DetailRiwayatTeknisiPage extends StatelessWidget {
                       const SizedBox(height: 20),
 
                       // Detail item (tanggal, durasi, biaya, status)
-                      _buildDetailItem("Tanggal", data["tanggal"]),
-                      _buildDetailItem("Durasi Pengerjaan", data["durasi"]),
-                      _buildDetailItem("Biaya", data["harga"]),
-                      _buildDetailItem("Status", data["status"]),
+                      _buildDetailItem("Tanggal", data["tanggal_booking"]),
+                      _buildDetailItem("Biaya", "Rp ${data["harga"] ?? '-'}"),
+                      _buildDetailItem("Status", data["status_pekerjaan"]),
+
                       const SizedBox(height: 18),
 
                       // Catatan Pekerjaan
@@ -151,11 +165,16 @@ class DetailRiwayatTeknisiPage extends StatelessWidget {
                                     fontWeight: FontWeight.bold),
                               ),
                               onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          "Fitur hubungi pelanggan belum diimplementasikan.")),
-                                );
+                                final phone = data["no_hp_pelanggan"]?.toString() ?? "";
+
+                                if (phone.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("Nomor HP pelanggan tidak tersedia.")),
+                                  );
+                                  return;
+                                }
+
+                                callCustomer(phone);
                               },
                             ),
                           ),

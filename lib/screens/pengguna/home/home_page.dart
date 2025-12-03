@@ -19,6 +19,10 @@ import '../pemesanan/keranjang_screen.dart';
 import '../../../widgets/network_image_with_fallback.dart';
 import '../../../widgets/app_dialog.dart';
 import '../../../config/base_url.dart';
+import '../../notifikasi/notificationPage.dart';
+import '../../../providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+
 
 extension ResponsiveHeight on BuildContext {
   double adaptiveHeight(double percent, {double min = 120, double max = 200}) {
@@ -192,11 +196,25 @@ class _HomePageState extends State<HomePage> {
         Navigator.push(context, MaterialPageRoute(builder: (_) => const MyOrderScreen()));
         break;
       case 2:
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListPage()));
+        Navigator.push(context, MaterialPageRoute(builder: (_) => ChatListPage()));
         break;
       case 3:
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const NotifikasiPage()));
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+
+        if (auth.userId == null) {
+          print("❌ ERROR: userId masih NULL");
+          return;
+        }
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NotificationPage(userId: auth.userId!),
+          ),
+        );
         break;
+
+
       case 4:
         Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePenggunaPage()));
         break;
