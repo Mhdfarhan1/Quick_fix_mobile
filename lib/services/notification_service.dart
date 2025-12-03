@@ -15,7 +15,7 @@ class NotificationService {
 
   Future<List<NotificationModel>> getNotifications(int userId) async {
 
-    final res = await ApiService.request(
+    final res = await ApiService. request(
       method: "GET",
       endpoint: "notifications",
     );
