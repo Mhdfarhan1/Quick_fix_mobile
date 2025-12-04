@@ -748,6 +748,41 @@ static Future<Map<String, dynamic>> deleteLayananTeknisi({
     }
   }
 
+  static Future<Map<String, dynamic>> getNotifications() async {
+    return await request(
+      method: "GET",
+      endpoint: "/notifications",
+    );
+  }
+
+
+  static Future<Map<String, dynamic>> markNotifRead(int id) async {
+    return await request(
+      method: "POST",
+      endpoint: "/notifications/$id/read",
+      body: {},
+    );
+  }
+
+
+  static Future<Map<String, dynamic>> readNotifikasi(int idNotifikasi) async {
+    return await request(
+      method: 'PUT',
+      endpoint: '/notifikasi/$idNotifikasi/read',
+      body: {},  // body kosong
+    );
+  }
+
+  static Future<Map<String, dynamic>> deleteNotifikasi(int idNotifikasi) async {
+    return await request(
+      method: 'DELETE',
+      endpoint: '/notifikasi/$idNotifikasi',
+    );
+  }
+
+
+
+
   
 
 }

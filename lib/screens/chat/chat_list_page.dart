@@ -45,7 +45,7 @@ class _ChatListPageState extends State<ChatListPage> {
 
 
   Future<void> loadChats() async {
-    final res = await ApiService.get('chat/list');
+    final res = await ApiService.get('/chat/list');
 
     if (res['statusCode'] == 200) {
       final data = res['data']['data'] as List;

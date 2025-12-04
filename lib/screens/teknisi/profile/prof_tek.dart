@@ -95,7 +95,7 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
           final List list = data['data'];
           print("DEBUG: Found ${list.length} services");
           if (list.isNotEmpty) {
-             print("DEBUG: First service raw data: ${list.first}");
+            print("DEBUG: First service raw data: ${list.first}");
           }
           setState(() {
             _services = list.map((e) {

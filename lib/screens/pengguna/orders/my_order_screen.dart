@@ -8,6 +8,7 @@ import '../../../config/base_url.dart';
 import '../../../widgets/network_image_with_fallback.dart';
 import '../tugas/detail_tugas_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../tugas/detail_selesai_tugas_screen.dart';
 
 
 class MyOrderScreen extends StatefulWidget {
@@ -122,14 +123,21 @@ class _MyOrderScreenState extends State<MyOrderScreen>
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => OrderDetailScreen(order: Map<String, dynamic>.from(order)),
-              ),
-            );
-
-
+            if (order['status'] == 'selesai') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OrderDetailSelesaiScreen(order: Map<String, dynamic>.from(order)),
+                ),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OrderDetailScreen(order: Map<String, dynamic>.from(order)),
+                ),
+              );
+            }
           },
           child: Padding(
             padding: const EdgeInsets.all(14),

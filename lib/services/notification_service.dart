@@ -17,7 +17,7 @@ class NotificationService {
 
     final res = await ApiService. request(
       method: "GET",
-      endpoint: "notifications",
+      endpoint: "/notifications",
     );
 
     print("NOTIF RESPONSE => ${res['data']}");
