@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'kategori_laporan_page.dart';
 
 class BantuanLaporanPage extends StatelessWidget {
   const BantuanLaporanPage({super.key});
@@ -23,21 +24,30 @@ class BantuanLaporanPage extends StatelessWidget {
             icon: CupertinoIcons.chat_bubble_2_fill,
             title: "Pusat Bantuan",
             subtitle: "Cari jawaban dan panduan penggunaan",
+            onTap: () {
+              // TODO: Navigasi ke halaman Pusat Bantuan
+            },
           ),
           _buildCard(
             icon: CupertinoIcons.exclamationmark_bubble,
             title: "Laporkan Masalah",
-            subtitle: "Laporkan error, bug, atau kendala aplikasi",
+            subtitle: "Laporkan masalah pesanan,pembayaran, atau aplikasi",
+            onTap: () {
+              // pake animasi custom
+              Navigator.of(context).push(_slideRouteToKategori());
+            },
           ),
           _buildCard(
             icon: CupertinoIcons.phone,
             title: "Kontak Dukungan",
             subtitle: "Email: support@example.com\nWA: 0812-3456-7890",
+            onTap: () {},
           ),
           _buildCard(
             icon: CupertinoIcons.info,
             title: "Tentang Aplikasi",
             subtitle: "Versi 1.0.0 - Build Stable",
+            onTap: () {},
           ),
         ],
       ),
@@ -48,13 +58,14 @@ class BantuanLaporanPage extends StatelessWidget {
     required IconData icon,
     required String title,
     required String subtitle,
+    VoidCallback? onTap,
   }) {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: Icon(icon, color: Color(0xFF0C4481), size: 30),
+        leading: Icon(icon, color: const Color(0xFF0C4481), size: 30),
         title: Text(
           title,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -64,8 +75,37 @@ class BantuanLaporanPage extends StatelessWidget {
           style: const TextStyle(color: Colors.black54, height: 1.3),
         ),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }
+}
+
+/// Route dengan animasi slide dari kanan + fade
+Route _slideRouteToKategori() {
+  return PageRouteBuilder(
+    pageBuilder: (context, animation, secondaryAnimation) =>
+    const KategoriLaporanPage(),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      const begin = Offset(1.0, 0.0); // mulai dari kanan
+      const end = Offset.zero;
+      const curve = Curves.easeOutCubic;
+
+      final tween = Tween(begin: begin, end: end).chain(
+        CurveTween(curve: curve),
+      );
+
+      final fadeTween = Tween<double>(begin: 0, end: 1).chain(
+        CurveTween(curve: curve),
+      );
+
+      return SlideTransition(
+        position: animation.drive(tween),
+        child: FadeTransition(
+          opacity: animation.drive(fadeTween),
+          child: child,
+        ),
+      );
+    },
+  );
 }
