@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:quick_fix/services/api_service.dart';
 
 class MasalahPembayaranPage extends StatefulWidget {
   const MasalahPembayaranPage({super.key});
@@ -12,7 +15,11 @@ class MasalahPembayaranPage extends StatefulWidget {
 class _MasalahPembayaranPageState extends State<MasalahPembayaranPage> {
   final _formKey = GlobalKey<FormState>();
 
+  final TextEditingController _metodePembayaranController =
+  TextEditingController();
   final TextEditingController _nominalIdController = TextEditingController();
+  final TextEditingController _nomorTujuanController = TextEditingController();
+  final TextEditingController _namaTujuanController = TextEditingController();
   final TextEditingController _deskripsiController = TextEditingController();
 
   String? _jenisMasalah;
@@ -28,7 +35,10 @@ class _MasalahPembayaranPageState extends State<MasalahPembayaranPage> {
 
   @override
   void dispose() {
+    _metodePembayaranController.dispose();
     _nominalIdController.dispose();
+    _nomorTujuanController.dispose();
+    _namaTujuanController.dispose();
     _deskripsiController.dispose();
     super.dispose();
   }
@@ -70,7 +80,7 @@ class _MasalahPembayaranPageState extends State<MasalahPembayaranPage> {
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          "Laporkan kendala terkait pembayaran anda alami saat menggunakan aplikasi agar tim kami dapat segera memperbaikinya",
+                          "Laporkan kendala terkait pembayaran yang Anda alami saat menggunakan aplikasi agar tim kami dapat segera menindaklanjuti.",
                           style: TextStyle(fontSize: 13, color: Colors.black87),
                         ),
                       ),
@@ -92,6 +102,30 @@ class _MasalahPembayaranPageState extends State<MasalahPembayaranPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // METODE PEMBAYARAN
+                            const Text(
+                              "Metode Pembayaran",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            _buildTextField(
+                              controller: _metodePembayaranController,
+                              hint:
+                              "Contoh: DANA, OVO, BCA Mobile, BRI, Mandiri, BNI, ShopeePay, dll",
+                              prefixIcon: CupertinoIcons.creditcard,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return "Metode pembayaran wajib diisi";
+                                }
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 16),
+
                             // NOMINAL / ID PEMBAYARAN
                             const Text(
                               "Nominal / ID Pembayaran",
@@ -112,6 +146,44 @@ class _MasalahPembayaranPageState extends State<MasalahPembayaranPage> {
                                 }
                                 return null;
                               },
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // NOMOR TUJUAN
+                            const Text(
+                              "Nomor Tujuan (Rekening / No. HP / VA)",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            _buildTextField(
+                              controller: _nomorTujuanController,
+                              hint:
+                              "Contoh: 08123456789 / 1234567890 / 3901xxxxxxxxx (opsional, tapi sangat membantu)",
+                              prefixIcon: CupertinoIcons.phone,
+                              validator: null, // opsional
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // NAMA TUJUAN
+                            const Text(
+                              "Nama Pemilik Akun / Rekening",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            _buildTextField(
+                              controller: _namaTujuanController,
+                              hint:
+                              "Nama pemilik rekening / akun pembayaran (opsional)",
+                              prefixIcon: CupertinoIcons.person,
+                              validator: null, // opsional
                             ),
 
                             const SizedBox(height: 16),
@@ -323,6 +395,10 @@ class _MasalahPembayaranPageState extends State<MasalahPembayaranPage> {
     );
   }
 
+  // ============================================================
+  // WIDGET TEXT FIELD
+  // ============================================================
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -362,6 +438,10 @@ class _MasalahPembayaranPageState extends State<MasalahPembayaranPage> {
     );
   }
 
+  // ============================================================
+  // PICK LAMPIRAN
+  // ============================================================
+
   Future<void> _pickLampiran() async {
     final result = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -375,41 +455,151 @@ class _MasalahPembayaranPageState extends State<MasalahPembayaranPage> {
     }
   }
 
-  void _submitForm() {
+  // ============================================================
+  // SUBMIT FORM KE BACKEND
+  // ============================================================
+
+  Future<void> _submitForm() async {
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate() || _jenisMasalah == null) {
-      setState(() {});
+      setState(() {}); // untuk munculkan error dropdown
       return;
     }
 
-    // TODO: kirim data ke backend (sertakan _lampiran kalau tidak null)
+    // AMBIL TOKEN DARI SECURE STORAGE
+    final token = await ApiService.storage.read(key: "token");
+
+    if (token == null || token.isEmpty) {
+      _showErrorDialog(
+        "Anda belum login atau sesi sudah habis.\nSilakan login ulang.",
+      );
+      return;
+    }
+
+    // Debug log (opsional)
+    print("===== DEBUG PEMBAYARAN =====");
+    print("TOKEN: Bearer $token");
+    print("Metode Pembayaran: ${_metodePembayaranController.text}");
+    print("Nominal / ID: ${_nominalIdController.text}");
+    print("Nomor Tujuan: ${_nomorTujuanController.text}");
+    print("Nama Tujuan: ${_namaTujuanController.text}");
+    print("Jenis Masalah: $_jenisMasalah");
+    print("Deskripsi: ${_deskripsiController.text}");
+    print("Lampiran: ${_lampiran?.path}");
+    print("============================");
+
+    // TAMPILKAN LOADING
     showDialog(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0C4481)),
+      ),
+    );
+
+    try {
+      final uri = Uri.parse("http://192.168.1.6:8000/api/complaints");
+
+      var request = http.MultipartRequest("POST", uri);
+      request.headers['Accept'] = "application/json";
+      request.headers['Authorization'] = "Bearer $token";
+
+      // DATA YANG DIKIRIM
+      request.fields['kategori'] = "pembayaran";
+      request.fields['metode_pembayaran'] =
+          _metodePembayaranController.text;
+      request.fields['nominal_id'] = _nominalIdController.text;
+      request.fields['nomor_tujuan'] = _nomorTujuanController.text;
+      request.fields['nama_tujuan'] = _namaTujuanController.text;
+      request.fields['jenis_masalah'] = _jenisMasalah!;
+      request.fields['deskripsi'] = _deskripsiController.text;
+
+      if (_lampiran != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            "lampiran",
+            _lampiran!.path,
           ),
-          title: const Text(
-            "Laporan terkirim",
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          content: const Text(
-            "Terima kasih, laporan pembayaran Anda sudah kami terima. "
-                "Tim kami akan meninjau dan menindaklanjuti secepatnya.",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                Navigator.of(context).pop();
-              },
-              child: const Text("Tutup"),
-            ),
-          ],
         );
-      },
+      }
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      print("===== RESPONSE PEMBAYARAN =====");
+      print("STATUS CODE: ${response.statusCode}");
+      print("BODY: $responseBody");
+      print("================================");
+
+      Navigator.pop(context); // tutup loading
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _showSuccessDialog();
+      } else if (response.statusCode == 401) {
+        _showErrorDialog(
+          "Sesi login sudah tidak valid (401 Unauthorized).\nSilakan login ulang.",
+        );
+      } else {
+        _showErrorDialog(
+          "Gagal mengirim laporan.\n"
+              "Status: ${response.statusCode}\n\n"
+              "Response:\n$responseBody",
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context); // tutup loading
+      _showErrorDialog("Terjadi error: $e");
+    }
+  }
+
+  // ============================================================
+  // DIALOGS
+  // ============================================================
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          "Laporan terkirim",
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: const Text(
+          "Terima kasih, laporan pembayaran Anda sudah kami terima. "
+              "Tim kami akan meninjau dan menindaklanjuti secepatnya.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.of(context).pop();
+            },
+            child: const Text("Tutup"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          "Terjadi Kesalahan",
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
     );
   }
 }

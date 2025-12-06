@@ -64,12 +64,16 @@ class _RiwayatKomplainPageState extends State<RiwayatKomplainPage> {
       final url = Uri.parse("http://192.168.1.6:8000/api/complaints");
       final response = await http.get(
         url,
-        headers: {"Authorization": "Bearer $token", "Accept": "application/json"},
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
       );
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-        final data = (json is Map && json['data'] != null) ? json['data'] as List : [];
+        final data =
+        (json is Map && json['data'] != null) ? json['data'] as List : [];
         setState(() {
           complaints = data;
           isLoading = false;
@@ -86,7 +90,11 @@ class _RiwayatKomplainPageState extends State<RiwayatKomplainPage> {
 
   void _snack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: AppTheme.primary, behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: AppTheme.primary,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -102,18 +110,27 @@ class _RiwayatKomplainPageState extends State<RiwayatKomplainPage> {
         centerTitle: true,
         title: const Text(
           "Riwayat Komplain",
-          style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 20),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+            fontSize: 20,
+          ),
         ),
       ),
       body: RefreshIndicator(
         onRefresh: fetchComplaints,
         color: AppTheme.primary,
         child: isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+            ? const Center(
+          child: CircularProgressIndicator(color: AppTheme.primary),
+        )
             : complaints.isEmpty
             ? _buildEmptyState()
             : ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 15,
+          ),
           itemCount: complaints.length,
           itemBuilder: (context, index) {
             final c = complaints[index] as Map<String, dynamic>;
@@ -138,15 +155,27 @@ class _RiwayatKomplainPageState extends State<RiwayatKomplainPage> {
               color: AppTheme.surface,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10)),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
               ],
             ),
-            child: Icon(Icons.assignment_outlined, size: 60, color: Colors.grey.shade300),
+            child: Icon(
+              Icons.assignment_outlined,
+              size: 60,
+              color: Colors.grey.shade300,
+            ),
           ),
           const SizedBox(height: 20),
           Text(
             "Belum Ada Komplain",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.grey.shade600),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.grey.shade600,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -175,22 +204,40 @@ class _PremiumCard extends StatelessWidget {
     final String status = data['status'] ?? 'baru';
     final String kategori = data['kategori'] ?? 'lain';
 
-    // Config berdasarkan status
+    // Warna berdasarkan status
     Color statusColor;
     switch (status.toLowerCase()) {
-      case 'baru': statusColor = AppTheme.warning; break;
-      case 'diproses': statusColor = AppTheme.info; break;
-      case 'selesai': statusColor = AppTheme.success; break;
-      default: statusColor = AppTheme.neutral;
+      case 'baru':
+        statusColor = AppTheme.warning;
+        break;
+      case 'diproses':
+        statusColor = AppTheme.info;
+        break;
+      case 'selesai':
+        statusColor = AppTheme.success;
+        break;
+      default:
+        statusColor = AppTheme.neutral;
     }
 
-    // Config Icon
+    // Icon berdasarkan kategori (pesanan, pembayaran, aplikasi, akun)
     IconData icon;
     switch (kategori.toLowerCase()) {
-      case 'pesanan': icon = Icons.local_mall_outlined; break;
-      case 'pembayaran': icon = Icons.account_balance_wallet_outlined; break;
-      case 'aplikasi': icon = Icons.phonelink_setup_outlined; break;
-      default: icon = Icons.article_outlined;
+      case 'pesanan':
+        icon = Icons.local_mall_outlined;
+        break;
+      case 'pembayaran':
+        icon = Icons.account_balance_wallet_outlined;
+        break;
+      case 'aplikasi':
+        icon = Icons.phonelink_setup_outlined;
+        break;
+      case 'akun':
+      case 'masalah_akun':
+        icon = Icons.person_outline;
+        break;
+      default:
+        icon = Icons.article_outlined;
     }
 
     return Container(
@@ -243,7 +290,11 @@ class _PremiumCard extends StatelessWidget {
                               color: AppTheme.bg,
                               borderRadius: BorderRadius.circular(15),
                             ),
-                            child: Icon(icon, color: AppTheme.primary, size: 24),
+                            child: Icon(
+                              icon,
+                              color: AppTheme.primary,
+                              size: 24,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -269,7 +320,6 @@ class _PremiumCard extends StatelessWidget {
                                 children: [
                                   _SmallBadge(text: kategori.toUpperCase()),
                                   const SizedBox(width: 8),
-                                  // Status Text Kecil
                                   Text(
                                     status.toUpperCase(),
                                     style: TextStyle(
@@ -285,7 +335,10 @@ class _PremiumCard extends StatelessWidget {
                         ),
 
                         // Arrow
-                        Icon(Icons.chevron_right_rounded, color: Colors.grey.shade300),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: Colors.grey.shade300,
+                        ),
                       ],
                     ),
                   ),
@@ -313,14 +366,18 @@ class _SmallBadge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 10, color: AppTheme.textSub, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+          fontSize: 10,
+          color: AppTheme.textSub,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
 }
 
 // =================================================================
-// 📄 DETAIL PAGE: MODERN & CLEAN (Updated)
+// 📄 DETAIL PAGE: MODERN & CLEAN
 // =================================================================
 
 class RiwayatKomplainDetailPage extends StatelessWidget {
@@ -333,20 +390,43 @@ class RiwayatKomplainDetailPage extends StatelessWidget {
     final String deskripsi = data['deskripsi'] ?? '-';
     final String status = data['status'] ?? 'baru';
     final String kategori = data['kategori'] ?? 'Lain-lain';
-    final String tanggal = data['tanggal_lapor'] ?? '-';
+    final String tanggal = data['tanggal_lapor']?.toString() ?? '-';
     final String balasanAdmin = data['balasan_admin'] ?? '';
 
-    // ⭐ UPDATE: Ekstraksi Nomor Pesanan agar aman (handle null dan int)
-    final String nomorPesanan = data['nomor_pesanan'] != null ? data['nomor_pesanan'].toString() : '-';
+    // Nomor Pesanan, Metode, Nominal aman meski null / int
+    final String nomorPesanan =
+    data['nomor_pesanan'] != null ? data['nomor_pesanan'].toString() : '-';
+    final String metodePembayaran = data['metode_pembayaran'] != null
+        ? data['metode_pembayaran'].toString()
+        : '-';
+    final String nominalPembayaran = data['nominal_id'] != null
+        ? data['nominal_id'].toString()
+        : '-';
 
-    final String metodePembayaran = data['metode_pembayaran'] != null ? data['metode_pembayaran'].toString() : '-';
+    // ⭐ Tambahan: Nomor Tujuan & Nama Tujuan
+    final String nomorTujuan = data['nomor_tujuan'] != null
+        ? data['nomor_tujuan'].toString()
+        : '-';
+    final String namaTujuan =
+    data['nama_tujuan'] != null ? data['nama_tujuan'].toString() : '-';
 
     IconData icon;
     switch (kategori.toLowerCase()) {
-      case 'pesanan': icon = Icons.local_mall_outlined; break;
-      case 'pembayaran': icon = Icons.account_balance_wallet_outlined; break;
-      case 'aplikasi': icon = Icons.phonelink_setup_outlined; break;
-      default: icon = Icons.article_outlined;
+      case 'pesanan':
+        icon = Icons.local_mall_outlined;
+        break;
+      case 'pembayaran':
+        icon = Icons.account_balance_wallet_outlined;
+        break;
+      case 'aplikasi':
+        icon = Icons.phonelink_setup_outlined;
+        break;
+      case 'akun':
+      case 'masalah_akun':
+        icon = Icons.person_outline;
+        break;
+      default:
+        icon = Icons.article_outlined;
     }
 
     return Scaffold(
@@ -356,7 +436,10 @@ class RiwayatKomplainDetailPage extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: const Text("Detail Komplain", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Detail Komplain",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -370,7 +453,11 @@ class RiwayatKomplainDetailPage extends StatelessWidget {
                 color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 5)),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 20,
+                    offset: const Offset(0, 5),
+                  ),
                 ],
               ),
               child: Column(
@@ -391,12 +478,19 @@ class RiwayatKomplainDetailPage extends StatelessWidget {
                   Text(
                     jenis,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textMain),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textMain,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     tanggal,
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textSub),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSub,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   _StatusPill(status: status),
@@ -407,16 +501,52 @@ class RiwayatKomplainDetailPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _InfoBit(label: "Kategori", value: kategori.toUpperCase()),
-
-                      // ⭐ UPDATE: Tampilkan Nomor Pesanan jika ada (tanpa cek kategori)
+                      _InfoBit(
+                        label: "Kategori",
+                        value: kategori.toUpperCase(),
+                      ),
                       if (nomorPesanan != '-')
-                        _InfoBit(label: "No. Pesanan", value: nomorPesanan),
-
+                        _InfoBit(
+                          label: "No. Pesanan",
+                          value: nomorPesanan,
+                        ),
                       if (metodePembayaran != '-')
-                        _InfoBit(label: "Pembayaran", value: metodePembayaran),
+                        _InfoBit(
+                          label: "Pembayaran",
+                          value: metodePembayaran,
+                        ),
+                      // Nominal khusus pembayaran
+                      if (kategori.toLowerCase() == 'pembayaran' &&
+                          nominalPembayaran != '-')
+                        _InfoBit(
+                          label: "Nominal / ID",
+                          value: nominalPembayaran,
+                        ),
                     ],
-                  )
+                  ),
+
+                  // ⭐ Baris kedua: Nomor Tujuan & Nama Tujuan (kalau pembayaran)
+                  if (kategori.toLowerCase() == 'pembayaran' &&
+                      (nomorTujuan != '-' || namaTujuan != '-'))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          if (nomorTujuan != '-')
+                            _InfoBit(
+                              label: "Nomor Tujuan",
+                              value: nomorTujuan,
+                            ),
+                          if (namaTujuan != '-')
+                            _InfoBit(
+                              label: "Nama Tujuan",
+                              value: namaTujuan,
+                            ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -424,7 +554,7 @@ class RiwayatKomplainDetailPage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // --- DESKRIPSI ---
-            _SectionHeader(title: "Deskripsi Masalah"),
+            const _SectionHeader(title: "Deskripsi Masalah"),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -435,14 +565,18 @@ class RiwayatKomplainDetailPage extends StatelessWidget {
               ),
               child: Text(
                 deskripsi,
-                style: const TextStyle(fontSize: 15, height: 1.6, color: AppTheme.textMain),
+                style: const TextStyle(
+                  fontSize: 15,
+                  height: 1.6,
+                  color: AppTheme.textMain,
+                ),
               ),
             ),
 
             const SizedBox(height: 24),
 
             // --- ADMIN REPLY (CHAT STYLE) ---
-            _SectionHeader(title: "Balasan Admin"),
+            const _SectionHeader(title: "Balasan Admin"),
             _AdminChatBubble(reply: balasanAdmin),
 
             const SizedBox(height: 40),
@@ -465,10 +599,17 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     Color color;
     switch (status.toLowerCase()) {
-      case 'baru': color = AppTheme.warning; break;
-      case 'diproses': color = AppTheme.info; break;
-      case 'selesai': color = AppTheme.success; break;
-      default: color = AppTheme.neutral;
+      case 'baru':
+        color = AppTheme.warning;
+        break;
+      case 'diproses':
+        color = AppTheme.info;
+        break;
+      case 'selesai':
+        color = AppTheme.success;
+        break;
+      default:
+        color = AppTheme.neutral;
     }
 
     return Container(
@@ -479,7 +620,12 @@ class _StatusPill extends StatelessWidget {
       ),
       child: Text(
         status.toUpperCase(),
-        style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 12, letterSpacing: 1),
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: color,
+          fontSize: 12,
+          letterSpacing: 1,
+        ),
       ),
     );
   }
@@ -495,13 +641,22 @@ class _InfoBit extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSub)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.textSub,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
-              value,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textMain),
-              overflow: TextOverflow.ellipsis
+            value,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textMain,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -519,7 +674,14 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(left: 4, bottom: 10),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textSub)),
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textSub,
+          ),
+        ),
       ),
     );
   }
@@ -543,7 +705,10 @@ class _AdminChatBubble extends StatelessWidget {
           children: [
             Icon(Icons.mark_chat_unread_outlined, color: Colors.grey.shade400),
             const SizedBox(width: 10),
-            Text("Belum ada tanggapan.", style: TextStyle(color: Colors.grey.shade500)),
+            Text(
+              "Belum ada tanggapan.",
+              style: TextStyle(color: Colors.grey.shade500),
+            ),
           ],
         ),
       );
@@ -559,7 +724,11 @@ class _AdminChatBubble extends StatelessWidget {
             color: AppTheme.surface,
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.support_agent, color: AppTheme.success, size: 24),
+          child: const Icon(
+            Icons.support_agent,
+            color: AppTheme.success,
+            size: 24,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -573,15 +742,33 @@ class _AdminChatBubble extends StatelessWidget {
                 bottomRight: Radius.circular(20),
               ),
               boxShadow: [
-                BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Customer Support", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.success)),
+                const Text(
+                  "Customer Support",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: AppTheme.success,
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Text(reply, style: const TextStyle(fontSize: 14, color: AppTheme.textMain, height: 1.4)),
+                Text(
+                  reply,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textMain,
+                    height: 1.4,
+                  ),
+                ),
               ],
             ),
           ),
