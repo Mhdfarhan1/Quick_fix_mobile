@@ -10,11 +10,8 @@ import '../categories/housing_category_screen.dart';
 import '../categories/electronics_category_screen.dart';
 import '../categories/car_category_screen.dart';
 import '../categories/motorcycle_category_screen.dart';
-import '../profile/profile_page.dart';
-import '../../teknisi/profile/profile_teknisi_page.dart';
+import '../../teknisi/profile/prof_tek.dart';
 import '../pencarian/search_landing_page.dart';
-import '../../chat/chat_page.dart';
-import '../notifikasi/notif.dart';
 import '../pemesanan/keranjang_screen.dart';
 import '../../../widgets/network_image_with_fallback.dart';
 import '../../../widgets/app_dialog.dart';
@@ -22,6 +19,7 @@ import '../../../config/base_url.dart';
 import '../../notifikasi/notificationPage.dart';
 import '../../../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
+import '../../../widgets/user_bottom_nav.dart';
 
 
 extension ResponsiveHeight on BuildContext {
@@ -186,40 +184,8 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
-  
-
-  void _onItemTapped(int index) {
-    setState(() => _selectedIndex = index);
-
-    switch (index) {
-      case 1:
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const MyOrderScreen()));
-        break;
-      case 2:
-        Navigator.push(context, MaterialPageRoute(builder: (_) => ChatListPage()));
-        break;
-      case 3:
-        final auth = Provider.of<AuthProvider>(context, listen: false);
-
-        if (auth.userId == null) {
-          print("❌ ERROR: userId masih NULL");
-          return;
-        }
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => NotificationPage(userId: auth.userId!),
-          ),
-        );
-        break;
 
 
-      case 4:
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePenggunaPage()));
-        break;
-    }
-  }
 
   Widget shimmerBox(double h, double w) {
     return Shimmer.fromColors(
@@ -263,7 +229,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: const UserBottomNav(selectedIndex: 0),
     );
   }
 
@@ -736,23 +702,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: const Color(0xFF0C4481),
-      currentIndex: _selectedIndex,
-      onTap: _onItemTapped,
-      selectedItemColor: const Color(0xFFFFC918),
-      unselectedItemColor: Colors.white,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Beranda'),
-        BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Aktivitas'),
-        BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: 'Chat'),
-        BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifikasi'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
-      ],
-    );
-  }
 }
 
 class _CategoryItem extends StatelessWidget {

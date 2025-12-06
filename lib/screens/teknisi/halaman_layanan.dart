@@ -138,7 +138,6 @@ class _HalamanLayananState extends State<HalamanLayanan> {
                               _buildIconButton(context, Icons.arrow_back, () {
                                 Navigator.pop(context);
                               }),
-                              _buildIconButton(context, Icons.shopping_cart_outlined, () {}),
                             ],
                           ),
                         ),
@@ -169,49 +168,6 @@ class _HalamanLayananState extends State<HalamanLayanan> {
       color: Colors.white,
       child: Row(
         children: [
-          // 🛒 Tombol Keranjang
-          Expanded(
-            flex: 1,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                if (idUser == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("⚠️ Anda belum login")),
-                  );
-                  return;
-                }
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Menambahkan ke keranjang...")),
-                );
-
-                bool success = await KeranjangService().tambahKeranjang(
-                  idTeknisi: widget.idTeknisi,
-                  idKeahlian: widget.idKeahlian,
-                  harga: hargaMin ?? 0,
-                );
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(success
-                        ? "✅ Berhasil ditambahkan ke keranjang"
-                        : "❌ Gagal menambahkan ke keranjang"),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-              label: const Text(''),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[800],
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 10),
 
           // 🟡 Tombol Pesan Sekarang
           Expanded(

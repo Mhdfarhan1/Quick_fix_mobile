@@ -9,6 +9,7 @@ import '../../../widgets/network_image_with_fallback.dart';
 import '../tugas/detail_tugas_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../tugas/detail_selesai_tugas_screen.dart';
+import '../../../widgets/user_bottom_nav.dart';
 
 
 class MyOrderScreen extends StatefulWidget {
@@ -361,6 +362,9 @@ class _MyOrderScreenState extends State<MyOrderScreen>
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: UserBottomNav(
+        selectedIndex: 1,
       ),
     );
   }

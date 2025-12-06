@@ -703,7 +703,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const TechnicianProfilePage()),
+          MaterialPageRoute(builder: (_) => const ProfileTeknisiPage.self())
         );
         break;
       case 4:

@@ -11,7 +11,7 @@ import '../../auth/login_screen.dart';
 import 'profile_edit_pengguna_page.dart';
 import '../../../config/base_url.dart';
 import '../Lainnya/Lainnya_route.dart';
-
+import '../../../widgets/user_bottom_nav.dart';
 class ProfilePenggunaPage extends StatefulWidget {
   const ProfilePenggunaPage({super.key});
 
@@ -161,23 +161,6 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
   // ====================== BUILD UI ======================
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (user == null) {
-      return Scaffold(
-        body: Center(
-          child: TextButton(
-            onPressed: _loadUser,
-            child: const Text("Gagal memuat profil. Coba lagi."),
-          ),
-        ),
-      );
-    }
-
     final userName = user?['nama'] ?? '-';
     final userEmail = user?['email'] ?? '-';
     final userPhone = user?['phone'] ?? '-';
@@ -187,10 +170,11 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Profilku", style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white,
+        title: const Text("Profilku", style: TextStyle(color: Color.fromARGB(255, 234, 234, 234))),
+        backgroundColor: const Color(0xFF0C4481),
+        foregroundColor: const Color.fromARGB(255, 255, 255, 255),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: Color.fromARGB(255, 255, 255, 255)),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -354,7 +338,10 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
             const SizedBox(height: 30),
           ],
         ),
+        
       ),
+      bottomNavigationBar: UserBottomNav(
+        selectedIndex: 4,)
     );
   }
 

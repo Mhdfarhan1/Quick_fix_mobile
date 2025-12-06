@@ -1,24 +1,17 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_links/app_links.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:timeago/timeago.dart' as timeago;
+
 import 'config/base_url.dart';
 import 'screens/splash/splash_screen.dart';
 import 'screens/splash/auth_gate.dart';
 import 'screens/pengguna/Pembayaran/struk_page.dart';
 import 'screens/pengguna/home/home_page.dart';
-import 'utils/ui_helper.dart';
 import 'screens/auth/login_screen.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl.dart';
 import 'providers/auth_provider.dart';
-import 'package:provider/provider.dart';
-import 'package:timeago/timeago.dart' as timeago;
-
-
-
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -27,30 +20,53 @@ void main() async {
 
   final auth = AuthProvider();
   await auth.loadFromStorage();   // ← WAJIB!
+  
 
   timeago.setLocaleMessages('id', timeago.IdMessages());
   timeago.setLocaleMessages('id', timeago.IdShortMessages());
-
-
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => auth),
       ],
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
 
-
-
-
-/// 🔗 Listener deep link seperti: 
-
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  StreamSubscription? _linkSubscription;
+
+  late AppLinks _appLinks;
+
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  /// ==============================
+  /// 🔗 LISTENER UNTUK DEEP LINK
+  /// ==============================
+
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// ==============================
+  /// 🧱 BUILD APP
+  /// ==============================
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -64,7 +80,6 @@ class MyApp extends StatelessWidget {
       ),
       routes: {
         '/login': (_) => const LoginScreen(),
-
         '/halaman_struk': (_) => const StrukPage(
               kodePemesanan: 'default',
               namaLayanan: 'default',
@@ -76,7 +91,6 @@ class MyApp extends StatelessWidget {
         '/dashboard': (_) => const HomePage(),
       },
       home: const SplashScreenWrapper(),
-      
     );
   }
 }
@@ -113,16 +127,11 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
     return FutureBuilder<bool>(
       future: loginFuture,
       builder: (context, snapshot) {
-
-        // Saat loading: tampilkan splash saja
         if (snapshot.connectionState != ConnectionState.done) {
-          return const SplashScreen(); // atau loading screen
+          return const SplashScreen();
         }
-
-        // Jika sudah selesai:
-        return const AuthGate();   // biarkan AuthGate yang menentukan login
+        return const AuthGate();
       },
     );
   }
 }
-

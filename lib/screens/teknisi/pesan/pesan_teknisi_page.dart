@@ -156,7 +156,7 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage>
         break;
       case 3:
         Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const TechnicianProfilePage()));
+            MaterialPageRoute(builder: (_) => const ProfileTeknisiPage.self()));
         break;
       case 4:
         Navigator.pushReplacement(

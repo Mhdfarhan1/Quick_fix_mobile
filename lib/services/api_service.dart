@@ -206,6 +206,13 @@ class ApiService {
           await prefs.setString('role', user['role'] ?? '');
           await prefs.setString('no_hp', user['no_hp'] ?? '');
 
+          if (user['id_teknisi'] != null) {
+            await prefs.setInt('id_teknisi', user['id_teknisi']);
+            log("✅ ID Teknisi disimpan: ${user['id_teknisi']}");
+          } else {
+            log("⚠️ User bukan teknisi atau id_teknisi tidak ditemukan!");
+          }
+
           // optional: alamat default
           if (user['alamat_default'] != null) {
             await prefs.setString('alamat_default', user['alamat_default']);
@@ -243,6 +250,12 @@ class ApiService {
   }) async {
     return await request(method: 'POST', endpoint: endpoint, body: data, context: context);
   }
+
+  static Future<int?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('id_user');
+  }
+
 
   // -----------------------
   // Register / Verify / Resend (preserve behavior)
@@ -575,14 +588,15 @@ static Future<Map<String, dynamic>> uploadKeahlianTeknisi({
 // ---------------------
 // Fetch layanan teknisi
 // ---------------------
-static Future<Map<String, dynamic>> getLayananTeknisi({
-  BuildContext? context,
-}) async {
-  final prefs = await SharedPreferences.getInstance();
+static Future<Map<String, dynamic>> getLayananTeknisi(
+  int teknisiId,
+  {BuildContext? context}
+) async {
   final token = await ApiService._getToken();
 
   try {
-    final url = Uri.parse('${BaseUrl.api}/teknisi/keahlian');
+    final url = Uri.parse('${BaseUrl.api}/teknisi/$teknisiId/keahlian');
+
     final response = await http.get(
       url,
       headers: {
@@ -591,18 +605,26 @@ static Future<Map<String, dynamic>> getLayananTeknisi({
       },
     );
 
-    final body = response.body;
-    Map<String, dynamic> parsed = {};
+    Map<String, dynamic> parsed;
     try {
-      parsed = jsonDecode(body);
+      parsed = jsonDecode(response.body);
     } catch (e) {
-      return {'statusCode': response.statusCode, 'data': {'success': false, 'message': 'Response bukan JSON', 'raw': body}};
+      return {
+        'statusCode': response.statusCode,
+        'data': {
+          'success': false,
+          'message': 'Response bukan JSON',
+          'raw': response.body
+        }
+      };
     }
+
     return {'statusCode': response.statusCode, 'data': parsed};
   } catch (e) {
-    return {'statusCode': 500, 'data': {'success': false, 'message': 'Gagal koneksi: $e'}};
+    return {'statusCode': 500, 'data': {'success': false, 'message': '$e'}};
   }
 }
+
 
 // ---------------------
 // Update layanan teknisi
@@ -778,6 +800,88 @@ static Future<Map<String, dynamic>> deleteLayananTeknisi({
       method: 'DELETE',
       endpoint: '/notifikasi/$idNotifikasi',
     );
+  }
+
+  static Future<Map<String, dynamic>> getUlasanTeknisi(int idTeknisi) async {
+    return await ApiService.get('/teknisi/$idTeknisi/ulasan');
+  }
+
+
+  static Future<Map<String, dynamic>> updateProfilTeknisi({
+    required String deskripsi,
+  }) async {
+    final token = await _getToken();
+    final url = Uri.parse('${BaseUrl.api}/teknisi/update_profile');
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        "deskripsi": deskripsi,
+      }),
+    );
+
+    return {
+      "statusCode": response.statusCode,
+      "data": jsonDecode(response.body),
+    };
+  }
+
+
+
+
+
+  static Future<Map<String, dynamic>> uploadGaleri(File file) async {
+    final url = Uri.parse('${BaseUrl.api}/teknisi/upload_galeri');
+    final token = await _getToken();
+
+    final request = http.MultipartRequest("POST", url);
+    request.headers['Authorization'] = 'Bearer $token';
+
+    request.files.add(
+      await http.MultipartFile.fromPath('file', file.path),  // field sesuai Laravel
+    );
+
+    final response = await request.send();
+    final responseBody = await response.stream.bytesToString();
+
+    return {
+      "statusCode": response.statusCode,
+      "data": jsonDecode(responseBody),  // <--- ini data utama
+    };
+  }
+
+
+
+  static Future<Map<String,dynamic>> deleteGaleri(String token, int idGaleri) async {
+    final url = Uri.parse('${BaseUrl.api}/teknisi/galeri/$idGaleri');
+    final res = await http.delete(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+    return {'statusCode': res.statusCode, 'body': res.body.isNotEmpty ? jsonDecode(res.body) : null};
+  }
+
+  static Future<Map<String, dynamic>> getGaleri(int teknisiId) async {
+    final url = Uri.parse('${BaseUrl.api}/teknisi/$teknisiId/galeri');
+    final token = await _getToken();
+
+    final res = await http.get(url, headers: {
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json'
+    });
+
+    return {
+      "statusCode": res.statusCode,
+      "data": jsonDecode(res.body)
+    };
   }
 
 

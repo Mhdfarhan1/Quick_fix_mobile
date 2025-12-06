@@ -214,14 +214,6 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
         icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
         onPressed: () => Navigator.pop(context),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-          onPressed: () {
-            // TODO: arahkan ke halaman keranjang / pesanan
-          },
-        ),
-      ],
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),

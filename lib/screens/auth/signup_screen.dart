@@ -177,14 +177,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       _buildRoleDropdown(),
                       const SizedBox(height: 16),
                       _buildPasswordField(
-                        hintText: 'Password',
+                        hintText: 'Kata Sandi',
                         obscureText: _obscurePassword,
                         controller: _passwordController,
                         onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
                       const SizedBox(height: 16),
                       _buildPasswordField(
-                        hintText: 'Confirm Password',
+                        hintText: 'Konfirmasi Kata sandi',
                         obscureText: _obscureConfirmPassword,
                         controller: _confirmPasswordController,
                         onToggleVisibility: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
@@ -200,7 +200,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.black)
-                            : const Text('SIGN UP', style: TextStyle(fontWeight: FontWeight.bold)),
+                            : const Text('DAFTAR', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+
+                    const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            "Sudah punya akun? ",
+                            style: TextStyle(fontSize: 14, color: Colors.black87),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                              ); // kembali ke halaman sebelumnya
+                            },
+                            child: const Text(
+                              "Masuk",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF0C4481), // warna biru sesuai permintaan
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

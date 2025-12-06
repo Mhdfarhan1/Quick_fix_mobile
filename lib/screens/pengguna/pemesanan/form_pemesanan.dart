@@ -329,6 +329,7 @@ class _FormPemesananState extends State<FormPemesanan> {
       appBar: AppBar(
         title: const Text("Pesanan"),
         backgroundColor: const Color(0xFF0C4481),
+        foregroundColor: const Color.fromARGB(255, 255, 255, 255),
       ),
       
       bottomNavigationBar: Container(
@@ -396,7 +397,12 @@ class _FormPemesananState extends State<FormPemesanan> {
                       }
                     }
                   },
-                  child: const Text("Tap untuk menentukan titik lokasi"),
+                  child: const Text(
+                    "Pilih lokasi",
+                    style: TextStyle(
+                      color: Color.fromARGB(255, 255, 255, 255),
+                    ),
+                  ),
                 ),
               ),
             ]),

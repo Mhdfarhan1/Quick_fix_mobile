@@ -58,10 +58,9 @@ class _SearchLandingPageState extends State<SearchLandingPage> {
           padding: const EdgeInsets.only(top: 14),
           child: Row(
             children: const [
-              Icon(Icons.location_on, color: Colors.white, size: 20),
               SizedBox(width: 2),
               Text(
-                "Kota Batam",
+                "Pencarian",
                 style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -70,15 +69,6 @@ class _SearchLandingPageState extends State<SearchLandingPage> {
             ],
           ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0, right: 8),
-            child: IconButton(
-              icon: const Icon(Icons.message_outlined, color: Colors.white),
-              onPressed: () {},
-            ),
-          ),
-        ],
       ),
     );
   }

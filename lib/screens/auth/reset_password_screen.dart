@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import 'VerifyResetOtpPage.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -28,7 +29,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     setState(() => _isLoading = true);
 
     final result = await ApiService.post(
-      endpoint: '/password/forgot', // endpoint di Laravel
+      endpoint: '/password/reset-otp', // endpoint di Laravel
       data: {'email': email},
     );
 
@@ -42,7 +43,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.pop(context); // kembali ke login
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => VerifyResetOtpPage(email: _emailController.text.trim()),
+        ),
+      );
+
     } else {
       final data = result['data'];
       ScaffoldMessenger.of(context).showSnackBar(
@@ -58,7 +65,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reset Password'),
+        title: const Text('Reset Kata sandi'),
         backgroundColor: const Color(0xFF0C4481),
         foregroundColor: Colors.white,
       ),
@@ -68,7 +75,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Masukkan email kamu untuk menerima link reset password:',
+              'Masukkan email kamu untuk menerima link reset kata sandi:',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 16),
@@ -99,7 +106,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               child: _isLoading
                   ? const CircularProgressIndicator(color: Colors.black)
                   : const Text(
-                      'KIRIM LINK RESET',
+                      'KIRIM OTP RESET',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
             ),

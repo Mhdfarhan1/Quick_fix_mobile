@@ -207,6 +207,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 right: 0,
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+                  constraints: BoxConstraints(
+                      minHeight: screenSize.height * 0.9, // full ke bawah
+                    ),
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.only(
@@ -225,7 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       _buildPasswordField(
                         controller: _passwordController,
-                        hintText: 'Password',
+                        hintText: 'Sandi',
                         obscureText: _obscurePassword,
                         onToggleVisibility: () {
                           setState(() => _obscurePassword = !_obscurePassword);
@@ -242,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
                             );
                           },
-                          child: const Text('Forgot password?'),
+                          child: const Text('Lupa Sandi?'),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -259,31 +262,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.black)
                             : const Text(
-                                'LOGIN',
+                                'Masuk',
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                       ),
                       const SizedBox(height: 24),
-                      const Center(
-                        child: Text('Or Login Using',
-                            style: TextStyle(color: Colors.grey)),
-                      ),
-                      const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildSocialButton(
-                              icon: FontAwesomeIcons.google, color: Colors.red),
-                          const SizedBox(width: 20),
-                          _buildSocialButton(
-                              icon: FontAwesomeIcons.facebook, color: Colors.blue),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text("Don't have an account?"),
+                          const Text("Belum punya akun?"),
                           TextButton(
                             onPressed: () {
                               Navigator.pushReplacement(
@@ -293,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               );
                             },
                             child: const Text(
-                              'SIGN UP',
+                              'DAFTAR',
                               style: TextStyle(
                                 color: Color(0xFF0C4481),
                                 fontWeight: FontWeight.bold,
