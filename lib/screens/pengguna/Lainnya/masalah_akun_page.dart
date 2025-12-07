@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:quick_fix/services/api_service.dart';
 
 class MasalahAkunPage extends StatefulWidget {
   const MasalahAkunPage({super.key});
@@ -95,7 +98,7 @@ class _MasalahAkunPageState extends State<MasalahAkunPage> {
                           children: [
                             // EMAIL / NO HP
                             const Text(
-                              "Email/ No.hp",
+                              "Email / No. HP",
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
@@ -104,11 +107,12 @@ class _MasalahAkunPageState extends State<MasalahAkunPage> {
                             const SizedBox(height: 6),
                             _buildTextField(
                               controller: _kontakController,
-                              hint: "Email atau nomor HP yang digunakan di akun",
+                              hint:
+                              "Email atau nomor HP yang digunakan di akun",
                               prefixIcon: CupertinoIcons.at,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return "Email / No.hp wajib diisi";
+                                  return "Email / No. HP wajib diisi";
                                 }
                                 return null;
                               },
@@ -161,7 +165,9 @@ class _MasalahAkunPageState extends State<MasalahAkunPage> {
                                 child: Text(
                                   "Jenis masalah wajib dipilih",
                                   style: TextStyle(
-                                      fontSize: 11, color: Colors.red),
+                                    fontSize: 11,
+                                    color: Colors.red,
+                                  ),
                                 ),
                               ),
 
@@ -206,7 +212,9 @@ class _MasalahAkunPageState extends State<MasalahAkunPage> {
                               onTap: _pickLampiran,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 12),
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFF3F5F9),
                                   borderRadius: BorderRadius.circular(12),
@@ -253,8 +261,9 @@ class _MasalahAkunPageState extends State<MasalahAkunPage> {
                                 child: Text(
                                   "Lampiran akan dikirim bersama laporan.",
                                   style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.black54),
+                                    fontSize: 11,
+                                    color: Colors.black54,
+                                  ),
                                 ),
                               ),
                           ],
@@ -323,6 +332,10 @@ class _MasalahAkunPageState extends State<MasalahAkunPage> {
     );
   }
 
+  // ============================================================
+  // TEXT FIELD BUILDER
+  // ============================================================
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -339,12 +352,16 @@ class _MasalahAkunPageState extends State<MasalahAkunPage> {
             ? null
             : Icon(prefixIcon, size: 20, color: Colors.grey.shade600),
         hintText: hint,
-        hintStyle:
-        TextStyle(color: Colors.grey.shade500, fontSize: 13.5),
+        hintStyle: TextStyle(
+          color: Colors.grey.shade500,
+          fontSize: 13.5,
+        ),
         filled: true,
         fillColor: Colors.white,
-        contentPadding:
-        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -355,12 +372,18 @@ class _MasalahAkunPageState extends State<MasalahAkunPage> {
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide:
-          BorderSide(color: Color(0xFF0C4481), width: 1.4),
+          borderSide: BorderSide(
+            color: Color(0xFF0C4481),
+            width: 1.4,
+          ),
         ),
       ),
     );
   }
+
+  // ============================================================
+  // PICK LAMPIRAN
+  // ============================================================
 
   Future<void> _pickLampiran() async {
     final result = await _picker.pickImage(
@@ -375,15 +398,102 @@ class _MasalahAkunPageState extends State<MasalahAkunPage> {
     }
   }
 
-  void _submitForm() {
+  // ============================================================
+  // SUBMIT KE BACKEND
+  // ============================================================
+
+  Future<void> _submitForm() async {
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate() || _jenisMasalah == null) {
-      setState(() {});
+      setState(() {}); // biar error dropdown muncul
       return;
     }
 
-    // TODO: kirim data ke backend (sertakan _lampiran kalau tidak null)
+    // Ambil token
+    final token = await ApiService.storage.read(key: "token");
+
+    if (token == null || token.isEmpty) {
+      _showErrorDialog(
+        "Anda belum login atau sesi sudah habis.\nSilakan login ulang.",
+      );
+      return;
+    }
+
+    // Debug (opsional)
+    print("===== DEBUG MASALAH AKUN =====");
+    print("TOKEN: Bearer $token");
+    print("Kontak: ${_kontakController.text}");
+    print("Jenis Masalah: $_jenisMasalah");
+    print("Deskripsi: ${_deskripsiController.text}");
+    print("Lampiran: ${_lampiran?.path}");
+    print("================================");
+
+    // Loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0C4481)),
+      ),
+    );
+
+    try {
+      final uri = Uri.parse("http://192.168.1.6:8000/api/complaints");
+
+      var request = http.MultipartRequest("POST", uri);
+      request.headers['Accept'] = "application/json";
+      request.headers['Authorization'] = "Bearer $token";
+
+      // DATA YANG DIKIRIM (samakan dengan field di Laravel)
+      request.fields['kategori'] = "akun";
+      request.fields['kontak'] = _kontakController.text; // email / no hp
+      request.fields['jenis_masalah'] = _jenisMasalah!;
+      request.fields['deskripsi'] = _deskripsiController.text;
+
+      if (_lampiran != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            "lampiran",
+            _lampiran!.path,
+          ),
+        );
+      }
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      print("===== RESPONSE MASALAH AKUN =====");
+      print("STATUS CODE: ${response.statusCode}");
+      print("BODY: $responseBody");
+      print("=================================");
+
+      Navigator.pop(context); // tutup loading
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _showSuccessDialog();
+      } else if (response.statusCode == 401) {
+        _showErrorDialog(
+          "Sesi login sudah tidak valid (401 Unauthorized).\nSilakan login ulang.",
+        );
+      } else {
+        _showErrorDialog(
+          "Gagal mengirim laporan.\n"
+              "Status: ${response.statusCode}\n\n"
+              "Response:\n$responseBody",
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      _showErrorDialog("Terjadi error: $e");
+    }
+  }
+
+  // ============================================================
+  // DIALOGS
+  // ============================================================
+
+  void _showSuccessDialog() {
     showDialog(
       context: context,
       builder: (ctx) {
@@ -410,6 +520,28 @@ class _MasalahAkunPageState extends State<MasalahAkunPage> {
           ],
         );
       },
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+        title: const Text(
+          "Terjadi Kesalahan",
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
     );
   }
 }
