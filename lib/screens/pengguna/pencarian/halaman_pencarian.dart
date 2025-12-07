@@ -83,6 +83,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
   }
 
   Future<void> fetchTeknisi({bool loadMore = false}) async {
+    
     if (_isLoading && !loadMore) return;
     if (loadMore && !hasMore) return;
 
@@ -108,7 +109,10 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
       final response = await http.get(uri).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
+        
         final body = json.decode(response.body);
+        print(json.encode(body["data"]));
+
 
         setState(() {
           if (!loadMore) teknisiList.clear();
@@ -458,8 +462,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
           value: sortBy,
           items: const [
             DropdownMenuItem(value: "rating", child: Text("Rating")),
-            DropdownMenuItem(value: "harga_min", child: Text("Harga Terendah")),
-            DropdownMenuItem(value: "harga_max", child: Text("Harga Tertinggi")),
+            DropdownMenuItem(value: "harga", child: Text("Harga")), // ← hanya satu
           ],
           onChanged: (value) {
             sortBy = value!;
@@ -503,8 +506,9 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     print(gambarUrl);
 
 
-    int hargaMin = parseHarga(teknisi['harga_min']);
-    int hargaMax = parseHarga(teknisi['harga_max']);
+    // API cuma punya 1 harga → pakai harga yang sama untuk min dan max
+    int harga = parseHarga(teknisi['harga']);
+
     double rating = double.tryParse(teknisi["rating"].toString()) ?? 0.0;
 
     return GestureDetector(
@@ -518,7 +522,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
               nama: teknisi["nama"] ?? '',
               deskripsi: teknisi["nama_keahlian"] ?? '',
               rating: rating,
-              harga: hargaMin,
+              harga: harga,
               gambarUtama: gambarUrl,
               gambarLayanan: [gambarUrl],
             ),
@@ -568,7 +572,11 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
                     ),
                     // Tampilkan harga dalam format rupiah
                     Text(
-                      "${formatRupiah(hargaMin)} - ${formatRupiah(hargaMax)}",
+                      formatRupiah(harga),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
                     Row(
                       children: [

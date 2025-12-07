@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:quick_fix/screens/pengguna/home/home_page.dart';
 
 // === Import halaman yang akan dibuka ===
 import '../screens/pengguna/orders/my_order_screen.dart';
@@ -42,7 +43,7 @@ class UserBottomNav extends StatelessWidget {
       case 0:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const MyOrderScreen()),
+          MaterialPageRoute(builder: (_) => const HomePage()),
         );
         break;
       case 1:

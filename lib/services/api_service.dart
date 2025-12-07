@@ -527,15 +527,12 @@ static Future<Map<String, dynamic>> fetchKategori() async {
 static Future<Map<String, dynamic>> uploadKeahlianTeknisi({
   int? idKeahlian,
   String? nama,
-  int? hargaMin,
-  int? hargaMax,
+  int? harga, // ← ganti!
   String? deskripsi,
   File? gambarFile,
   BuildContext? context,
 }) async {
-  final prefs = await SharedPreferences.getInstance();
   final token = await ApiService._getToken();
-
   OverlayEntry? loader;
   if (context != null) loader = UIHelper.showLoading(context, text: 'Mengunggah layanan...');
 
@@ -543,33 +540,27 @@ static Future<Map<String, dynamic>> uploadKeahlianTeknisi({
     final uri = Uri.parse('${BaseUrl.api}/teknisi/keahlian');
     final request = http.MultipartRequest('POST', uri);
 
-    // headers
     request.headers.addAll({
       'Accept': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
     });
 
-    // fields
     if (idKeahlian != null) request.fields['id_keahlian'] = idKeahlian.toString();
     if (nama != null) request.fields['nama'] = nama;
-    if (hargaMin != null) request.fields['harga_min'] = hargaMin.toString();
-    if (hargaMax != null) request.fields['harga_max'] = hargaMax.toString();
+    if (harga != null) request.fields['harga'] = harga.toString(); // ← hanya satu harga
     if (deskripsi != null && deskripsi.isNotEmpty) request.fields['deskripsi'] = deskripsi;
 
-    // file
     if (gambarFile != null) {
       final mimeType = lookupMimeType(gambarFile.path) ?? 'image/jpeg';
-      final multipartFile = await http.MultipartFile.fromPath('gambar_layanan', gambarFile.path,
-          contentType: MediaType.parse(mimeType));
-      request.files.add(multipartFile);
+      request.files.add(await http.MultipartFile.fromPath(
+        'gambar_layanan', gambarFile.path,
+        contentType: MediaType.parse(mimeType),
+      ));
     }
 
-    // send
     final streamed = await request.send();
     final respStr = await streamed.stream.bytesToString();
-    final statusCode = streamed.statusCode;
 
-    // parse response body
     dynamic data;
     try {
       data = jsonDecode(respStr);
@@ -577,13 +568,12 @@ static Future<Map<String, dynamic>> uploadKeahlianTeknisi({
       data = {'status': false, 'message': 'Response bukan JSON', 'raw': respStr};
     }
 
-    return {'statusCode': statusCode, 'data': data};
-  } catch (e) {
-    return {'statusCode': 500, 'data': {'status': false, 'message': 'Error: $e'}};
+    return {'statusCode': streamed.statusCode, 'data': data};
   } finally {
     loader?.remove();
   }
 }
+
 
 // ---------------------
 // Fetch layanan teknisi
@@ -633,53 +623,41 @@ static Future<Map<String, dynamic>> updateLayananTeknisi({
   required int id,
   int? idKeahlian,
   String? nama,
-  int? hargaMin,
-  int? hargaMax,
+  int? harga, // ← ganti!
   String? deskripsi,
   File? gambarFile,
   BuildContext? context,
 }) async {
-  final prefs = await SharedPreferences.getInstance();
   final token = await ApiService._getToken();
-
-
   OverlayEntry? loader;
   if (context != null) loader = UIHelper.showLoading(context, text: 'Memperbarui layanan...');
 
   try {
     final uri = Uri.parse('${BaseUrl.api}/teknisi/keahlian/$id');
     final request = http.MultipartRequest('POST', uri);
-
-    // method spoofing untuk PUT
     request.fields['_method'] = 'PUT';
 
-    // headers
     request.headers.addAll({
       'Accept': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
     });
 
-    // fields
     if (idKeahlian != null) request.fields['id_keahlian'] = idKeahlian.toString();
     if (nama != null) request.fields['nama'] = nama;
-    if (hargaMin != null) request.fields['harga_min'] = hargaMin.toString();
-    if (hargaMax != null) request.fields['harga_max'] = hargaMax.toString();
+    if (harga != null) request.fields['harga'] = harga.toString(); // ← satu harga
     if (deskripsi != null && deskripsi.isNotEmpty) request.fields['deskripsi'] = deskripsi;
 
-    // file
     if (gambarFile != null) {
       final mimeType = lookupMimeType(gambarFile.path) ?? 'image/jpeg';
-      final multipartFile = await http.MultipartFile.fromPath('gambar_layanan', gambarFile.path,
-          contentType: MediaType.parse(mimeType));
-      request.files.add(multipartFile);
+      request.files.add(await http.MultipartFile.fromPath(
+        'gambar_layanan', gambarFile.path,
+        contentType: MediaType.parse(mimeType),
+      ));
     }
 
-    // send
     final streamed = await request.send();
     final respStr = await streamed.stream.bytesToString();
-    final statusCode = streamed.statusCode;
 
-    // parse response body
     dynamic data;
     try {
       data = jsonDecode(respStr);
@@ -687,13 +665,12 @@ static Future<Map<String, dynamic>> updateLayananTeknisi({
       data = {'success': false, 'message': 'Response bukan JSON', 'raw': respStr};
     }
 
-    return {'statusCode': statusCode, 'data': data};
-  } catch (e) {
-    return {'statusCode': 500, 'data': {'success': false, 'message': 'Error: $e'}};
+    return {'statusCode': streamed.statusCode, 'data': data};
   } finally {
     loader?.remove();
   }
 }
+
 
 // ---------------------
 // Delete layanan teknisi

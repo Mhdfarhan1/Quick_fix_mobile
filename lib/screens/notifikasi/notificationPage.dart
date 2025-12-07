@@ -4,7 +4,8 @@ import 'notificationprovider.dart';
 import '../../services/notification_service.dart';
 import '../../models/notification_model.dart';
 import 'package:timeago/timeago.dart' as timeago;
-
+import '../../../providers/auth_provider.dart';
+import '../../widgets/user_bottom_nav.dart';
 
 class NotificationPage extends StatelessWidget {
   final int userId;
@@ -20,19 +21,36 @@ class NotificationPage extends StatelessWidget {
         prov.initPusher(userId);
         return prov;
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF2F8FA),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF0C4481),
-          foregroundColor: const Color.fromARGB(255, 255, 255, 255),
-          title: const Text("Notifikasi"),
-        ),
-        body: const _NotificationList(),
+      child: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
+          print("🔥 DEBUG NotificationPage");
+          print("   - userRole: ${auth.userRole}");
+          print("   - navbar seharusnya muncul? ${auth.userRole == 'pelanggan'}");
+          return Scaffold(
+            backgroundColor: const Color(0xFFF2F8FA),
+
+            // === NAVBAR TAMPIL HANYA JIKA ROLE = PELANGGAN ===
+            bottomNavigationBar: auth.userRole == "pelanggan"
+                ? const UserBottomNav(selectedIndex: 3)
+                : null,
+
+            appBar: AppBar(
+              backgroundColor: const Color(0xFF0C4481),
+              foregroundColor: Colors.white,
+              title: const Text("Notifikasi"),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+
+            body: const _NotificationList(),
+          );
+        },
       ),
     );
   }
 }
-
 
 class _NotificationList extends StatelessWidget {
   const _NotificationList({super.key});
@@ -83,7 +101,7 @@ class _NotificationItem extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // LEFT SIDE (TEXTS)
+            // LEFT SIDE
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,9 +111,9 @@ class _NotificationItem extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: item.isRead ?
-                          Colors.grey[700] :
-                          const Color(0xFF0C4481),
+                      color: item.isRead
+                          ? Colors.grey[700]
+                          : const Color(0xFF0C4481),
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -110,7 +128,7 @@ class _NotificationItem extends StatelessWidget {
               ),
             ),
 
-            // RIGHT SIDE (TIME)
+            // RIGHT SIDE
             Padding(
               padding: const EdgeInsets.only(left: 10),
               child: Text(

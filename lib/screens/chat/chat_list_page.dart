@@ -1,48 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
 import '../../models/chat_model.dart';
+import '../../providers/auth_provider.dart';
 import 'chat_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatListPage extends StatefulWidget {
   @override
   State<ChatListPage> createState() => _ChatListPageState();
-  
 }
 
 class _ChatListPageState extends State<ChatListPage> {
   List<ChatModel> chats = [];
 
-  String role = "pelanggan";
-
   @override
   void initState() {
     super.initState();
-    loadRole();
     loadChats();
   }
-
-
-
-  String formatTime(DateTime? time) {
-    if (time == null) return "";
-
-    final now = DateTime.now();
-    if (now.difference(time).inDays == 0) {
-      return "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
-    }
-
-    return "${time.day}/${time.month}";
-  }
-
-  Future<void> loadRole() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      role = prefs.getString("role") ?? "pelanggan";
-    });
-  }
-
-
 
   Future<void> loadChats() async {
     final res = await ApiService.get('/chat/list');
@@ -56,25 +31,25 @@ class _ChatListPageState extends State<ChatListPage> {
     }
   }
 
-  Widget buildChatTile(ChatModel chat, String role) {
+  Widget buildChatTile(ChatModel chat, String? role) {
+    // Tentukan nama ditampilkan berdasarkan role
+    final isTeknisi = role == "teknisi";
 
-    // Kalau user biasa → tampilkan nama teknisi
-    // Kalau teknisi → tampilkan nama user
-    final displayName = role == "teknisi"
-        ? chat.namaUser ?? "Pelanggan"
-        : chat.namaTeknisi ?? "Teknisi";
+    final displayName = isTeknisi
+        ? (chat.namaUser ?? "Pelanggan")
+        : (chat.namaTeknisi ?? "Teknisi");
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: Color(0xFF0C4481),
+        backgroundColor: const Color(0xFF0C4481),
         child: Text(
           displayName[0],
-          style: TextStyle(color: Colors.white),
+          style: const TextStyle(color: Colors.white),
         ),
       ),
       title: Text(
         displayName,
-        style: TextStyle(fontWeight: FontWeight.bold),
+        style: const TextStyle(fontWeight: FontWeight.bold),
       ),
       subtitle: Text(
         chat.lastMessage ?? 'Belum ada pesan',
@@ -84,7 +59,7 @@ class _ChatListPageState extends State<ChatListPage> {
       trailing: chat.lastMessageAt != null
           ? Text(
               TimeOfDay.fromDateTime(chat.lastMessageAt!).format(context),
-              style: TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: 12),
             )
           : null,
       onTap: () {
@@ -101,34 +76,39 @@ class _ChatListPageState extends State<ChatListPage> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
+    final userRole = Provider.of<AuthProvider>(context).userRole ?? "pelanggan";
+
+    print("📌 ChatListPage — role: $userRole");
+
     return Scaffold(
-      backgroundColor: Color(0xFFF5FAFC),
+      backgroundColor: const Color(0xFFF5FAFC),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text("Chat", style: TextStyle(
-          color: Colors.black,
-          fontSize: 28,
-          fontWeight: FontWeight.bold
-        )),
+        title: const Text(
+          "Chat",
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
 
       body: Column(
         children: [
-
-          // Search bar
+          // 🔍 Search Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
-                color: Color(0xFFEDEAEA),
+                color: const Color(0xFFEDEAEA),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: TextField(
+              child: const TextField(
                 decoration: InputDecoration(
                   icon: Icon(Icons.search),
                   hintText: "Silahkan cari",
@@ -138,13 +118,13 @@ class _ChatListPageState extends State<ChatListPage> {
             ),
           ),
 
-          SizedBox(height: 15),
+          const SizedBox(height: 15),
 
           Expanded(
             child: ListView.builder(
               itemCount: chats.length,
               itemBuilder: (context, i) {
-                return buildChatTile(chats[i], role);
+                return buildChatTile(chats[i], userRole);
               },
             ),
           ),

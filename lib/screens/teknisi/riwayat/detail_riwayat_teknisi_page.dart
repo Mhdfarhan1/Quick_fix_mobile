@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../../../services/api_service.dart';
 import '../../chat/chat_page.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../services/chat_service.dart';
 
 
 class DetailRiwayatTeknisiPage extends StatelessWidget {
@@ -22,33 +23,6 @@ class DetailRiwayatTeknisiPage extends StatelessWidget {
       throw 'Tidak bisa membuka aplikasi telepon';
     }
   }
-
-  Future<int?> createOrGetChat(int idTeknisi) async {
-    try {
-      final token = await ApiService.storage.read(key: 'token');
-
-      final response = await http.post(
-        Uri.parse("${BaseUrl.server}/api/chat/start"),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Accept": "application/json",
-        },
-        body: {
-          "id_teknisi": idTeknisi.toString(),
-        },
-      );
-
-      final body = jsonDecode(response.body);
-      if (body["status"] == true) {
-        return body["chat"]["id_chat"];
-      }
-    } catch (e) {
-      print("Error start chat => $e");
-    }
-    return null;
-  }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -196,14 +170,20 @@ class DetailRiwayatTeknisiPage extends StatelessWidget {
                                     fontWeight: FontWeight.bold),
                               ),
                               onPressed: () async {
-                                final chatId = data["id_chat"];
-                                final idTeknisi = data["id_teknisi"];
+                                final role = await ApiService.storage.read(key: 'role');
+                                final isTeknisi = role == "teknisi";
+
+                                final chatId = data["id_chat"];        // <-- bisa null
+                                final idTeknisi = data["id_teknisi"];  // <-- int
+                                final idUser = data["id_user"];        // <-- int
 
                                 int? finalChatId = chatId;
 
-                                // Jika chat belum ada → buat otomatis
-                                if (chatId == null) {
-                                  finalChatId = await createOrGetChat(idTeknisi);
+                                if (finalChatId == null) {
+                                  finalChatId = await ChatService.createOrGetChat(
+                                    idTeknisi,
+                                    idUser,
+                                  );
 
                                   if (finalChatId == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -213,7 +193,6 @@ class DetailRiwayatTeknisiPage extends StatelessWidget {
                                   }
                                 }
 
-                                // Navigasi ke halaman chat
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -223,7 +202,7 @@ class DetailRiwayatTeknisiPage extends StatelessWidget {
                                     ),
                                   ),
                                 );
-                              },
+                              }
                             ),
                           ),
                           const SizedBox(height: 12),

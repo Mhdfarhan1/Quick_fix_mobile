@@ -122,19 +122,9 @@ class _LainnyaPageState extends State<LainnyaPage> {
                 },
               ),
 
-              _buildMenuItem(
-                Icons.miscellaneous_services,
-                "Jenis Layanan Utama",
-              ),
             ]),
 
-            const SizedBox(height: 20),
-
-            _buildSectionTitle("Pengaturan aplikasi"),
-            _buildMenuCard([
-              _buildMenuItem(Icons.language, "Bahasa"),
-              _buildMenuItem(Icons.work_outline, "Portofolio"),
-            ]),
+            
 
             const SizedBox(height: 20),
 
@@ -196,7 +186,7 @@ class _LainnyaPageState extends State<LainnyaPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text(
-                          "Ahmad Sahroni",
+                          "Budi Teknisi",
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         Text(

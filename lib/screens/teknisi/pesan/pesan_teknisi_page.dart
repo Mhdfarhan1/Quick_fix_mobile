@@ -118,6 +118,8 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage>
   //  FETCH API
   // ====================================================
   Future<List<dynamic>> fetchPesanan(String url) async {
+    print("🔎 Fetch URL: $url");
+
     try {
       final res = await http.get(
         Uri.parse(url),
@@ -127,15 +129,19 @@ class _PesananTeknisiPageState extends State<PesananTeknisiPage>
         },
       );
 
+      print("📥 Status: ${res.statusCode}");
+      print("📥 Body: ${res.body}");
+
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         return data["data"] ?? [];
       }
     } catch (e) {
-      print("Error GET pesanan: $e");
+      print("❌ Error GET pesanan: $e");
     }
     return [];
   }
+
 
   // ====================================================
   //  NAVBAR ACTION

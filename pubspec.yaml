@@ -72,6 +72,7 @@ dependencies:
 
 
 
+
   mime: ^1.0.5
   http_parser: ^4.0.3
 
@@ -110,6 +111,7 @@ flutter:
     - assets/images/Logo_quickfix.png
     - assets/default.jpg
     - assets/lottie/loading.json
+    - assets/images/teknisi_avatar.png
 
   # BENAR: 'fonts' sejajar dengan 'assets' sebagai properti dari 'flutter'
   fonts:

@@ -39,8 +39,7 @@ class _HalamanLayananState extends State<HalamanLayanan> {
 
   bool loading = true;
 
-  int? hargaMin;
-  int? hargaMax;
+  int? harga;
   List<String> gambar = [];
   List<dynamic> ulasan = [];
   int garansi = 0 ;
@@ -79,12 +78,13 @@ class _HalamanLayananState extends State<HalamanLayanan> {
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
+        print("🔥 BODY DETAIL: ${res.body}");
+
 
         if (!mounted) return;
 
         setState(() {
-          hargaMin = int.tryParse(body["harga_min"].toString()) ?? 0;
-          hargaMax = int.tryParse(body["harga_max"].toString()) ?? 0;
+          harga = int.tryParse(body["harga"].toString()) ?? 0;
           gambar = List<String>.from(body["gambar"]);
           ulasan = body["ulasan"];
           garansi = body["garansi"] ?? 0;
@@ -189,8 +189,8 @@ class _HalamanLayananState extends State<HalamanLayanan> {
                       idTeknisi: widget.idTeknisi,
                       idKeahlian: widget.idKeahlian,
                       namaTeknisi: widget.nama,
-                      namaKeahlian: widget.deskripsi,
-                      harga: hargaMin ?? 0,
+                      namaKeahlian: widget.nama,
+                      harga: harga ?? 0,
                     ),
                   ),
                 );
@@ -246,7 +246,7 @@ class _HalamanLayananState extends State<HalamanLayanan> {
           ),
           const SizedBox(height: 6),
           Text(
-            "Rp ${hargaMin} - ${hargaMax}",
+            "Rp ${harga ?? 0}",
             style: const TextStyle(
               color: Colors.amber,
               fontSize: 18,

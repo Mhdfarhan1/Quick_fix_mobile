@@ -20,8 +20,7 @@ class Service {
   int id;
   String name;
   String description;
-  int? priceMin;
-  int? priceMax;
+  int? price;
   String? imageUrl;
   File? imageFile;
   int? idKeahlian;
@@ -31,21 +30,18 @@ class Service {
     required this.id,
     required this.name,
     required this.description,
-    this.priceMin,
-    this.priceMax,
+    this.price,
     this.imageUrl,
     this.imageFile,
     this.idKeahlian,
     this.namaKeahlian,
   });
 
-  String getPriceRangeText() {
-    if (priceMin == null && priceMax == null) return "Harga belum diatur";
-    final min = priceMin != null ? "Rp ${_formatCurrency(priceMin!)}" : "";
-    final max = priceMax != null ? "Rp ${_formatCurrency(priceMax!)}" : "";
-    if (min.isNotEmpty && max.isNotEmpty) return "$min - $max";
-    return (min + max).trim();
+  String getPriceText(int? price) {
+    if (price == null || price == 0) return "Harga belum diatur";
+    return "Rp ${_formatCurrency(price)}";
   }
+
 
   static String _formatCurrency(int value) {
     final s = value.toString();
@@ -248,12 +244,7 @@ String? _authToken;
                 idKeahlian: e['id_keahlian'],
                 name: e['nama'] ?? e['keahlian']?['nama_keahlian'] ?? 'Tidak diketahui',
                 description: e['deskripsi'] ?? '',
-                priceMin: (e['harga_min'] is int)
-                    ? e['harga_min']
-                    : int.tryParse(e['harga_min']?.toString() ?? ''),
-                priceMax: (e['harga_max'] is int)
-                    ? e['harga_max']
-                    : int.tryParse(e['harga_max']?.toString() ?? ''),
+                price: (e['harga'] is int) ? e['harga'] : int.tryParse(e['harga']?.toString() ?? '0'), // ← hanya ini
                 imageUrl: _constructImageUrl(e['gambar_layanan']),
                 namaKeahlian: e['keahlian']?['nama_keahlian'],
               );
@@ -521,11 +512,10 @@ String? _authToken;
               id: data['id'] ?? _nextId++,
               name: data['nama'] ?? data['keahlian']?['nama_keahlian'] ?? 'Layanan Baru',
               description: data['deskripsi'] ?? "Tidak ada deskripsi",
-              priceMin: (data['harga_min'] is int) ? data['harga_min'] : int.tryParse(data['harga_min']?.toString() ?? ''),
-              priceMax: (data['harga_max'] is int) ? data['harga_max'] : int.tryParse(data['harga_max']?.toString() ?? ''),
+              price: (data['harga'] is int) ? data['harga'] : int.tryParse(data['harga']?.toString() ?? '0'), // ← satu
               imageUrl: fullImgUrl,
-              // imageFile is not available here as it was uploaded, but we have the URL now
             );
+
 
             setState(() => _services.insert(0, newService));
           },
@@ -851,7 +841,10 @@ String? _authToken;
                 ),
               ),
               const SizedBox(height: 4),
-              Text(s.getPriceRangeText(), style: const TextStyle(fontSize: 13, color: Color(0xFF0C4481), fontWeight: FontWeight.w600)),
+              Text(
+                s.getPriceText(s.price),
+                style: const TextStyle(fontSize: 13, color: Color(0xFF0C4481), fontWeight: FontWeight.w600),
+              ),
             ]),
           ),
         ),
@@ -866,8 +859,7 @@ String? _authToken;
     final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController(text: service.name);
     final descCtrl = TextEditingController(text: service.description);
-    final priceMinCtrl = TextEditingController(text: service.priceMin?.toString() ?? '');
-    final priceMaxCtrl = TextEditingController(text: service.priceMax?.toString() ?? '');
+    final priceCtrl = TextEditingController(text: service.price?.toString() ?? '');
     XFile? pickedImage;
 
     showModalBottomSheet(
@@ -894,11 +886,18 @@ String? _authToken;
                   const SizedBox(height: 8),
                   TextFormField(controller: descCtrl, decoration: const InputDecoration(labelText: "Deskripsi"), maxLines: 2),
                   const SizedBox(height: 8),
-                  Row(children: [
-                    Expanded(child: TextFormField(controller: priceMinCtrl, decoration: const InputDecoration(labelText: "Harga Min (angka)"), keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly],)),
-                    const SizedBox(width: 8),
-                    Expanded(child: TextFormField(controller: priceMaxCtrl, decoration: const InputDecoration(labelText: "Harga Max (angka)"), keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly],)),
-                  ]),
+                  TextFormField(
+                    controller: priceCtrl,
+                    decoration: const InputDecoration(labelText: "Harga (angka)"),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return "Harga wajib diisi";
+                      if (int.tryParse(v) == null) return "Harga tidak valid";
+                      if (int.parse(v) <= 0) return "Harga harus lebih dari 0";
+                      return null;
+                    },
+                  ),
                   const SizedBox(height: 12),
                   Align(alignment: Alignment.centerLeft, child: Text("Gambar Layanan", style: TextStyle(fontSize: 13, color: Colors.grey[800]))),
                   const SizedBox(height: 6),
@@ -932,58 +931,56 @@ String? _authToken;
                       child: ElevatedButton(
                         onPressed: () async {
                           if (!formKey.currentState!.validate()) return;
-                          final min = priceMinCtrl.text.trim().isEmpty ? null : int.parse(priceMinCtrl.text.trim());
-                          final max = priceMaxCtrl.text.trim().isEmpty ? null : int.parse(priceMaxCtrl.text.trim());
-                          if (min != null && max != null && min > max) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Harga Min tidak boleh lebih besar dari Harga Max")));
-                            return;
-                          }
 
-                          showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => const Center(child: CircularProgressIndicator()),
+                          );
 
                           try {
                             final resp = await ApiService.updateLayananTeknisi(
                               id: service.id,
                               nama: nameCtrl.text.trim(),
-                              hargaMin: min,
-                              hargaMax: max,
+                              harga: int.parse(priceCtrl.text.trim()),
                               deskripsi: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
                               gambarFile: pickedImage != null ? File(pickedImage!.path) : null,
                             );
 
-                            Navigator.of(context).pop(); // close loading dialog
+                            Navigator.of(context).pop(); // close loading
 
-                            if ((resp['statusCode'] == 200) || (resp['data'] is Map && (resp['data']['success'] == true || resp['statusCode'] == 200))) {
+                            if ((resp['statusCode'] == 200) ||
+                                (resp['data'] is Map && (resp['data']['success'] == true || resp['statusCode'] == 200))) {
+                              
                               final data = resp['data']['data'] ?? resp['data'];
                               final imgPath = data['gambar_layanan'] as String?;
-                              
-                              print("DEBUG: Edit success. Updating service at index $index");
-                              print("DEBUG: New image path: $imgPath");
-                              final fullImgUrl = imgPath != null ? (BaseUrl.api.replaceAll('/api', '') + imgPath) : null;
-                              print("DEBUG: Full image URL: $fullImgUrl");
+                              final fullImgUrl = imgPath != null
+                                  ? (BaseUrl.api.replaceAll('/api', '') + imgPath)
+                                  : null;
 
                               setState(() {
                                 _services[index] = Service(
                                   id: service.id,
                                   name: nameCtrl.text.trim(),
                                   description: descCtrl.text.trim().isEmpty ? "Tidak ada deskripsi" : descCtrl.text.trim(),
-                                  priceMin: min,
-                                  priceMax: max,
+                                  price: int.parse(priceCtrl.text.trim()),
                                   imageFile: pickedImage != null ? File(pickedImage!.path) : service.imageFile,
                                   imageUrl: pickedImage == null ? (fullImgUrl ?? service.imageUrl) : null,
-                                  idKeahlian: service.idKeahlian, // Keep original ID
+                                  idKeahlian: service.idKeahlian,
                                   namaKeahlian: service.namaKeahlian,
                                 );
                               });
 
-                              Navigator.of(ctx2).pop(); // close modal
+                              Navigator.of(ctx2).pop();
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Layanan berhasil diperbarui")));
                             } else {
-                              final msg = (resp['data'] is Map) ? (resp['data']['message'] ?? resp['data'].toString()) : 'Gagal memperbarui layanan';
+                              final msg = (resp['data'] is Map)
+                                  ? (resp['data']['message'] ?? resp['data'].toString())
+                                  : 'Gagal memperbarui layanan';
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $msg')));
                             }
                           } catch (e) {
-                            Navigator.of(context).pop(); // close loading
+                            Navigator.of(context).pop();
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal update: $e')));
                           }
                         },

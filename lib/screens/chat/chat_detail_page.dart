@@ -583,6 +583,7 @@ void initState() {
         return Scaffold(
           appBar: AppBar(
             backgroundColor: Color(0xFF0C4481),
+            foregroundColor: Color.fromARGB(255, 232, 232, 233),
             elevation: 0,
             titleSpacing: 0,
             title: Row(
