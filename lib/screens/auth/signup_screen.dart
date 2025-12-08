@@ -20,7 +20,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _phoneFormatter = MaskTextInputFormatter(
     mask: '####-####-####',
     filter: { "#": RegExp(r'[0-9]') },
-    type: MaskAutoCompletionType.lazy,
+    type: MaskAutoCompletionType.lazy, // lazy lebih nyaman untuk hapus
   );
 
   final _emailController = TextEditingController();
@@ -202,39 +202,44 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         hintText: 'Email',
                         controller: _emailController,
                         errorText: _emailError,
+                        fieldType: 'email',
                       ),
                       const SizedBox(height: 16),
 
                       _buildTextField(
                         icon: Icons.person_outline,
-                        hintText: 'Username',
+                        hintText: 'Nama Lengkap',
                         controller: _usernameController,
                         errorText: _usernameError,
                       ),
+
                       const SizedBox(height: 16),
 
                       _buildRoleDropdown(),
                       const SizedBox(height: 16),
 
-                      _buildPasswordField(
+                      _buildTextField(
+                        icon: Icons.lock_outline,
                         hintText: 'Kata Sandi',
-                        obscureText: _obscurePassword,
                         controller: _passwordController,
-                        onToggleVisibility: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
                         errorText: _passwordError,
+                        fieldType: 'password',
+                        obscureText: _obscurePassword,
+                        onToggleVisibility: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
                       ),
+
+
                       const SizedBox(height: 16),
 
-                      _buildTextField(
+                      _buildPhoneField(
                         icon: Icons.phone_android,
                         hintText: 'Nomor HP',
                         controller: _phoneController,
                         errorText: _phoneError,
-                        inputFormatters: [
-                          _phoneFormatter,
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
                       ),
 
                       const SizedBox(height: 24),
@@ -322,11 +327,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
     required TextEditingController controller,
     String? errorText,
     List<TextInputFormatter>? inputFormatters,
+    String fieldType = 'text', // 'text', 'email', 'phone', 'password'
+    bool obscureText = false,
+    VoidCallback? onToggleVisibility,
   }) {
+    // tentukan keyboardType
+    TextInputType keyboardType;
+    switch (fieldType) {
+      case 'email':
+        keyboardType = TextInputType.emailAddress;
+        break;
+      case 'phone':
+        keyboardType = TextInputType.number;
+        break;
+      case 'password':
+        keyboardType = TextInputType.visiblePassword;
+        break;
+      default:
+        keyboardType = TextInputType.text;
+    }
+
     return TextField(
       controller: controller,
       inputFormatters: inputFormatters,
-      keyboardType: TextInputType.number,
+      keyboardType: keyboardType,
+      obscureText: fieldType == 'password' ? obscureText : false,
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Colors.grey),
         hintText: hintText,
@@ -353,22 +378,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFEA0C0C)),
         ),
+        suffixIcon: fieldType == 'password'
+            ? IconButton(
+                icon: Icon(
+                  obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey,
+                ),
+                onPressed: onToggleVisibility,
+              )
+            : null,
       ),
     );
   }
 
-  Widget _buildPasswordField({
+
+
+  // TextField untuk Nomor HP
+  Widget _buildPhoneField({
+    required IconData icon,
     required String hintText,
-    required bool obscureText,
-    required VoidCallback onToggleVisibility,
     required TextEditingController controller,
     String? errorText,
   }) {
     return TextField(
       controller: controller,
-      obscureText: obscureText,
+      keyboardType: TextInputType.number,
+      inputFormatters: [
+        _phoneFormatter, // cukup ini saja
+      ],
       decoration: InputDecoration(
-        prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+        prefixIcon: Icon(icon, color: Colors.grey),
         hintText: hintText,
         errorText: errorText,
         filled: true,
@@ -392,13 +431,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFEA0C0C)),
-        ),
-        suffixIcon: IconButton(
-          icon: Icon(
-            obscureText ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey,
-          ),
-          onPressed: onToggleVisibility,
         ),
       ),
     );
