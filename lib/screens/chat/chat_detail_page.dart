@@ -161,7 +161,7 @@ void initState() {
 
 
   Future<void> loadOtherUser() async {
-    final res = await ApiService.get('chat/${widget.chatId}/detail');
+    final res = await ApiService.get('/chat/${widget.chatId}/detail');
 
     print("DETAIL CHAT: $res");
 
@@ -234,7 +234,7 @@ void initState() {
   }
 
   Future<void> loadMessages() async {
-    final res = await ApiService.get('chat/${widget.chatId}/messages');
+    final res = await ApiService.get('/chat/${widget.chatId}/messages');
 
     if (res['statusCode'] == 200 && res['data'] != null) {
       final data = res['data']['messages'] as List;
@@ -293,7 +293,7 @@ void initState() {
 
     // ✅ kirim ke server
     final res = await ApiService.post(
-      endpoint: 'chat/send',
+      endpoint: '/chat/send',
       data: {
         "id_chat": widget.chatId,
         "message": text,
@@ -347,7 +347,7 @@ void initState() {
       "file": await MultipartFile.fromFile(picked.path),
     });
 
-    final res = await ApiService.postMultipart('chat/send', fd);
+    final res = await ApiService.postMultipart('/chat/send', fd);
 
     if (res['statusCode'] != 200) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -583,6 +583,7 @@ void initState() {
         return Scaffold(
           appBar: AppBar(
             backgroundColor: Color(0xFF0C4481),
+            foregroundColor: Color.fromARGB(255, 232, 232, 233),
             elevation: 0,
             titleSpacing: 0,
             title: Row(
@@ -622,9 +623,6 @@ void initState() {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 itemBuilder: (context) => [
                   PopupMenuItem(child: Text("Tampilkan Profil")),
-                  PopupMenuItem(child: Text("Kembali ke halaman utama")),
-                  PopupMenuItem(child: Text("Cari")),
-                  PopupMenuItem(child: Text("Senyapkan")),
                   PopupMenuItem(child: Text("Laporkan pengguna ini")),
                   PopupMenuItem(child: Text("Butuh bantuan?")),
                 ],

@@ -35,22 +35,37 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
+            <!-- THEME -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
+            <!-- LAUNCHER INTENT FILTER (JANGAN TARUH DEEP LINK DI SINI) -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
 
+            <!-- DEEP LINK: PAYMENT FINISH -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data android:scheme="quickfix" android:host="payment-finish" />
-                <data android:scheme="quickfix" android:host="reset-password" />
             </intent-filter>
+
+            <!-- DEEP LINK: RESET PASSWORD -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="quickfix"
+                    android:host="reset-password" />
+            </intent-filter>
+
+
         </activity>
+
 
         <meta-data
             android:name="flutterEmbedding"

@@ -1,5 +1,11 @@
+import '../../../config/base_url.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../../../services/api_service.dart';
+import '../../chat/chat_page.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../services/chat_service.dart';
 
 
 class DetailRiwayatTeknisiPage extends StatelessWidget {
@@ -17,7 +23,6 @@ class DetailRiwayatTeknisiPage extends StatelessWidget {
       throw 'Tidak bisa membuka aplikasi telepon';
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -164,18 +169,40 @@ class DetailRiwayatTeknisiPage extends StatelessWidget {
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold),
                               ),
-                              onPressed: () {
-                                final phone = data["no_hp_pelanggan"]?.toString() ?? "";
+                              onPressed: () async {
+                                final role = await ApiService.storage.read(key: 'role');
+                                final isTeknisi = role == "teknisi";
 
-                                if (phone.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("Nomor HP pelanggan tidak tersedia.")),
+                                final chatId = data["id_chat"];        // <-- bisa null
+                                final idTeknisi = data["id_teknisi"];  // <-- int
+                                final idUser = data["id_user"];        // <-- int
+
+                                int? finalChatId = chatId;
+
+                                if (finalChatId == null) {
+                                  finalChatId = await ChatService.createOrGetChat(
+                                    idTeknisi,
+                                    idUser,
                                   );
-                                  return;
+
+                                  if (finalChatId == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text("Gagal membuat chat baru.")),
+                                    );
+                                    return;
+                                  }
                                 }
 
-                                callCustomer(phone);
-                              },
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ChatPage(
+                                      chatId: finalChatId!,
+                                      idTeknisi: idTeknisi,
+                                    ),
+                                  ),
+                                );
+                              }
                             ),
                           ),
                           const SizedBox(height: 12),

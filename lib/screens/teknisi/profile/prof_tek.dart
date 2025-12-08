@@ -5,22 +5,22 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:quick_fix/screens/teknisi/lainnya/lainnya_page.dart';
-import 'package:quick_fix/screens/teknisi/pesan/pesan_teknisi_page.dart';
-import 'package:quick_fix/screens/teknisi/riwayat/riwayat_teknisi_page.dart';
-import '../home/Home_page_teknisi.dart';
+import 'list_ulasan_page.dart';
 import 'add_service_modal.dart';
-
+import '../../../models/review_model.dart';
 // API imports (sesuaikan path jika berbeda)
 import '../../../services/api_service.dart';
 import '../../../config/base_url.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../widgets/teknisi_bottom_nav.dart';
+import '../../../widgets/user_bottom_nav.dart';
+
 
 class Service {
   int id;
   String name;
   String description;
-  int? priceMin;
-  int? priceMax;
+  int? price;
   String? imageUrl;
   File? imageFile;
   int? idKeahlian;
@@ -30,21 +30,18 @@ class Service {
     required this.id,
     required this.name,
     required this.description,
-    this.priceMin,
-    this.priceMax,
+    this.price,
     this.imageUrl,
     this.imageFile,
     this.idKeahlian,
     this.namaKeahlian,
   });
 
-  String getPriceRangeText() {
-    if (priceMin == null && priceMax == null) return "Harga belum diatur";
-    final min = priceMin != null ? "Rp ${_formatCurrency(priceMin!)}" : "";
-    final max = priceMax != null ? "Rp ${_formatCurrency(priceMax!)}" : "";
-    if (min.isNotEmpty && max.isNotEmpty) return "$min - $max";
-    return (min + max).trim();
+  String getPriceText(int? price) {
+    if (price == null || price == 0) return "Harga belum diatur";
+    return "Rp ${_formatCurrency(price)}";
   }
+
 
   static String _formatCurrency(int value) {
     final s = value.toString();
@@ -53,50 +50,199 @@ class Service {
   }
 }
 
-class TechnicianProfilePage extends StatefulWidget {
+class ProfileTeknisiPage extends StatefulWidget {
   final bool isTechnician;
+  final int? teknisiId;
 
-  const TechnicianProfilePage({Key? key, this.isTechnician = true})
-      : super(key: key);
+  // Constructor untuk pelanggan → WAJIB ID
+  const ProfileTeknisiPage({
+    Key? key,
+    required this.teknisiId,
+    this.isTechnician = false,
+  }) : super(key: key);
+
+  // Constructor untuk teknisi → TANPA ID
+  const ProfileTeknisiPage.self({
+    Key? key,
+  })  : teknisiId = null,
+        isTechnician = true,
+        super(key: key);
 
   @override
-  State<TechnicianProfilePage> createState() => _TechnicianProfilePageState();
+  State<ProfileTeknisiPage> createState() => _ProfileTeknisiPageState();
 }
 
-class _TechnicianProfilePageState extends State<TechnicianProfilePage>
+
+class _ProfileTeknisiPageState extends State<ProfileTeknisiPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _currentIndex = 3;
+
+  int? _idTeknisi;
+
+  String? _tentangSaya;
+  String? userRole;
+
+
+  String? namaTeknisi;
+  String? fotoTeknisi;
+  double? ratingTeknisi;
+  bool headerLoading = true;
+
+  String? tentangSaya; // isi dari backend
+List<String> _gallery = []; // berisi urls
+String? _authToken;
 
   final ImagePicker _picker = ImagePicker();
 
   List<Service> _services = [];
 
+  List<TechnicianReview> _reviews = [];
+  double _ratingAvg = 0.0;
+
   int _nextId = 5;
+
+  void goToMyProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final teknisiId = prefs.getInt('id_teknisi');
+
+    if (teknisiId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("ID teknisi tidak ditemukan!")),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileTeknisiPage(
+          teknisiId: teknisiId,
+          isTechnician: true,
+        ),
+      ),
+    );
+  }
+
 
   @override
   void initState() {
     super.initState();
+    _initData(); // ini sudah include _fetchUlasan(id)
     _tabController = TabController(length: 2, vsync: this);
-    // Fetch layanan dari backend jika user adalah teknisi
+    _fetchLayananFromBackend();
     if (widget.isTechnician) {
-      _fetchLayananFromBackend();
+      ;
     }
   }
 
+
+  Future<int?> getTeknisiIdFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt("id_teknisi");
+  }
+
+  Future<void> _initData() async {
+    print("🚀 [INIT] Mulai initData()");
+    final idTeknisi = await getTeknisiIdFromPrefs();
+    print("🔑 [INIT] ID Teknisi dari prefs = $idTeknisi");
+
+    if (idTeknisi == null) {
+      print("❌ ID teknisi tidak ditemukan di SharedPreferences!");
+      
+      return;
+    }
+
+    print("✅ ID TEKNISI TERDETEKSI: $idTeknisi");
+
+    fetchTeknisiHeader(idTeknisi);
+    _fetchUlasan(idTeknisi);
+    fetchGaleri();
+    _fetchLayananFromBackend(); // ini biasanya ambil id sendiri dari token
+  }
+
+
+
+  Future<void> fetchTeknisiHeader(int idTeknisi) async {
+    print("📢 [HEADER] Fetch header teknisi id=$idTeknisi");
+
+    try {
+      final res = await ApiService.get("/get_teknisi?id=$idTeknisi");
+      print("📥 [HEADER] Response header: $res");
+
+      final data = res["data"];  // <-- FIX PENTING
+
+      setState(() {
+        namaTeknisi  = data["nama"];
+        fotoTeknisi  = data["foto_profile"];
+        ratingTeknisi = double.tryParse(data["rating_avg"].toString()) ?? 0.0;
+        tentangSaya = data["deskripsi"] ?? "";
+        _gallery = (data["galeri"] is List) ? List<String>.from(data["galeri"]) : [];
+        headerLoading = false;
+
+        headerLoading = false;
+      });
+    } catch (e) {
+      print("❌ [HEADER] ERROR: $e");
+      setState(() {
+        headerLoading = false;
+      });
+    }
+  }
+
+
+  Future<void> _fetchUlasan(int idTeknisi) async {
+    print("📢 Fetch ulasan teknisi id=$idTeknisi");
+
+    try {
+      final resp = await ApiService.getUlasanTeknisi(idTeknisi);
+
+      if (resp['statusCode'] == 200 && resp['data']['status'] == true) {
+        final data = resp['data'];
+
+        setState(() {
+          _ratingAvg = double.tryParse(data['rating_avg'].toString()) ?? 0.0;
+
+          _reviews = (data['ulasan'] as List).map((e) {
+            // jika backend hanya kirim filename, tambahkan BaseUrl.server
+            if (e['foto_pelanggan'] != null && e['foto_pelanggan'].toString().isNotEmpty) {
+              e['foto_pelanggan'] =
+                  '${BaseUrl.server}/storage/foto/pelanggan/${e['foto_pelanggan']}';
+            }
+            return TechnicianReview.fromJson(e);
+          }).toList();
+        });
+      }
+    } catch (e) {
+      print("❌ ERROR FETCH ULASAN: $e");
+    }
+  }
+
+
+
   Future<void> _fetchLayananFromBackend() async {
     print("DEBUG: Fetching services from backend...");
+
+    // Ambil ID dari widget → jika null, ambil dari prefs
+    final int? teknisiId = widget.teknisiId ?? await getTeknisiIdFromPrefs();
+
+    if (teknisiId == null) {
+      print("DEBUG: Tidak ada teknisiId. Tidak bisa fetch layanan.");
+      return;
+    }
+
     try {
-      final resp = await ApiService.getLayananTeknisi();
+      final resp = await ApiService.getLayananTeknisi(teknisiId);
       print("DEBUG: Fetch response: $resp");
+
       if (resp['statusCode'] == 200 && resp['data'] is Map) {
         final data = resp['data'];
+
         if (data['success'] == true && data['data'] is List) {
           final List list = data['data'];
+
           print("DEBUG: Found ${list.length} services");
-          if (list.isNotEmpty) {
-             print("DEBUG: First service raw data: ${list.first}");
-          }
+
           setState(() {
             _services = list.map((e) {
               return Service(
@@ -104,31 +250,28 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
                 idKeahlian: e['id_keahlian'],
                 name: e['nama'] ?? e['keahlian']?['nama_keahlian'] ?? 'Tidak diketahui',
                 description: e['deskripsi'] ?? '',
-                priceMin: (e['harga_min'] is int) ? e['harga_min'] : int.tryParse(e['harga_min']?.toString() ?? ''),
-                priceMax: (e['harga_max'] is int) ? e['harga_max'] : int.tryParse(e['harga_max']?.toString() ?? ''),
+                price: (e['harga'] is int) ? e['harga'] : int.tryParse(e['harga']?.toString() ?? '0'), // ← hanya ini
                 imageUrl: _constructImageUrl(e['gambar_layanan']),
                 namaKeahlian: e['keahlian']?['nama_keahlian'],
               );
             }).toList();
-            _nextId = (_services.isEmpty ? 5 : _services.map((s) => s.id).reduce((a, b) => a > b ? a : b) + 1);
           });
-        } else {
-          print("DEBUG: Data format invalid or success false");
         }
-      } else {
-        print("DEBUG: Status code not 200: ${resp['statusCode']}");
       }
     } catch (e) {
       print("DEBUG: Error fetching services: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal memuat layanan: $e")));
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      bottomNavigationBar: _buildCustomBottomNav(),
+      bottomNavigationBar: widget.isTechnician
+      ? const TeknisiBottomNav(currentIndex: 3)
+      : const UserBottomNav(selectedIndex: 0),
+
       body: Column(
         children: [
           _buildHeader(),
@@ -146,6 +289,208 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
       ),
     );
   }
+
+  void _editTentangSaya() {
+    TextEditingController controller = TextEditingController(text: _tentangSaya);
+
+    showDialog(
+      context: context,
+      builder: (ctxDialog) {   // SIMPAN context dialog real
+        return AlertDialog(
+          title: const Text("Edit Deskripsi"),
+          content: TextField(
+            controller: controller,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: "Masukkan deskripsi teknisi",
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctxDialog), child: const Text("Batal")),
+            ElevatedButton(
+              onPressed: () async {
+                if (controller.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Deskripsi tidak boleh kosong")),
+                  );
+                  return;
+                }
+
+                Navigator.pop(ctxDialog); // Tutup dialog Edit
+
+                // Tampilkan dialog loading, dan simpan context-nya
+                late BuildContext loadingContext;
+
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctxLoading) {
+                    loadingContext = ctxLoading;
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                );
+
+                final res = await ApiService.updateProfilTeknisi(
+                  deskripsi: controller.text.trim(),
+                );
+
+                // Tutup loading pakai context yang BENAR
+                if (mounted) Navigator.pop(loadingContext);
+
+                if (res['statusCode'] == 200 && res['data']['status'] == true) {
+                  if (mounted) {
+                    setState(() {
+                      _tentangSaya = controller.text.trim(); // update instan
+                      headerLoading = true; // optional kalau ada loading indicator
+                    });
+                    if (_idTeknisi != null) await fetchTeknisiHeader(_idTeknisi!); // reload header
+                  }
+                }else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Gagal memperbarui")),
+                    );
+                  }
+                }
+              },
+              child: const Text("Simpan"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+    Future<void> fetchGaleri() async {
+    print("--------------------------------------------------------");
+    print("🎨 [GALLERY] MULAI MENGAMBIL GALERI TEKNISI...");
+    print("--------------------------------------------------------");
+
+    int? teknisiId = widget.teknisiId;
+
+    print("📌 teknisiId dari widget = ${widget.teknisiId}");
+
+    // Jika teknisi membuka profil sendiri, ambil id_teknisi dari prefs
+    if (teknisiId == null) {
+      final prefs = await SharedPreferences.getInstance();
+      teknisiId = prefs.getInt("id_teknisi");
+      print("🔄 teknisiId dari SharedPreferences = $teknisiId");
+    }
+
+    if (teknisiId == null) {
+      print("❌ [GALLERY] GAGAL → ID teknisi tetap NULL. Tidak bisa ambil galeri.");
+      return;
+    }
+
+    print("✅ [GALLERY] FINAL teknisiId = $teknisiId");
+    print("🌐 Mengirim request ke API getGaleri($teknisiId)");
+
+    final res = await ApiService.getGaleri(teknisiId);
+
+    print("📥 Status Code = ${res['statusCode']}");
+    print("📦 Response Data = ${res['data']}");
+
+    if (res['statusCode'] == 200 && res['data']['status'] == true) {
+
+      final List<dynamic> rawData = res['data']['data'];
+
+      print("📸 Jumlah gambar galeri ditemukan = ${rawData.length}");
+
+      setState(() {
+        _gallery = List<String>.from(
+          rawData.map((item) {
+            print("🖼️ Foto galeri: ${item['gambar_galeri']}");
+            return item['gambar_galeri'];
+          }),
+        );
+      });
+
+      print("🎉 [GALLERY] SUCCESS → Galeri berhasil dimuat.");
+    } else {
+      print("⚠️ [GALLERY] API mengembalikan error:");
+      print("📝 Pesan: ${res['data']['message']}");
+    }
+
+    print("--------------------------------------------------------");
+    print("🎨 [GALLERY] SELESAI MEMPROSES GALERI");
+    print("--------------------------------------------------------");
+  }
+
+
+
+
+
+
+
+
+  void _editGaleriTeknisi() async {
+    final XFile? picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (picked == null) return;
+
+    final file = File(picked.path);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final res = await ApiService.uploadGaleri(file);
+
+    Navigator.pop(context);
+
+    if (res['statusCode'] == 200 || res['statusCode'] == 201) {
+      final data = res['data']['data'];   // <--- ambil dari 'data'
+
+      if (data != null && data['gambar_galeri'] != null) {
+        setState(() => _gallery.insert(0, data['gambar_galeri']));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text("Berhasil upload galeri")));
+      }
+    } else {
+      final err = res['data']?['message'] ?? 'Gagal upload';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(err.toString())),
+      );
+    }
+  }
+
+
+  void _confirmDeleteGallery(int index) {
+    final url = _gallery[index];
+    // Jika Anda menyimpan id_galeri juga, pakai id untuk delete. Untuk contoh di atas,
+    // ApiService.deleteGaleri membutuhkan id_galeri. Jadi idealnya simpan list objek {id, url}.
+    showDialog(context: context, builder: (ctx) {
+      return AlertDialog(
+        title: const Text("Hapus Foto"),
+        content: const Text("Yakin ingin menghapus foto ini?"),
+        actions: [
+          TextButton(onPressed: ()=> Navigator.pop(ctx), child: const Text("Batal")),
+          TextButton(onPressed: () async {
+            Navigator.pop(ctx);
+            // contoh: jika Anda punya id, panggil delete id:
+            // final idGaleri = _galleryIds[index];
+            // final res = await ApiService.deleteGaleri(token!, idGaleri);
+            // For demo, kita remove dari UI if success...
+            // if (res['statusCode'] == 200) {
+            //   setState(()=> _gallery.removeAt(index));
+            //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Terhapus')));
+            // }
+            // Jika belum menyimpan id di client, Anda perlu mengubah API response untuk mengirim id_galeri ketika fetch.
+            setState(()=> _gallery.removeAt(index));
+          }, child: const Text("Hapus")),
+        ],
+      );
+    });
+  }
+
+
+
+
 
   void _onAddServicePressed() {
     print('DEBUG: + Tambah Layanan pressed');
@@ -167,17 +512,16 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
           onServiceAdded: (data) {
             print("DEBUG: onServiceAdded callback triggered with data: $data");
             final imgPath = data['gambar_layanan'] as String?;
-            final fullImgUrl = imgPath != null ? (BaseUrl.api.replaceAll('/api', '') + imgPath) : null;
+            final fullImgUrl = _constructImageUrl(imgPath); null;
 
             final newService = Service(
               id: data['id'] ?? _nextId++,
               name: data['nama'] ?? data['keahlian']?['nama_keahlian'] ?? 'Layanan Baru',
               description: data['deskripsi'] ?? "Tidak ada deskripsi",
-              priceMin: (data['harga_min'] is int) ? data['harga_min'] : int.tryParse(data['harga_min']?.toString() ?? ''),
-              priceMax: (data['harga_max'] is int) ? data['harga_max'] : int.tryParse(data['harga_max']?.toString() ?? ''),
+              price: (data['harga'] is int) ? data['harga'] : int.tryParse(data['harga']?.toString() ?? '0'), // ← satu
               imageUrl: fullImgUrl,
-              // imageFile is not available here as it was uploaded, but we have the URL now
             );
+
 
             setState(() => _services.insert(0, newService));
           },
@@ -189,33 +533,54 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
 
 
   Widget _buildHeader() {
+    if (headerLoading) {
+      return Container(
+        color: Color(0xFF0C4481),
+        padding: EdgeInsets.symmetric(vertical: 30),
+        child: Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
     return Container(
-      color: const Color(0xFF0C4481),
-      padding:
-          const EdgeInsets.only(top: 50, bottom: 20, left: 20, right: 20),
+      decoration: const BoxDecoration(
+        color: Color(0xFF0C4481),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
+      padding: const EdgeInsets.only(top: 50, bottom: 20, left: 20, right: 20),
       child: Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 30,
-            backgroundImage: NetworkImage("https://i.pravatar.cc/300"),
+            backgroundImage: NetworkImage(fotoTeknisi ??
+                "https://ui-avatars.com/api/?name=${namaTeknisi ?? 'T'}"),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text("Louis Partridge",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600)),
-                SizedBox(height: 4),
+              children: [
+                Text(
+                  namaTeknisi ?? "-",
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.star, color: Color(0xFFFECC32), size: 16),
-                    SizedBox(width: 4),
-                    Text("4.9",
-                        style: TextStyle(color: Colors.white, fontSize: 14)),
+                    const Icon(Icons.star,
+                        color: Color(0xFFFECC32), size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      (ratingTeknisi ?? 0).toStringAsFixed(1),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
                   ],
                 ),
               ],
@@ -225,6 +590,7 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
       ),
     );
   }
+
 
   Widget _buildTabBar() {
     return Container(
@@ -246,71 +612,162 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text("Tentang Saya",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
         const Text(
-          "Hai! Aku Louis, seorang engineer yang fokus di bidang renovasi rumah. "
-          "Sudah beberapa tahun aku bergelut di dunia renovasi dan membantu banyak orang "
-          "meujudkan rumah impian mereka.",
-          style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
+          "Tentang Saya",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        const SizedBox(height: 16),
-        const Text("Galeri Teknisi",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: _editTentangSaya,
+                child: Text(
+                  tentangSaya == null || tentangSaya!.trim().isEmpty
+                      ? "Tambah deskripsi..."
+                      : tentangSaya!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    height: 1.4,
+                    fontStyle: (tentangSaya == null || tentangSaya!.trim().isEmpty)
+                        ? FontStyle.italic
+                        : FontStyle.normal,
+                  ),
+                ),
+              ),
+            ),
+              if (widget.isTechnician)
+                IconButton(
+                  icon: Icon(Icons.edit),
+                  onPressed: _editTentangSaya,
+                ),
+
+
+          ],
+        ),
+
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("Galeri Teknisi",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              if (widget.isTechnician)
+                IconButton(
+                  icon: Icon(Icons.edit),
+                  onPressed: _editGaleriTeknisi,
+                ),
+
+          ],
+        ),
+
         const SizedBox(height: 8),
         _buildGalleryGrid(),
         const SizedBox(height: 20),
-        const Text("4.9 ⭐ Ulasan Pelanggan",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        _buildReview("Henry Cavill", "Hasil renovasinya rapi dan sesuai harapan."),
-        _buildReview("Tom Holland", "Pengerjaan cepat dan detail. Sangat puas."),
-        _buildReview("Timothée Chalamet", "Profesional dan bisa dipercaya."),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "${_ratingAvg.toStringAsFixed(1)} ⭐ Ulasan Pelanggan",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+
+            // 🔗 tombol menuju halaman list ulasan
+            IconButton(
+              icon: const Icon(Icons.arrow_forward_ios, size: 16),
+              onPressed: () {
+                Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ListUlasanPage(
+                    reviews: _reviews,
+                    isLoading: false,
+                  ),
+                ),
+              );
+              },
+            ),
+          ],
+        ),
+          const SizedBox(height: 10),
+
+          _reviews.isEmpty
+          ? const Text("Belum ada ulasan.")
+          : Column(
+              children: _reviews
+                  .take(3) // ⬅ hanya ambil 3 ulasan
+                  .map((r) => _buildReview(r.namaPelanggan, r.komentar))
+                  .toList(),
+            ),
       ]),
     );
   }
 
   Widget _buildGalleryGrid() {
+    final items = _gallery.isNotEmpty ? _gallery : List.generate(5, (i) => "https://picsum.photos/400/300?random=$i");
     return GridView.builder(
       shrinkWrap: true,
-      itemCount: 5,
+      itemCount: items.length,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
       itemBuilder: (_, i) {
-        return Container(
-          margin: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            image: DecorationImage(
-                image: NetworkImage("https://picsum.photos/400/300?random=$i"),
-                fit: BoxFit.cover),
+        final url = items[i];
+        return GestureDetector(
+          onLongPress: widget.isTechnician ? () => _confirmDeleteGallery(i) : null,
+          child: Container(
+            margin: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              image: DecorationImage(
+                image: NetworkImage(url),
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildReview(String name, String text) {
+
+  Widget _buildReview(String name, String text, {String? photoUrl}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
-      decoration:
-          BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const CircleAvatar(radius: 20, backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=3")),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 4),
-            Text(text, style: const TextStyle(fontSize: 13)),
-          ]),
-        )
-      ]),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                ? NetworkImage(photoUrl)
+                : const NetworkImage("https://i.pravatar.cc/150?img=3"), // fallback
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 4),
+                Text(text, style: const TextStyle(fontSize: 13)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
+
 
   Widget _buildServiceTab() {
     return SingleChildScrollView(
@@ -346,16 +803,16 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
     );
   }
 
-  String? _constructImageUrl(String? path) {
-    if (path == null || path.isEmpty) return null;
-    if (path.startsWith('http')) return path;
-    // If path starts with /, assume it's relative to domain root
-    if (path.startsWith('/')) {
-      return BaseUrl.api.replaceAll('/api', '') + path;
-    }
-    // If just filename, assume it's in the default storage folder
-    return BaseUrl.api.replaceAll('/api', '') + '/storage/keahlian_teknisi/' + path;
+  String? _constructImageUrl(String? fileName) {
+    if (fileName == null || fileName.isEmpty) return null;
+
+    final base = BaseUrl.api.replaceAll('/api', '');
+
+    // Jika backend hanya kirim nama file
+    return "$base/storage/foto/gambar_layanan/$fileName";
   }
+
+
 
   Widget _buildServiceCard(int index) {
     final s = _services[index];
@@ -404,7 +861,10 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
                 ),
               ),
               const SizedBox(height: 4),
-              Text(s.getPriceRangeText(), style: const TextStyle(fontSize: 13, color: Color(0xFF0C4481), fontWeight: FontWeight.w600)),
+              Text(
+                s.getPriceText(s.price),
+                style: const TextStyle(fontSize: 13, color: Color(0xFF0C4481), fontWeight: FontWeight.w600),
+              ),
             ]),
           ),
         ),
@@ -419,8 +879,7 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
     final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController(text: service.name);
     final descCtrl = TextEditingController(text: service.description);
-    final priceMinCtrl = TextEditingController(text: service.priceMin?.toString() ?? '');
-    final priceMaxCtrl = TextEditingController(text: service.priceMax?.toString() ?? '');
+    final priceCtrl = TextEditingController(text: service.price?.toString() ?? '');
     XFile? pickedImage;
 
     showModalBottomSheet(
@@ -447,11 +906,18 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
                   const SizedBox(height: 8),
                   TextFormField(controller: descCtrl, decoration: const InputDecoration(labelText: "Deskripsi"), maxLines: 2),
                   const SizedBox(height: 8),
-                  Row(children: [
-                    Expanded(child: TextFormField(controller: priceMinCtrl, decoration: const InputDecoration(labelText: "Harga Min (angka)"), keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly],)),
-                    const SizedBox(width: 8),
-                    Expanded(child: TextFormField(controller: priceMaxCtrl, decoration: const InputDecoration(labelText: "Harga Max (angka)"), keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly],)),
-                  ]),
+                  TextFormField(
+                    controller: priceCtrl,
+                    decoration: const InputDecoration(labelText: "Harga (angka)"),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return "Harga wajib diisi";
+                      if (int.tryParse(v) == null) return "Harga tidak valid";
+                      if (int.parse(v) <= 0) return "Harga harus lebih dari 0";
+                      return null;
+                    },
+                  ),
                   const SizedBox(height: 12),
                   Align(alignment: Alignment.centerLeft, child: Text("Gambar Layanan", style: TextStyle(fontSize: 13, color: Colors.grey[800]))),
                   const SizedBox(height: 6),
@@ -485,58 +951,54 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
                       child: ElevatedButton(
                         onPressed: () async {
                           if (!formKey.currentState!.validate()) return;
-                          final min = priceMinCtrl.text.trim().isEmpty ? null : int.parse(priceMinCtrl.text.trim());
-                          final max = priceMaxCtrl.text.trim().isEmpty ? null : int.parse(priceMaxCtrl.text.trim());
-                          if (min != null && max != null && min > max) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Harga Min tidak boleh lebih besar dari Harga Max")));
-                            return;
-                          }
 
-                          showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => const Center(child: CircularProgressIndicator()),
+                          );
 
                           try {
                             final resp = await ApiService.updateLayananTeknisi(
                               id: service.id,
                               nama: nameCtrl.text.trim(),
-                              hargaMin: min,
-                              hargaMax: max,
+                              harga: int.parse(priceCtrl.text.trim()),
                               deskripsi: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
                               gambarFile: pickedImage != null ? File(pickedImage!.path) : null,
                             );
 
-                            Navigator.of(context).pop(); // close loading dialog
+                            Navigator.of(context).pop(); // close loading
 
-                            if ((resp['statusCode'] == 200) || (resp['data'] is Map && (resp['data']['success'] == true || resp['statusCode'] == 200))) {
+                            if ((resp['statusCode'] == 200) ||
+                                (resp['data'] is Map && (resp['data']['success'] == true || resp['statusCode'] == 200))) {
+                              
                               final data = resp['data']['data'] ?? resp['data'];
                               final imgPath = data['gambar_layanan'] as String?;
-                              
-                              print("DEBUG: Edit success. Updating service at index $index");
-                              print("DEBUG: New image path: $imgPath");
-                              final fullImgUrl = imgPath != null ? (BaseUrl.api.replaceAll('/api', '') + imgPath) : null;
-                              print("DEBUG: Full image URL: $fullImgUrl");
+                              final fullImgUrl = _constructImageUrl(imgPath); null;
 
                               setState(() {
                                 _services[index] = Service(
                                   id: service.id,
                                   name: nameCtrl.text.trim(),
                                   description: descCtrl.text.trim().isEmpty ? "Tidak ada deskripsi" : descCtrl.text.trim(),
-                                  priceMin: min,
-                                  priceMax: max,
+                                  price: int.parse(priceCtrl.text.trim()),
                                   imageFile: pickedImage != null ? File(pickedImage!.path) : service.imageFile,
                                   imageUrl: pickedImage == null ? (fullImgUrl ?? service.imageUrl) : null,
-                                  idKeahlian: service.idKeahlian, // Keep original ID
+                                  idKeahlian: service.idKeahlian,
                                   namaKeahlian: service.namaKeahlian,
                                 );
                               });
 
-                              Navigator.of(ctx2).pop(); // close modal
+                              Navigator.of(ctx2).pop();
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Layanan berhasil diperbarui")));
                             } else {
-                              final msg = (resp['data'] is Map) ? (resp['data']['message'] ?? resp['data'].toString()) : 'Gagal memperbarui layanan';
+                              final msg = (resp['data'] is Map)
+                                  ? (resp['data']['message'] ?? resp['data'].toString())
+                                  : 'Gagal memperbarui layanan';
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $msg')));
                             }
                           } catch (e) {
-                            Navigator.of(context).pop(); // close loading
+                            Navigator.of(context).pop();
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal update: $e')));
                           }
                         },
@@ -601,67 +1063,6 @@ class _TechnicianProfilePageState extends State<TechnicianProfilePage>
     );
   }
 
-  Widget _buildCustomBottomNav() {
-    const highlight = Color(0xFFFFCC33);
-    final items = [
-      _NavItem(icon: Icons.home, label: 'Beranda'),
-      _NavItem(icon: Icons.assignment, label: 'Pesanan'),
-      _NavItem(icon: Icons.history, label: 'Riwayat'),
-      _NavItem(icon: Icons.person, label: 'Profil'),
-      _NavItem(icon: Icons.more_horiz, label: 'Lainnya'),
-    ];
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(color: const Color(0xFF0C4481), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, -1))]),
-      child: Row(
-        children: List.generate(items.length, (i) {
-          final active = i == _currentIndex;
-          final item = items[i];
-          return Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => _onNavTap(i),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-                decoration: BoxDecoration(color: active ? highlight.withOpacity(0.12) : Colors.transparent, borderRadius: BorderRadius.circular(12)),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(color: active ? highlight.withOpacity(0.18) : Colors.transparent, borderRadius: BorderRadius.circular(10)),
-                    child: Icon(item.icon, color: active ? highlight : Colors.white, size: 22),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(item.label, style: TextStyle(fontSize: 11, color: active ? highlight : Colors.white)),
-                ]),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  void _onNavTap(int index) {
-    setState(() => _currentIndex = index);
-    switch (index) {
-      case 0:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeTeknisiPage()));
-        break;
-      case 1:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PesananTeknisiPage()));
-        break;
-      case 2:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const RiwayatTeknisiPage()));
-        break;
-      case 3:
-        // already profile
-        break;
-      case 4:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LainnyaPage()));
-        break;
-    }
-  }
 }
 
 class _NavItem {

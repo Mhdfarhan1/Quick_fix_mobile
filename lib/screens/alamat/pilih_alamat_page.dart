@@ -73,6 +73,7 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: const Color(0xFF0C4481),
+        foregroundColor: const Color.fromARGB(255, 255, 255, 255),
         title: const Text("Pilih Alamat"),
         centerTitle: true,
       ),

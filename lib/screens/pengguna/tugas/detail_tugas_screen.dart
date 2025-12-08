@@ -150,9 +150,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.all(14),
+                  backgroundColor: Colors.red,        // 🔴 Warna tombol
+                  side: const BorderSide(color: Colors.red), // Border merah
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 onPressed: () {},
-                child: const Text("Batalkan"),
+                child: const Text(
+                  "Batalkan",
+                  style: TextStyle(
+                    color: Colors.white,              // ⚪ Teks putih
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 10),

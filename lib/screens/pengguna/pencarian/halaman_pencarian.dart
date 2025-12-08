@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +10,39 @@ import '../../../config/base_url.dart';
 import '../../teknisi/halaman_layanan.dart';
 import '../pemesanan/form_pemesanan.dart';
 import 'package:shimmer/shimmer.dart';
+
+class CurrencyInputFormatter extends TextInputFormatter {
+  final formatter = NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0);
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // jika kosong
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // ambil angka saja
+    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // jika angka kosong
+    if (digits.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // format angka jadi rupiah
+    final number = int.parse(digits);
+    final newText = formatter.format(number);
+
+    // posisi cursor
+    return TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newText.length),
+    );
+  }
+}
 
 class HalamanPencarian extends StatefulWidget {
   String searchQuery;
@@ -27,6 +62,28 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
 
   List kategoriList = [];
   List subKategoriList = [];
+
+  String? selectedProvinsi;
+  String? selectedKota;
+  double minRating = 0.0;
+
+  // Dummy data provinsi → kota
+  final List<Map<String, dynamic>> provinsiList = [
+    {"nama": "Jawa Barat", "id": 1},
+    {"nama": "DKI Jakarta", "id": 2},
+  ];
+
+  final Map<int, List<Map<String, dynamic>>> kotaByProvinsi = {
+    1: [
+      {"nama": "Bandung", "id": 101},
+      {"nama": "Bekasi", "id": 102},
+    ],
+    2: [
+      {"nama": "Jakarta Selatan", "id": 201},
+      {"nama": "Jakarta Barat", "id": 202},
+    ]
+  };
+
 
   int? selectedKategoriId;
   int? selectedSubKategoriId;
@@ -71,16 +128,29 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      fetchKategori(); // <-- WAJIB dipanggil dulu
       fetchTeknisi();
     });
   }
+
 
   @override
   void dispose() {
     _debounce?.cancel();
     super.dispose();
   }
+
+  int parseRupiah(String value) {
+    if (value.isEmpty) return 0;
+
+    // Hapus semua karakter selain angka
+    String digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+    return int.tryParse(digits) ?? 0;
+  }
+
 
   Future<void> fetchTeknisi({bool loadMore = false}) async {
     if (_isLoading && !loadMore) return;
@@ -92,20 +162,49 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
       setState(() => _isLoadMore = true);
     }
 
-    final queryParams = <String, String>{
-      if (widget.searchQuery.isNotEmpty) 'search': widget.searchQuery,
-      if (_selectedCategory != "Semua") 'kategori': _selectedCategory,
-      if (lokasi.isNotEmpty) 'lokasi': lokasi,
-      if (sortBy.isNotEmpty) 'sort': sortBy,
-      'page': page.toString(),
-      'limit': '6',
-    };
+    // Parse input harga
+    final minHarga = parseRupiah(minHargaController.text);
+    final maxHarga = parseRupiah(maxHargaController.text);
+
+    // Build query parameters
+    final Map<String, String> queryParams = {};
+
+    // Filter dari search bar & kategori
+    if (widget.searchQuery.isNotEmpty) queryParams['search'] = widget.searchQuery;
+    if (_selectedCategory != "Semua") queryParams['kategori'] = _selectedCategory;
+    if (lokasi.isNotEmpty) queryParams['lokasi'] = lokasi;
+    if (sortBy.isNotEmpty) queryParams['sort'] = sortBy;
+
+    // Filter bottomsheet
+    if (selectedKategoriId != null) queryParams['id_kategori'] = selectedKategoriId.toString();
+    if (selectedSubKategoriId != null) queryParams['id_keahlian'] = selectedSubKategoriId.toString();
+    if (minHarga > 0) queryParams['min_harga'] = minHarga.toString();
+    if (maxHarga > 0) queryParams['max_harga'] = maxHarga.toString();
+
+    // Filter Provinsi / Kota
+    if (selectedProvinsi != null) queryParams['provinsi'] = selectedProvinsi!;
+    if (selectedKota != null) queryParams['kota'] = selectedKota!;
+
+    // Filter rating
+    if (minRating > 0) queryParams['min_rating'] = minRating.toString();
+
+    // Saat pertama kali search, pakai lokasi default
+    if (widget.searchQuery.isEmpty && lokasi.isEmpty) {
+      lokasi = "Jakarta"; // dummy alamat default
+      queryParams['lokasi'] = lokasi;
+    }
+
+    // Pagination
+    queryParams['page'] = page.toString();
+    queryParams['limit'] = '6';
+
 
     final uri = Uri.parse("${BaseUrl.api}/search-teknisi")
         .replace(queryParameters: queryParams);
 
     try {
-      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      final response =
+          await http.get(uri).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
@@ -135,7 +234,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
         setState(() {
-          kategoriList = body['data'];
+          kategoriList = body['data']; // isinya: id_kategori, nama_kategori
         });
       }
     } catch (e) {
@@ -143,30 +242,40 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     }
   }
 
-  Future<void> fetchSubKategori(int kategoriId) async {
+
+  Future<List<dynamic>> fetchSubKategoriRaw(int kategoriId) async {
     try {
-      final response = await http.get(Uri.parse(
-          "${BaseUrl.api}/sub-kategori?kategori_id=$kategoriId"));
+      final response = await http.get(
+        Uri.parse("${BaseUrl.api}/keahlian?kategori_id=$kategoriId"),
+      );
 
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
-        setState(() {
-          subKategoriList = body['data'];
-        });
+        return body['data'];
       }
     } catch (e) {
       debugPrint("Error sub kategori: $e");
     }
+
+    return [];
   }
+
+
 
 
   void resetAndFetch() {
     page = 1;
     teknisiList.clear();
     hasMore = true;
+
+    // 🚨 Jika filter kategori atau subkategori dipilih, kosongkan search
+    if (selectedKategoriId != null || selectedSubKategoriId != null) {
+      widget.searchQuery = '';
+    }
+
     fetchTeknisi();
-    fetchKategori();
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -214,14 +323,6 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
         icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
         onPressed: () => Navigator.pop(context),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-          onPressed: () {
-            // TODO: arahkan ke halaman keranjang / pesanan
-          },
-        ),
-      ],
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
@@ -240,8 +341,27 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
         Expanded(
           child: TextField(
             controller: TextEditingController(text: widget.searchQuery),
-            onChanged: (value) => widget.searchQuery = value,
-            onSubmitted: (value) => resetAndFetch(),
+            onChanged: (value) {
+              widget.searchQuery = value;
+
+              // 🔄 Reset filter kecuali harga
+              selectedKategoriId = null;
+              selectedSubKategoriId = null;
+              onlyOnline = false;
+
+              // Fetch teknisi dengan search + harga saja
+              resetAndFetch();
+            },
+            onSubmitted: (value) {
+              widget.searchQuery = value;
+
+              // 🔄 Reset filter kecuali harga
+              selectedKategoriId = null;
+              selectedSubKategoriId = null;
+              onlyOnline = false;
+
+              resetAndFetch();
+            },
             decoration: InputDecoration(
               hintText: "Cari teknisi atau layanan...",
               prefixIcon: const Icon(Icons.search),
@@ -254,6 +374,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
             ),
           ),
         ),
+
         const SizedBox(width: 8),
         // ⚙️ Tombol filter
         InkWell(
@@ -295,153 +416,215 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
             return Container(
               padding: const EdgeInsets.all(16),
               height: MediaQuery.of(context).size.height * 0.9,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
 
-                  // HEADER
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Semua Filter",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      TextButton(
-                        onPressed: () {
-                          setModalState(() {
-                            selectedKategoriId = null;
-                            selectedSubKategoriId = null;
-                            minHargaController.clear();
-                            maxHargaController.clear();
-                            onlyOnline = false;
-                          });
-                        },
-                        child: const Text("Hapus Semua"),
-                      )
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  /// KATEGORI
-                  const Text("Kategori", style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: kategoriList.map((e) {
-                      bool selected = selectedKategoriId == e['id'];
-
-                      return ChoiceChip(
-                        label: Text(e['nama']),
-                        selected: selected,
-                        onSelected: (_) {
-                          setModalState(() {
-                            selectedKategoriId = e['id'];
-                            selectedSubKategoriId = null;
-                            fetchSubKategori(e['id']);
-                          });
-                        },
-                        selectedColor: const Color(0xFF0C4481),
-                        labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  /// SUB KATEGORI
-                  const Text("Sub Kategori", style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: subKategoriList.map((e) {
-                      bool selected = selectedSubKategoriId == e['id'];
-
-                      return ChoiceChip(
-                        label: Text(e['nama']),
-                        selected: selected,
-                        onSelected: (_) {
-                          setModalState(() => selectedSubKategoriId = e['id']);
-                        },
-                        selectedColor: const Color(0xFF0C4481),
-                        labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  /// HARGA
-                  const Text("Jangkauan Harga", style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: minHargaController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            hintText: "Rp50.000",
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Text("-"),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: maxHargaController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            hintText: "Rp100.000",
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      )
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  /// ONLINE
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Penjual sedang online",
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      Switch(
-                        value: onlyOnline,
-                        activeColor: const Color(0xFF0C4481),
-                        onChanged: (val) {
-                          setModalState(() => onlyOnline = val);
-                        },
-                      )
-                    ],
-                  ),
-
-                  const Spacer(),
-
-                  /// BUTTON TERAPKAN
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0C4481),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        resetAndFetch();
-                      },
-                      child: const Text("Terapkan", style: TextStyle(color: Colors.white)),
+                    // HEADER
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Semua Filter",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        TextButton(
+                          onPressed: () {
+                            setModalState(() {
+                              selectedKategoriId = null;
+                              selectedSubKategoriId = null;
+                              minHargaController.clear();
+                              maxHargaController.clear();
+                              onlyOnline = false;
+                              selectedProvinsi = null;
+                              selectedKota = null;
+                              minRating = 0;
+                            });
+                          },
+                          child: const Text("Hapus Semua"),
+                        )
+                      ],
                     ),
-                  )
-                ],
+
+                    const SizedBox(height: 16),
+
+                    /// KATEGORI
+                    const Text("Kategori", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: kategoriList.map((e) {
+                        bool selected = selectedKategoriId == e['id_kategori'];
+                        return ChoiceChip(
+                          label: Text(e['nama_kategori']),
+                          selected: selected,
+                          onSelected: (_) async {
+                            setModalState(() {
+                              selectedKategoriId = e['id_kategori'];
+                              selectedSubKategoriId = null;
+                              subKategoriList = [];
+                            });
+                            final data = await fetchSubKategoriRaw(e['id_kategori']);
+                            setModalState(() {
+                              subKategoriList = data;
+                            });
+                          },
+                          selectedColor: const Color(0xFF0C4481),
+                          labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
+                        );
+                      }).toList(),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    /// SUB KATEGORI
+                    const Text("Sub Kategori", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: subKategoriList.map((e) {
+                        bool selected = selectedSubKategoriId == e['id_keahlian'];
+                        return ChoiceChip(
+                          label: Text(e['nama_keahlian']),
+                          selected: selected,
+                          onSelected: (_) {
+                            setModalState(() => selectedSubKategoriId = e['id_keahlian']);
+                          },
+                          selectedColor: const Color(0xFF0C4481),
+                          labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
+                        );
+                      }).toList(),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    /// PROVINSI & KOTA
+                    const Text("Provinsi", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: selectedProvinsi,
+                      hint: const Text("Pilih Provinsi"),
+                      items: provinsiList.map<DropdownMenuItem<String>>((e) {
+                        return DropdownMenuItem<String>(
+                          value: e['nama'],
+                          child: Text(e['nama']),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setModalState(() {
+                          selectedProvinsi = val;
+                          selectedKota = null;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+                    const Text("Kota/Kabupaten", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: selectedKota,
+                      hint: const Text("Pilih Kota/Kabupaten"),
+                      items: (selectedProvinsi != null
+                          ? kotaByProvinsi[provinsiList.firstWhere((p) => p['nama'] == selectedProvinsi)['id']] ?? []
+                          : [])
+                          .map<DropdownMenuItem<String>>((e) => DropdownMenuItem<String>(
+                                value: e['nama'],
+                                child: Text(e['nama']),
+                              ))
+                          .toList(),
+                      onChanged: (val) {
+                        setModalState(() => selectedKota = val);
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+                    const Text("Rating Minimum", style: TextStyle(fontWeight: FontWeight.bold)),
+                    Slider(
+                      min: 0,
+                      max: 5,
+                      divisions: 5,
+                      value: minRating,
+                      label: minRating.toString(),
+                      onChanged: (val) => setModalState(() => minRating = val),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    /// HARGA
+                    const Text("Jangkauan Harga", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: minHargaController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [CurrencyInputFormatter()],
+                            decoration: const InputDecoration(
+                              hintText: "Rp50.000",
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text("-"),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: maxHargaController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [CurrencyInputFormatter()],
+                            decoration: const InputDecoration(
+                              hintText: "Rp100.000",
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    /// ONLINE
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Penjual sedang online",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Switch(
+                          value: onlyOnline,
+                          activeColor: const Color(0xFF0C4481),
+                          onChanged: (val) {
+                            setModalState(() => onlyOnline = val);
+                          },
+                        )
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    /// BUTTON TERAPKAN
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0C4481),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          resetAndFetch();
+                        },
+                        child: const Text("Terapkan", style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             );
           },
@@ -449,6 +632,7 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
       },
     );
   }
+
 
   Widget _buildHeaderRow(Color yellow) {
     return Row(
@@ -461,18 +645,6 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
             fontSize: 18,
             color: Color(0xFF0C4481),
           ),
-        ),
-        DropdownButton(
-          value: sortBy,
-          items: const [
-            DropdownMenuItem(value: "rating", child: Text("Rating")),
-            DropdownMenuItem(value: "harga_min", child: Text("Harga Terendah")),
-            DropdownMenuItem(value: "harga_max", child: Text("Harga Tertinggi")),
-          ],
-          onChanged: (value) {
-            sortBy = value!;
-            resetAndFetch();
-          },
         ),
       ],
     );
@@ -500,19 +672,28 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
   }
 
   Widget _buildTeknisiCard(dynamic teknisi, Color yellow) {
-    String gambarFile = teknisi['gambar']?.toString() ?? '';
+    String path = teknisi['gambar']?.toString() ?? '';
 
-    if (!gambarFile.contains("foto/")) {
-      gambarFile = "foto/$gambarFile";
+    String gambarUrl;
+
+    // Jika API sudah memberi path lengkap seperti "/storage/xxx.jpg"
+    if (path.startsWith("/storage")) {
+      gambarUrl = "${BaseUrl.server}$path"; 
+    }
+    // Jika API hanya kirim nama file: "default_layanan.jpg"
+    else {
+      gambarUrl = "${BaseUrl.storage}/foto/$path";
     }
 
-    String gambarUrl = "${BaseUrl.storage}/$gambarFile";
+    print("FINAL URL: $gambarUrl");
+
     print(BaseUrl.storage);
     print(gambarUrl);
 
 
-    int hargaMin = parseHarga(teknisi['harga_min']);
-    int hargaMax = parseHarga(teknisi['harga_max']);
+    // API cuma punya 1 harga → pakai harga yang sama untuk min dan max
+    int harga = parseHarga(teknisi['harga']);
+
     double rating = double.tryParse(teknisi["rating"].toString()) ?? 0.0;
 
     return GestureDetector(
@@ -526,9 +707,10 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
               nama: teknisi["nama"] ?? '',
               deskripsi: teknisi["nama_keahlian"] ?? '',
               rating: rating,
-              harga: hargaMin,
+              harga: harga,
               gambarUtama: gambarUrl,
               gambarLayanan: [gambarUrl],
+              fotoProfile: teknisi["foto_profile"] ?? "",
             ),
           ),
         );
@@ -576,7 +758,11 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
                     ),
                     // Tampilkan harga dalam format rupiah
                     Text(
-                      "${formatRupiah(hargaMin)} - ${formatRupiah(hargaMax)}",
+                      formatRupiah(harga),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
                     Row(
                       children: [

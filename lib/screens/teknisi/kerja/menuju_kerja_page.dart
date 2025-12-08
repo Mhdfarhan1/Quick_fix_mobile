@@ -657,6 +657,7 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
   // =============================== UI ===============================
   Widget _buildHeaderLokasi(data) {
     return Container(
+      width: double.infinity, // ← Wajib agar full lebar HP
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       decoration: const BoxDecoration(
         color: Color(0xff0A4B88),
@@ -675,20 +676,6 @@ class _MenujuKerjaPageState extends State<MenujuKerjaPage>
             style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           const SizedBox(height: 15),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.home_repair_service, color: Colors.white, size: 28),
-              SizedBox(width: 20),
-              Icon(Icons.arrow_forward, color: Colors.white, size: 26),
-              SizedBox(width: 20),
-              Icon(Icons.bike_scooter, color: Colors.white, size: 28),
-              SizedBox(width: 20),
-              Icon(Icons.arrow_forward, color: Colors.white, size: 26),
-              SizedBox(width: 20),
-              Icon(Icons.home, color: Colors.white, size: 28),
-            ],
-          )
         ],
       ),
     );

@@ -26,6 +26,7 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF0C4481),
+        foregroundColor: const Color.fromARGB(255, 243, 243, 243),
         title: const Text("Detail Pekerjaan", style: TextStyle(color: Colors.white)),
       ),
       body: Padding(

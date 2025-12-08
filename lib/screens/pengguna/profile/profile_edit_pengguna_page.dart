@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+import '../../../services/api_service.dart'; // path sesuai project Anda
+import 'package:provider/provider.dart';
+import '../../../providers/auth_provider.dart'; // contoh jika token disimpan di provider
 
 class ProfileEditPenggunaPage extends StatefulWidget {
-  // Data yang diterima dari halaman profil
   final String currentName;
   final String currentEmail;
   final String currentPhone;
+
+  // optional: Anda bisa pass token secara langsung atau ambil dari Provider dalam state
+  final String? authToken;
 
   const ProfileEditPenggunaPage({
     super.key,
     required this.currentName,
     required this.currentEmail,
     required this.currentPhone,
+    this.authToken,
   });
 
   @override
@@ -18,17 +24,16 @@ class ProfileEditPenggunaPage extends StatefulWidget {
       _ProfileEditPenggunaPageState();
 }
 
-class _ProfileEditPenggunaPageState
-    extends State<ProfileEditPenggunaPage> {
+class _ProfileEditPenggunaPageState extends State<ProfileEditPenggunaPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // Inisialisasi controller dengan data yang dikirim dari halaman profil
     _nameController = TextEditingController(text: widget.currentName);
     _emailController = TextEditingController(text: widget.currentEmail);
     _phoneController = TextEditingController(text: widget.currentPhone);
@@ -42,30 +47,27 @@ class _ProfileEditPenggunaPageState
     super.dispose();
   }
 
-  // FUNGSI KRITIS: Menyimpan dan Mengembalikan Data
-  void _saveProfile() {
-    if (_formKey.currentState!.validate()) {
-      final newName = _nameController.text;
-      final newEmail = _emailController.text;
-      final newPhone = _phoneController.text;
-
-      // --- INI ADALAH KUNCI PERBAIKANNYA ---
-      // Menggunakan Navigator.pop untuk KEMBALI dan MENGIRIM data baru
-      Navigator.pop(context, {
-        'name': newName,
-        'email': newEmail,
-        'phone': newPhone,
-      });
-      // ------------------------------------
-    }
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) return 'Email tidak boleh kosong';
+    final emailRegex = RegExp(r"^[\w\.\-]+@([\w\-]+\.)+[\w]{2,4}$");
+    if (!emailRegex.hasMatch(value)) return 'Format email tidak valid';
+    return null;
   }
 
-  // Widget untuk field input
+  String? _validatePhone(String? value) {
+    if (value == null || value.isEmpty) return null; // boleh kosong
+    // Validasi sederhana: hanya angka dan +, 6..30 panjang
+    final phoneRegex = RegExp(r'^[\d\+\-\s]{6,30}$');
+    if (!phoneRegex.hasMatch(value)) return 'Format nomor telepon tidak valid';
+    return null;
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20.0),
@@ -79,14 +81,90 @@ class _ProfileEditPenggunaPageState
           filled: true,
           fillColor: Colors.grey[50],
         ),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return '$label tidak boleh kosong';
-          }
-          return null;
-        },
+        validator: validator ??
+            (value) {
+              if (value == null || value.isEmpty) {
+                return '$label tidak boleh kosong';
+              }
+              return null;
+            },
       ),
     );
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    // Ambil token: prioritas parameter, kalau null coba ambil dari Provider
+    String? token = widget.authToken;
+    if (token == null) {
+      try {
+        // contoh jika anda menyimpan token di AuthProvider
+        final authProv = Provider.of<AuthProvider>(context, listen: false);
+        token = authProv.token; // sesuaikan properti token
+      } catch (_) {
+        token = null;
+      }
+    }
+
+    // Tambahkan setelah cek Provider
+    if (token == null || token.isEmpty) {
+      token = await ApiService.storage.read(key: 'token');
+    }
+
+
+    if (token == null || token.isEmpty) {
+      setState(() => _isLoading = false);
+      // Tampilkan pesan error bila token tidak tersedia
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Token autentikasi tidak ditemukan. Silakan login ulang.')),
+      );
+      return;
+    }
+
+    final newName = _nameController.text.trim();
+    final newEmail = _emailController.text.trim();
+    final newPhone = _phoneController.text.trim();
+
+    final result = await ApiService.updateProfile(
+      token: token,
+      nama: newName,
+      email: newEmail,
+      noHp: newPhone.isEmpty ? null : newPhone,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (result['success'] == true) {
+      // Ambil data user yang dikembalikan server (jika ada)
+      final data = result['data']?['data']; // sesuai respons Laravel di atas
+
+      // Kembalikan perubahan ke halaman sebelumnya agar UI bisa refresh
+      Navigator.pop(context, {
+        'name': newName,
+        'email': newEmail,
+        'phone': newPhone,
+        'server_data': data,
+      });
+    } else {
+      // Tangani error (validasi 422 atau error lain)
+      if (result['status'] == 422 && result['errors'] != null) {
+        final errors = result['errors'];
+        // Ambil pesan error field (jika ada)
+        String message = 'Validasi gagal';
+        if (errors is Map) {
+          final firstKey = errors.keys.first;
+          final firstMsg = errors[firstKey] is List ? errors[firstKey][0] : errors[firstKey];
+          message = firstMsg.toString();
+        }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      } else {
+        final msg = result['message'] ?? 'Gagal memperbarui profil';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
+    }
   }
 
   @override
@@ -106,34 +184,32 @@ class _ProfileEditPenggunaPageState
             children: <Widget>[
               const SizedBox(height: 20),
 
-              // Field Nama Lengkap
               _buildTextField(
                 controller: _nameController,
                 label: 'Nama Lengkap',
                 icon: Icons.person,
               ),
 
-              // Field Email
               _buildTextField(
                 controller: _emailController,
                 label: 'Email',
                 icon: Icons.email,
                 keyboardType: TextInputType.emailAddress,
+                validator: _validateEmail,
               ),
 
-              // Field Nomor Telepon
               _buildTextField(
                 controller: _phoneController,
                 label: 'Nomor Telepon',
                 icon: Icons.phone,
                 keyboardType: TextInputType.phone,
+                validator: _validatePhone,
               ),
 
               const SizedBox(height: 30),
 
-              // Tombol Simpan
               ElevatedButton(
-                onPressed: _saveProfile,
+                onPressed: _isLoading ? null : _saveProfile,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFFCC33),
                   foregroundColor: const Color(0xFF0C4481),
@@ -143,10 +219,16 @@ class _ProfileEditPenggunaPageState
                   ),
                   elevation: 5,
                 ),
-                child: const Text(
-                  'Simpan Perubahan',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text(
+                        'Simpan Perubahan',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
               ),
               const SizedBox(height: 20),
             ],

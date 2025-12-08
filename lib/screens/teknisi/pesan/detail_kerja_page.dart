@@ -74,39 +74,58 @@ class DetailKerjaPage extends StatelessWidget {
           children: [
 
             /// HEADER
-            Container(
-              padding: const EdgeInsets.all(20),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [primary, primary.withOpacity(0.9)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Detail Pekerjaan",
-                    style: TextStyle(
-                      fontSize: 22,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    data['nama_keahlian'],
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                ],
-              ),
+            /// HEADER
+Container(
+  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+  width: double.infinity,
+  decoration: BoxDecoration(
+    gradient: LinearGradient(
+      colors: [primary, primary.withOpacity(0.9)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    borderRadius: const BorderRadius.only(
+      bottomLeft: Radius.circular(24),
+      bottomRight: Radius.circular(24),
+    ),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+
+      /// ROW: Back Button + Title
+      Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Colors.white,
+              size: 22,
             ),
+          ),
+          const SizedBox(width: 12),
+
+          const Text(
+            "Detail Pekerjaan",
+            style: TextStyle(
+              fontSize: 22,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 6),
+
+      Text(
+        data['nama_keahlian'],
+        style: const TextStyle(color: Colors.white70),
+      ),
+    ],
+  ),
+),
 
             Expanded(
               child: SingleChildScrollView(
@@ -114,27 +133,56 @@ class DetailKerjaPage extends StatelessWidget {
                 child: Column(
                   children: [
 
-                    /// FOTO KELUHAN
-                    Container(
-                      height: 150,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: (data['foto_keluhan'] as List?)?.length ?? 0,
-                        itemBuilder: (context, index) {
-                          return Container(
+                  /// FOTO KELUHAN
+                  Container(
+                    height: 180,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: (data['foto_keluhan'] as List?)?.length ?? 0,
+                      itemBuilder: (context, index) {
+                        final url = "${BaseUrl.storage}/${data['foto_keluhan'][index]}";
+
+                        return GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: true, // klik luar = close
+                              builder: (_) {
+                                return Dialog(
+                                  backgroundColor: Colors.transparent,
+                                  insetPadding: EdgeInsets.all(10),
+                                  child: InteractiveViewer(
+                                    maxScale: 5,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Image.network(
+                                        url,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          child: Container(
+                            width: 370,
                             margin: const EdgeInsets.only(right: 12),
-                            width: 200,
-                            decoration: BoxDecoration(
+                            alignment: Alignment.center,
+                            child: ClipRRect(
                               borderRadius: BorderRadius.circular(16),
-                              image: DecorationImage(
-                                image: NetworkImage(data['foto_keluhan'][index]),
-                                fit: BoxFit.cover,
+                              child: Image.network(
+                                url,
+                                height: 160,
+                                fit: BoxFit.fitHeight,
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
                     ),
+                  ),
+
 
                     const SizedBox(height: 16),
 
@@ -223,10 +271,15 @@ class DetailKerjaPage extends StatelessWidget {
             child: OutlinedButton(
               onPressed: () {},
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: Colors.red),
-                foregroundColor: Colors.red,
+                backgroundColor: Colors.red,        // Warna tombol
+                foregroundColor: Colors.white,      // Warna teks & ripple
+                side: const BorderSide(color: Colors.red),
+                padding: const EdgeInsets.all(14),
               ),
-              child: const Text("Batalkan"),
+              child: const Text(
+                "Batalkan",
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ),
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:quick_fix/screens/teknisi/lainnya/lainnya_page.dart';
 import 'package:quick_fix/screens/teknisi/pesan/pesan_teknisi_page.dart';
-import 'package:quick_fix/screens/teknisi/profile/profile_teknisi_page.dart';
 import '../home/Home_page_teknisi.dart';
 import 'detail_riwayat_teknisi_page.dart';
 import '../profile/prof_tek.dart';
@@ -14,7 +13,6 @@ import '../../../services/api_service.dart';
 
 import '../../../config/base_url.dart';
 
-import '../profile/prof_tek.dart';
 import '../lainnya/lainnya_page.dart';
 
 class RiwayatTeknisiPage extends StatefulWidget {
@@ -98,7 +96,7 @@ class _RiwayatTeknisiPageState extends State<RiwayatTeknisiPage> {
         break;
       case 3:
         Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const TechnicianProfilePage()));
+            MaterialPageRoute(builder: (_) => const ProfileTeknisiPage.self()));
         break;
       case 4:
         Navigator.pushReplacement(

@@ -29,11 +29,6 @@ class NotifikasiPage extends StatelessWidget {
       "subtitle": "Sudah waktunya servis rutin, nih! Cegah kerusakan...",
       "time": "6 jam lalu"
     },
-    {
-      "title": "Garansi",
-      "subtitle": "Garansi kamu aktif sampai tanggal tertentu...",
-      "time": "1 hari lalu"
-    },
   ];
 
   @override

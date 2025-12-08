@@ -1,6 +1,6 @@
 class NotificationModel {
   final int id;
-  final int userId;
+  final int idUser;
   final String judul;
   final String pesan;
   final bool isRead;
@@ -8,7 +8,7 @@ class NotificationModel {
 
   NotificationModel({
     required this.id,
-    required this.userId,
+    required this.idUser,
     required this.judul,
     required this.pesan,
     required this.isRead,
@@ -18,7 +18,7 @@ class NotificationModel {
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
       id: json['id'],
-      userId: json['user_id'],
+      idUser: json['id_user'],
       judul: json['judul'],
       pesan: json['pesan'],
       isRead: json['is_read'] == 1,

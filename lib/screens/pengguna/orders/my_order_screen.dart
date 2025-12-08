@@ -8,6 +8,8 @@ import '../../../config/base_url.dart';
 import '../../../widgets/network_image_with_fallback.dart';
 import '../tugas/detail_tugas_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../tugas/detail_selesai_tugas_screen.dart';
+import '../../../widgets/user_bottom_nav.dart';
 
 
 class MyOrderScreen extends StatefulWidget {
@@ -122,14 +124,21 @@ class _MyOrderScreenState extends State<MyOrderScreen>
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => OrderDetailScreen(order: Map<String, dynamic>.from(order)),
-              ),
-            );
-
-
+            if (order['status'] == 'selesai') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OrderDetailSelesaiScreen(order: Map<String, dynamic>.from(order)),
+                ),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OrderDetailScreen(order: Map<String, dynamic>.from(order)),
+                ),
+              );
+            }
           },
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -301,17 +310,16 @@ class _MyOrderScreenState extends State<MyOrderScreen>
                 ),
               ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  ),
-                  const Text(
-                    "Pesanan Saya",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  const Center(
+                    child: Text(
+                      "Pesanan Saya",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -353,6 +361,9 @@ class _MyOrderScreenState extends State<MyOrderScreen>
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: UserBottomNav(
+        selectedIndex: 1,
       ),
     );
   }

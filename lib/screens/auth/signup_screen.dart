@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../services/api_service.dart';
 import 'login_screen.dart';
 import 'otp_screen.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:flutter/services.dart';
+
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -13,13 +15,23 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+
+  final _phoneFormatter = MaskTextInputFormatter(
+    mask: '####-####-####',
+    filter: { "#": RegExp(r'[0-9]') },
+    type: MaskAutoCompletionType.lazy, // lazy lebih nyaman untuk hapus
+  );
 
   final _emailController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _phoneController = TextEditingController();
+
+  String? _emailError;
+  String? _usernameError;
+  String? _passwordError;
+  String? _phoneError;
 
   String _selectedRole = 'pelanggan';
   final List<String> _roles = ['pelanggan', 'teknisi'];
@@ -29,7 +41,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _emailController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -37,17 +49,39 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final email = _emailController.text.trim();
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
-    final confirmPassword = _confirmPasswordController.text.trim();
+    final phone = _phoneController.text.trim();
 
-    if (email.isEmpty || username.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      _showSnackBar('Semua field harus diisi!', Colors.red);
-      return;
+    setState(() {
+      _emailError = null;
+      _usernameError = null;
+      _passwordError = null;
+      _phoneError = null;
+    });
+
+    bool isValid = true;
+
+    if (email.isEmpty) {
+      setState(() => _emailError = 'Email wajib diisi');
+      isValid = false;
+    }
+    if (username.isEmpty) {
+      setState(() => _usernameError = 'Username wajib diisi');
+      isValid = false;
+    }
+    if (password.isEmpty) {
+      setState(() => _passwordError = 'Kata sandi wajib diisi');
+      isValid = false;
+    }
+    if (phone.isEmpty) {
+      setState(() => _phoneError = 'Nomor HP wajib diisi');
+      isValid = false;
+    } else if (_phoneFormatter.getUnmaskedText().length != 12) {
+      // Validasi panjang input angka saja
+      setState(() => _phoneError = 'Nomor HP harus 12 digit');
+      isValid = false;
     }
 
-    if (password != confirmPassword) {
-      _showSnackBar('Password dan konfirmasi tidak sama!', Colors.red);
-      return;
-    }
+    if (!isValid) return;
 
     setState(() => _isLoading = true);
 
@@ -57,11 +91,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
         email: email,
         password: password,
         role: _selectedRole,
+        noHp: phone,
       );
 
       final statusCode = response['statusCode'];
       final data = response['data'] ?? {};
-      
 
       if (statusCode == 200 || statusCode == 201) {
         final status = data['status'] ?? false;
@@ -77,9 +111,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ? serverEmail
             : email;
 
-        print("📩 Email untuk OTP: $emailResponse");
-        print("🔍 DATA SERVER: $data");
-
         _showSnackBar('Registrasi berhasil! OTP telah dikirim.', Colors.green);
 
         Future.delayed(const Duration(seconds: 1), () {
@@ -90,23 +121,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           );
         });
-      }
-      else if (statusCode == 422 && data['errors'] != null) {
+      } else if (statusCode == 422 && data['errors'] != null) {
         final errors = data['errors'] as Map<String, dynamic>;
-        String errorMsg = '';
-        errors.forEach((key, value) {
-          if (value != null && value is List && value.isNotEmpty) {
-            errorMsg += '${value[0]}\n';
-          }
+        
+        setState(() {
+          if (errors['email'] != null) _emailError = errors['email'][0];
+          if (errors['nama'] != null) _usernameError = errors['nama'][0];
+          if (errors['password'] != null) _passwordError = errors['password'][0];
+          if (errors['no_hp'] != null) _phoneError = errors['no_hp'][0];
         });
-        _showSnackBar(errorMsg.trim(), Colors.red);
-      }
 
-      else {
+        _showSnackBar('Harap perbaiki data yang salah.', Colors.red);
+      } else {
         final message = data['message'] ?? 'Terjadi kesalahan server.';
         _showSnackBar(message, Colors.red);
       }
-
     } catch (e) {
       _showSnackBar('Terjadi kesalahan koneksi: $e', Colors.red);
     } finally {
@@ -136,7 +165,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           height: screenSize.height,
           child: Stack(
             children: [
-              // Background
               Container(
                 height: screenSize.height * 0.4,
                 width: double.infinity,
@@ -149,58 +177,116 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ],
                 ),
               ),
-              // Form
               Positioned(
                 top: screenSize.height * 0.3,
                 left: 0,
                 right: 0,
                 child: Container(
-                   width: double.infinity,
-                    constraints: BoxConstraints(
-                      minHeight: screenSize.height * 0.9, // full ke bawah
+                  width: double.infinity,
+                  constraints: BoxConstraints(
+                    minHeight: screenSize.height * 0.9,
+                  ),
+                  padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
                     ),
-                    padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildTextField(icon: Icons.email_outlined, hintText: 'Email', controller: _emailController),
+                      _buildTextField(
+                        icon: Icons.email_outlined,
+                        hintText: 'Email',
+                        controller: _emailController,
+                        errorText: _emailError,
+                        fieldType: 'email',
+                      ),
                       const SizedBox(height: 16),
-                      _buildTextField(icon: Icons.person_outline, hintText: 'Username', controller: _usernameController),
+
+                      _buildTextField(
+                        icon: Icons.person_outline,
+                        hintText: 'Nama Lengkap',
+                        controller: _usernameController,
+                        errorText: _usernameError,
+                      ),
+
                       const SizedBox(height: 16),
+
                       _buildRoleDropdown(),
                       const SizedBox(height: 16),
-                      _buildPasswordField(
-                        hintText: 'Password',
-                        obscureText: _obscurePassword,
+
+                      _buildTextField(
+                        icon: Icons.lock_outline,
+                        hintText: 'Kata Sandi',
                         controller: _passwordController,
-                        onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                        errorText: _passwordError,
+                        fieldType: 'password',
+                        obscureText: _obscurePassword,
+                        onToggleVisibility: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
                       ),
+
+
                       const SizedBox(height: 16),
-                      _buildPasswordField(
-                        hintText: 'Confirm Password',
-                        obscureText: _obscureConfirmPassword,
-                        controller: _confirmPasswordController,
-                        onToggleVisibility: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+
+                      _buildPhoneField(
+                        icon: Icons.phone_android,
+                        hintText: 'Nomor HP',
+                        controller: _phoneController,
+                        errorText: _phoneError,
                       ),
+
                       const SizedBox(height: 24),
+
                       ElevatedButton(
                         onPressed: _isLoading ? null : _handleSignUp,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.amber,
                           foregroundColor: Colors.black87,
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.black)
-                            : const Text('SIGN UP', style: TextStyle(fontWeight: FontWeight.bold)),
+                            : const Text('DAFTAR',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            "Sudah punya akun? ",
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              "Masuk",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF0C4481),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -217,7 +303,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: const Color(0xFFF4FCFD),
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButton<String>(
@@ -239,46 +325,112 @@ class _SignUpScreenState extends State<SignUpScreen> {
     required IconData icon,
     required String hintText,
     required TextEditingController controller,
+    String? errorText,
+    List<TextInputFormatter>? inputFormatters,
+    String fieldType = 'text', // 'text', 'email', 'phone', 'password'
+    bool obscureText = false,
+    VoidCallback? onToggleVisibility,
   }) {
+    // tentukan keyboardType
+    TextInputType keyboardType;
+    switch (fieldType) {
+      case 'email':
+        keyboardType = TextInputType.emailAddress;
+        break;
+      case 'phone':
+        keyboardType = TextInputType.number;
+        break;
+      case 'password':
+        keyboardType = TextInputType.visiblePassword;
+        break;
+      default:
+        keyboardType = TextInputType.text;
+    }
+
     return TextField(
       controller: controller,
+      inputFormatters: inputFormatters,
+      keyboardType: keyboardType,
+      obscureText: fieldType == 'password' ? obscureText : false,
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Colors.grey),
         hintText: hintText,
+        errorText: errorText,
         filled: true,
-        fillColor: Colors.grey[200],
+        fillColor: const Color(0xFFF4FCFD),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF20C9E2)),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEA0C0C)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEA0C0C)),
+        ),
+        suffixIcon: fieldType == 'password'
+            ? IconButton(
+                icon: Icon(
+                  obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey,
+                ),
+                onPressed: onToggleVisibility,
+              )
+            : null,
       ),
     );
   }
 
-  Widget _buildPasswordField({
+
+
+  // TextField untuk Nomor HP
+  Widget _buildPhoneField({
+    required IconData icon,
     required String hintText,
-    required bool obscureText,
-    required VoidCallback onToggleVisibility,
     required TextEditingController controller,
+    String? errorText,
   }) {
     return TextField(
       controller: controller,
-      obscureText: obscureText,
+      keyboardType: TextInputType.number,
+      inputFormatters: [
+        _phoneFormatter, // cukup ini saja
+      ],
       decoration: InputDecoration(
-        prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+        prefixIcon: Icon(icon, color: Colors.grey),
         hintText: hintText,
+        errorText: errorText,
         filled: true,
-        fillColor: Colors.grey[200],
+        fillColor: const Color(0xFFF4FCFD),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        suffixIcon: IconButton(
-          icon: Icon(
-            obscureText ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey,
-          ),
-          onPressed: onToggleVisibility,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF20C9E2)),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEA0C0C)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEA0C0C)),
         ),
       ),
     );

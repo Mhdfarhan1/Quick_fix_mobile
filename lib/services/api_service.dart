@@ -206,6 +206,13 @@ class ApiService {
           await prefs.setString('role', user['role'] ?? '');
           await prefs.setString('no_hp', user['no_hp'] ?? '');
 
+          if (user['id_teknisi'] != null) {
+            await prefs.setInt('id_teknisi', user['id_teknisi']);
+            log("✅ ID Teknisi disimpan: ${user['id_teknisi']}");
+          } else {
+            log("⚠️ User bukan teknisi atau id_teknisi tidak ditemukan!");
+          }
+
           // optional: alamat default
           if (user['alamat_default'] != null) {
             await prefs.setString('alamat_default', user['alamat_default']);
@@ -243,6 +250,12 @@ class ApiService {
   }) async {
     return await request(method: 'POST', endpoint: endpoint, body: data, context: context);
   }
+
+  static Future<int?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('id_user');
+  }
+
 
   // -----------------------
   // Register / Verify / Resend (preserve behavior)
@@ -514,15 +527,12 @@ static Future<Map<String, dynamic>> fetchKategori() async {
 static Future<Map<String, dynamic>> uploadKeahlianTeknisi({
   int? idKeahlian,
   String? nama,
-  int? hargaMin,
-  int? hargaMax,
+  int? harga, // ← ganti!
   String? deskripsi,
   File? gambarFile,
   BuildContext? context,
 }) async {
-  final prefs = await SharedPreferences.getInstance();
   final token = await ApiService._getToken();
-
   OverlayEntry? loader;
   if (context != null) loader = UIHelper.showLoading(context, text: 'Mengunggah layanan...');
 
@@ -530,33 +540,27 @@ static Future<Map<String, dynamic>> uploadKeahlianTeknisi({
     final uri = Uri.parse('${BaseUrl.api}/teknisi/keahlian');
     final request = http.MultipartRequest('POST', uri);
 
-    // headers
     request.headers.addAll({
       'Accept': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
     });
 
-    // fields
     if (idKeahlian != null) request.fields['id_keahlian'] = idKeahlian.toString();
     if (nama != null) request.fields['nama'] = nama;
-    if (hargaMin != null) request.fields['harga_min'] = hargaMin.toString();
-    if (hargaMax != null) request.fields['harga_max'] = hargaMax.toString();
+    if (harga != null) request.fields['harga'] = harga.toString(); // ← hanya satu harga
     if (deskripsi != null && deskripsi.isNotEmpty) request.fields['deskripsi'] = deskripsi;
 
-    // file
     if (gambarFile != null) {
       final mimeType = lookupMimeType(gambarFile.path) ?? 'image/jpeg';
-      final multipartFile = await http.MultipartFile.fromPath('gambar_layanan', gambarFile.path,
-          contentType: MediaType.parse(mimeType));
-      request.files.add(multipartFile);
+      request.files.add(await http.MultipartFile.fromPath(
+        'gambar_layanan', gambarFile.path,
+        contentType: MediaType.parse(mimeType),
+      ));
     }
 
-    // send
     final streamed = await request.send();
     final respStr = await streamed.stream.bytesToString();
-    final statusCode = streamed.statusCode;
 
-    // parse response body
     dynamic data;
     try {
       data = jsonDecode(respStr);
@@ -564,25 +568,25 @@ static Future<Map<String, dynamic>> uploadKeahlianTeknisi({
       data = {'status': false, 'message': 'Response bukan JSON', 'raw': respStr};
     }
 
-    return {'statusCode': statusCode, 'data': data};
-  } catch (e) {
-    return {'statusCode': 500, 'data': {'status': false, 'message': 'Error: $e'}};
+    return {'statusCode': streamed.statusCode, 'data': data};
   } finally {
     loader?.remove();
   }
 }
 
+
 // ---------------------
 // Fetch layanan teknisi
 // ---------------------
-static Future<Map<String, dynamic>> getLayananTeknisi({
-  BuildContext? context,
-}) async {
-  final prefs = await SharedPreferences.getInstance();
+static Future<Map<String, dynamic>> getLayananTeknisi(
+  int teknisiId,
+  {BuildContext? context}
+) async {
   final token = await ApiService._getToken();
 
   try {
-    final url = Uri.parse('${BaseUrl.api}/teknisi/keahlian');
+    final url = Uri.parse('${BaseUrl.api}/teknisi/$teknisiId/keahlian');
+
     final response = await http.get(
       url,
       headers: {
@@ -591,18 +595,26 @@ static Future<Map<String, dynamic>> getLayananTeknisi({
       },
     );
 
-    final body = response.body;
-    Map<String, dynamic> parsed = {};
+    Map<String, dynamic> parsed;
     try {
-      parsed = jsonDecode(body);
+      parsed = jsonDecode(response.body);
     } catch (e) {
-      return {'statusCode': response.statusCode, 'data': {'success': false, 'message': 'Response bukan JSON', 'raw': body}};
+      return {
+        'statusCode': response.statusCode,
+        'data': {
+          'success': false,
+          'message': 'Response bukan JSON',
+          'raw': response.body
+        }
+      };
     }
+
     return {'statusCode': response.statusCode, 'data': parsed};
   } catch (e) {
-    return {'statusCode': 500, 'data': {'success': false, 'message': 'Gagal koneksi: $e'}};
+    return {'statusCode': 500, 'data': {'success': false, 'message': '$e'}};
   }
 }
+
 
 // ---------------------
 // Update layanan teknisi
@@ -611,53 +623,41 @@ static Future<Map<String, dynamic>> updateLayananTeknisi({
   required int id,
   int? idKeahlian,
   String? nama,
-  int? hargaMin,
-  int? hargaMax,
+  int? harga, // ← ganti!
   String? deskripsi,
   File? gambarFile,
   BuildContext? context,
 }) async {
-  final prefs = await SharedPreferences.getInstance();
   final token = await ApiService._getToken();
-
-
   OverlayEntry? loader;
   if (context != null) loader = UIHelper.showLoading(context, text: 'Memperbarui layanan...');
 
   try {
     final uri = Uri.parse('${BaseUrl.api}/teknisi/keahlian/$id');
     final request = http.MultipartRequest('POST', uri);
-
-    // method spoofing untuk PUT
     request.fields['_method'] = 'PUT';
 
-    // headers
     request.headers.addAll({
       'Accept': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
     });
 
-    // fields
     if (idKeahlian != null) request.fields['id_keahlian'] = idKeahlian.toString();
     if (nama != null) request.fields['nama'] = nama;
-    if (hargaMin != null) request.fields['harga_min'] = hargaMin.toString();
-    if (hargaMax != null) request.fields['harga_max'] = hargaMax.toString();
+    if (harga != null) request.fields['harga'] = harga.toString(); // ← satu harga
     if (deskripsi != null && deskripsi.isNotEmpty) request.fields['deskripsi'] = deskripsi;
 
-    // file
     if (gambarFile != null) {
       final mimeType = lookupMimeType(gambarFile.path) ?? 'image/jpeg';
-      final multipartFile = await http.MultipartFile.fromPath('gambar_layanan', gambarFile.path,
-          contentType: MediaType.parse(mimeType));
-      request.files.add(multipartFile);
+      request.files.add(await http.MultipartFile.fromPath(
+        'gambar_layanan', gambarFile.path,
+        contentType: MediaType.parse(mimeType),
+      ));
     }
 
-    // send
     final streamed = await request.send();
     final respStr = await streamed.stream.bytesToString();
-    final statusCode = streamed.statusCode;
 
-    // parse response body
     dynamic data;
     try {
       data = jsonDecode(respStr);
@@ -665,13 +665,12 @@ static Future<Map<String, dynamic>> updateLayananTeknisi({
       data = {'success': false, 'message': 'Response bukan JSON', 'raw': respStr};
     }
 
-    return {'statusCode': statusCode, 'data': data};
-  } catch (e) {
-    return {'statusCode': 500, 'data': {'success': false, 'message': 'Error: $e'}};
+    return {'statusCode': streamed.statusCode, 'data': data};
   } finally {
     loader?.remove();
   }
 }
+
 
 // ---------------------
 // Delete layanan teknisi
@@ -744,6 +743,158 @@ static Future<Map<String, dynamic>> deleteLayananTeknisi({
       return {
         'statusCode': null,
         'data': null,
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> getNotifications() async {
+    return await request(
+      method: "GET",
+      endpoint: "/notifications",
+    );
+  }
+
+
+  static Future<Map<String, dynamic>> markNotifRead(int id) async {
+    return await request(
+      method: "POST",
+      endpoint: "/notifications/$id/read",
+      body: {},
+    );
+  }
+
+
+  static Future<Map<String, dynamic>> readNotifikasi(int idNotifikasi) async {
+    return await request(
+      method: 'PUT',
+      endpoint: '/notifikasi/$idNotifikasi/read',
+      body: {},  // body kosong
+    );
+  }
+
+  static Future<Map<String, dynamic>> deleteNotifikasi(int idNotifikasi) async {
+    return await request(
+      method: 'DELETE',
+      endpoint: '/notifikasi/$idNotifikasi',
+    );
+  }
+
+  static Future<Map<String, dynamic>> getUlasanTeknisi(int idTeknisi) async {
+    return await ApiService.get('/teknisi/$idTeknisi/ulasan');
+  }
+
+
+  static Future<Map<String, dynamic>> updateProfilTeknisi({
+    required String deskripsi,
+  }) async {
+    final token = await _getToken();
+    final url = Uri.parse('${BaseUrl.api}/teknisi/update_profile');
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        "deskripsi": deskripsi,
+      }),
+    );
+
+    return {
+      "statusCode": response.statusCode,
+      "data": jsonDecode(response.body),
+    };
+  }
+
+
+
+
+
+  static Future<Map<String, dynamic>> uploadGaleri(File file) async {
+    final url = Uri.parse('${BaseUrl.api}/teknisi/upload_galeri');
+    final token = await _getToken();
+
+    final request = http.MultipartRequest("POST", url);
+    request.headers['Authorization'] = 'Bearer $token';
+
+    request.files.add(
+      await http.MultipartFile.fromPath('file', file.path),  // field sesuai Laravel
+    );
+
+    final response = await request.send();
+    final responseBody = await response.stream.bytesToString();
+
+    return {
+      "statusCode": response.statusCode,
+      "data": jsonDecode(responseBody),  // <--- ini data utama
+    };
+  }
+
+
+
+  static Future<Map<String,dynamic>> deleteGaleri(String token, int idGaleri) async {
+    final url = Uri.parse('${BaseUrl.api}/teknisi/galeri/$idGaleri');
+    final res = await http.delete(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+    return {'statusCode': res.statusCode, 'body': res.body.isNotEmpty ? jsonDecode(res.body) : null};
+  }
+
+  static Future<Map<String, dynamic>> getGaleri(int teknisiId) async {
+    final url = Uri.parse('${BaseUrl.api}/teknisi/$teknisiId/galeri');
+    final token = await _getToken();
+
+    final res = await http.get(url, headers: {
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json'
+    });
+
+    return {
+      "statusCode": res.statusCode,
+      "data": jsonDecode(res.body)
+    };
+  }
+
+  static Future<Map<String, dynamic>> updateProfile({
+    required String token,
+    required String nama,
+    required String email,
+    String? noHp,
+  }) async {
+    final url = Uri.parse('${BaseUrl.api}/user/update');
+
+    final response = await http.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'nama': nama,
+        'email': email,
+        'no_hp': noHp,
+      }),
+    );
+
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return {'success': true, 'data': body};
+    } else if (response.statusCode == 422) {
+      // validasi gagal
+      return {'success': false, 'status': 422, 'errors': body};
+    } else {
+      return {
+        'success': false,
+        'status': response.statusCode,
+        'message': body['message'] ?? 'Terjadi kesalahan'
       };
     }
   }

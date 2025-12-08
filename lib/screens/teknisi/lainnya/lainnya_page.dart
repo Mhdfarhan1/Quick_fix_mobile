@@ -7,8 +7,9 @@ import 'package:quick_fix/screens/teknisi/lainnya/pendapatan_page.dart';
 import '../home/Home_page_teknisi.dart';
 import '../profile/prof_tek.dart';
 import '../../../screens/auth/login_screen.dart';
-
-
+import '../../pengguna/Lainnya/bantuan_laporan_page.dart';
+import '../../pengguna/Lainnya/kebijakan_privasi_page.dart';
+import '../../pengguna/Lainnya/tentang_aplikasi.dart';
 
 class LainnyaPage extends StatefulWidget {
   const LainnyaPage({super.key});
@@ -48,7 +49,7 @@ class _LainnyaPageState extends State<LainnyaPage> {
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const TechnicianProfilePage()),
+          MaterialPageRoute(builder: (_) => const ProfileTeknisiPage.self())
         );
         break;
 
@@ -122,27 +123,47 @@ class _LainnyaPageState extends State<LainnyaPage> {
                 },
               ),
 
-              _buildMenuItem(
-                Icons.miscellaneous_services,
-                "Jenis Layanan Utama",
-              ),
             ]),
 
-            const SizedBox(height: 20),
-
-            _buildSectionTitle("Pengaturan aplikasi"),
-            _buildMenuCard([
-              _buildMenuItem(Icons.language, "Bahasa"),
-              _buildMenuItem(Icons.work_outline, "Portofolio"),
-            ]),
+            
 
             const SizedBox(height: 20),
 
             _buildSectionTitle("Lainnya"),
             _buildMenuCard([
-              _buildMenuItem(Icons.help_outline, "Bantuan & Laporan"),
-              _buildMenuItem(Icons.info_outline, "Tentang Aplikasi"),
-              _buildMenuItem(Icons.privacy_tip_outlined, "Kebijakan Privasi"),
+              _buildMenuItem(
+                Icons.help_outline,
+                "Bantuan & Laporan",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BantuanLaporanPage()),
+                  );
+                },
+              ),
+
+              _buildMenuItem(
+                Icons.info_outline,
+                "Tentang Aplikasi",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TentangAplikasiPage()),
+                  );
+                },
+              ),
+
+              _buildMenuItem(
+                Icons.privacy_tip_outlined,
+                "Kebijakan Privasi",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const KebijakanPrivasiPage()),
+                  );
+                },
+              ),
+
               _buildMenuItem(
                 Icons.logout,
                 "Keluar Akun",
@@ -196,7 +217,7 @@ class _LainnyaPageState extends State<LainnyaPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text(
-                          "Ahmad Sahroni",
+                          "Budi Teknisi",
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         Text(

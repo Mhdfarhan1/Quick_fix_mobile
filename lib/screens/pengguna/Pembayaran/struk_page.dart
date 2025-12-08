@@ -25,6 +25,7 @@ class StrukPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Struk Pembayaran'),
         backgroundColor: const Color(0xFF0C4481),
+        foregroundColor: Color.fromARGB(255, 255, 255, 255),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -65,8 +66,11 @@ class StrukPage extends StatelessWidget {
                     ),
                     child: const Text(
                       'OK',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white, // warna teks putih
+                      ),
                     ),
                   ),
                 )
