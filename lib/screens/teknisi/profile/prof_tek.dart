@@ -203,15 +203,21 @@ String? _authToken;
         setState(() {
           _ratingAvg = double.tryParse(data['rating_avg'].toString()) ?? 0.0;
 
-          _reviews = (data['ulasan'] as List)
-              .map((e) => TechnicianReview.fromJson(e))
-              .toList();
+          _reviews = (data['ulasan'] as List).map((e) {
+            // jika backend hanya kirim filename, tambahkan BaseUrl.server
+            if (e['foto_pelanggan'] != null && e['foto_pelanggan'].toString().isNotEmpty) {
+              e['foto_pelanggan'] =
+                  '${BaseUrl.server}/storage/foto/pelanggan/${e['foto_pelanggan']}';
+            }
+            return TechnicianReview.fromJson(e);
+          }).toList();
         });
       }
     } catch (e) {
       print("❌ ERROR FETCH ULASAN: $e");
     }
   }
+
 
 
   Future<void> _fetchLayananFromBackend() async {
@@ -506,7 +512,7 @@ String? _authToken;
           onServiceAdded: (data) {
             print("DEBUG: onServiceAdded callback triggered with data: $data");
             final imgPath = data['gambar_layanan'] as String?;
-            final fullImgUrl = imgPath != null ? (BaseUrl.api.replaceAll('/api', '') + imgPath) : null;
+            final fullImgUrl = _constructImageUrl(imgPath); null;
 
             final newService = Service(
               id: data['id'] ?? _nextId++,
@@ -729,25 +735,39 @@ String? _authToken;
   }
 
 
-  Widget _buildReview(String name, String text) {
+  Widget _buildReview(String name, String text, {String? photoUrl}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
-      decoration:
-          BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const CircleAvatar(radius: 20, backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=3")),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 4),
-            Text(text, style: const TextStyle(fontSize: 13)),
-          ]),
-        )
-      ]),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                ? NetworkImage(photoUrl)
+                : const NetworkImage("https://i.pravatar.cc/150?img=3"), // fallback
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 4),
+                Text(text, style: const TextStyle(fontSize: 13)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
+
 
   Widget _buildServiceTab() {
     return SingleChildScrollView(
@@ -783,16 +803,16 @@ String? _authToken;
     );
   }
 
-  String? _constructImageUrl(String? path) {
-    if (path == null || path.isEmpty) return null;
-    if (path.startsWith('http')) return path;
-    // If path starts with /, assume it's relative to domain root
-    if (path.startsWith('/')) {
-      return BaseUrl.api.replaceAll('/api', '') + path;
-    }
-    // If just filename, assume it's in the default storage folder
-    return BaseUrl.api.replaceAll('/api', '') + '/storage/keahlian_teknisi/' + path;
+  String? _constructImageUrl(String? fileName) {
+    if (fileName == null || fileName.isEmpty) return null;
+
+    final base = BaseUrl.api.replaceAll('/api', '');
+
+    // Jika backend hanya kirim nama file
+    return "$base/storage/foto/gambar_layanan/$fileName";
   }
+
+
 
   Widget _buildServiceCard(int index) {
     final s = _services[index];
@@ -954,9 +974,7 @@ String? _authToken;
                               
                               final data = resp['data']['data'] ?? resp['data'];
                               final imgPath = data['gambar_layanan'] as String?;
-                              final fullImgUrl = imgPath != null
-                                  ? (BaseUrl.api.replaceAll('/api', '') + imgPath)
-                                  : null;
+                              final fullImgUrl = _constructImageUrl(imgPath); null;
 
                               setState(() {
                                 _services[index] = Service(

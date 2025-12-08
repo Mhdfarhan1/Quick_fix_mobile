@@ -4,6 +4,7 @@ import '../../services/api_service.dart';
 import '../../models/chat_model.dart';
 import '../../providers/auth_provider.dart';
 import 'chat_page.dart';
+import '../../widgets/user_bottom_nav.dart';
 
 class ChatListPage extends StatefulWidget {
   @override
@@ -30,6 +31,68 @@ class _ChatListPageState extends State<ChatListPage> {
       });
     }
   }
+
+  Future<void> deleteChat(int idChat) async {
+    final res = await ApiService.delete('/chat/delete/$idChat');
+
+    if (res['statusCode'] == 200) {
+      setState(() {
+        chats.removeWhere((c) => c.idChat == idChat);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Chat berhasil dihapus")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Gagal menghapus chat")),
+      );
+    }
+  }
+
+  void confirmDelete(String name, int idChat) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Text("Yakin ingin menghapus\n$name", textAlign: TextAlign.center),
+          contentPadding: const EdgeInsets.only(top: 10),
+          content: const SizedBox(height: 5),
+          actions: [
+            // 👉 GANTI BAGIAN INI
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context); // tutup popup (AMAN)
+
+                // tampil loading
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  barrierColor: Colors.black.withOpacity(0.3),
+                  builder: (_) => const Center(child: CircularProgressIndicator()),
+                );
+
+                await deleteChat(idChat);
+                if (!mounted) return;
+
+                Navigator.pop(context); // tutup loading
+              },
+              child: const Text("Iya", style: TextStyle(color: Colors.red)),
+            ),
+
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Tidak"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+
 
   Widget buildChatTile(ChatModel chat, String? role) {
     // Tentukan nama ditampilkan berdasarkan role
@@ -73,6 +136,42 @@ class _ChatListPageState extends State<ChatListPage> {
           ),
         );
       },
+      onLongPress: () {
+        showModalBottomSheet(
+          context: context,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (ctx) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: Center(
+                    child: Text(
+                      displayName,
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  title: Center(
+                    child: Text(
+                      "Hapus",
+                      style: TextStyle(color: Colors.red, fontSize: 16),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx); // 🔥 WAJIB pakai yg ini
+                    confirmDelete(displayName, chat.idChat);
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -84,6 +183,9 @@ class _ChatListPageState extends State<ChatListPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5FAFC),
+      bottomNavigationBar: userRole == "pelanggan"
+        ? const UserBottomNav(selectedIndex: 2)
+        : null,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

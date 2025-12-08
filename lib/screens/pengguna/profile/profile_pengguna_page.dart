@@ -4,16 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../services/api_service.dart';
 import 'package:quick_fix/screens/pengguna/Lainnya/riwayat_komplain_page.dart';
-
 
 import '../../auth/login_screen.dart';
 import 'profile_edit_pengguna_page.dart';
 import '../../../config/base_url.dart';
 import '../Lainnya/Lainnya_route.dart';
 import '../../../widgets/user_bottom_nav.dart';
+
 class ProfilePenggunaPage extends StatefulWidget {
   const ProfilePenggunaPage({super.key});
 
@@ -25,7 +24,6 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
   Map<String, dynamic>? user;
   bool isLoading = true;
   bool isUploading = false;
-
 
   @override
   void initState() {
@@ -59,14 +57,17 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
-        final userData =
-        data is Map<String, dynamic> && data.containsKey('data')
+        final userData = data is Map<String, dynamic> && data.containsKey('data')
             ? data['data']
             : data;
 
         setState(() {
           user = userData;
+          if (user!['foto_profile'] != null && user!['foto_profile'].toString().isNotEmpty) {
+            // gabungkan BaseUrl.server + storage path
+            user!['foto_profile'] = '${BaseUrl.server}/storage/foto/foto_teknisi/${user!['foto_profile']}';
+          }
+
           isLoading = false;
         });
       } else if (response.statusCode == 401) {
@@ -85,13 +86,42 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
     }
   }
 
+  void _openEdit() async {
+    if (user == null) return;
+
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileEditPenggunaPage(
+          currentName: user?['nama'],
+          currentEmail: user?['email'],
+          currentPhone: user?['no_hp'],
+        ),
+      ),
+    );
+
+    if (result != null && result is Map) {
+      setState(() {
+        user?['nama'] = result['name'] ?? user?['nama'];
+        user?['email'] = result['email'] ?? user?['email'];
+        user?['no_hp'] = result['phone'] ?? user?['no_hp'];
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil diperbarui')),
+      );
+
+      _loadUser(); // refresh data
+    }
+  }
+
   // ====================== UPLOAD FOTO PROFIL ======================
   Future<void> _pickAndUploadPhoto() async {
     if (user == null) return;
 
     final picker = ImagePicker();
     final pickedFile =
-    await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
 
     if (pickedFile == null) return;
 
@@ -107,19 +137,21 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
 
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('${BaseUrl.api}/profile'),
+        Uri.parse('${BaseUrl.api}/profile/uploadFoto'),
       )
         ..headers['Authorization'] = 'Bearer $token'
         ..fields['id_user'] = userId.toString()
-        ..files.add(
-            await http.MultipartFile.fromPath('foto_profile', file.path));
+        ..files.add(await http.MultipartFile.fromPath(
+          'foto_profile',
+          file.path,
+          filename: file.path.split("/").last,
+        ));
 
       final response = await request.send();
       final resBody = await response.stream.bytesToString();
+      final resJson = jsonDecode(resBody);
 
       debugPrint('📤 Upload Response: $resBody');
-
-      final resJson = jsonDecode(resBody);
 
       if (response.statusCode == 200 && resJson['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -127,12 +159,14 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
         );
 
         setState(() {
-          user?['foto_profile'] = resJson['path'];
+          // backend sudah mengirim URL lengkap via asset()
+          user?['foto_profile'] = '${BaseUrl.server}/storage/foto/foto_teknisi/${resJson['filename']}';
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text("Gagal upload: ${resJson['message'] ?? 'Error'}")),
+              content: Text(
+                  "Gagal upload: ${resJson['message'] ?? 'Terjadi kesalahan'}")),
         );
       }
     } catch (e) {
@@ -148,15 +182,13 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await ApiService.storage.delete(key: 'token');
-    await prefs.remove('user');
-    await prefs.remove("id_user");
     await prefs.clear();
 
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
-            (route) => false,
+        (route) => false,
       );
     }
   }
@@ -166,23 +198,24 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
   Widget build(BuildContext context) {
     final userName = user?['nama'] ?? '-';
     final userEmail = user?['email'] ?? '-';
-    final userPhone = user?['phone'] ?? '-';
     final userRole = user?['role'] ?? '-';
-    final userPhoto = user?['foto_profile'];
+    final userPhoto = (user?['foto_profile'] != null && user!['foto_profile'].toString().isNotEmpty)
+          ? user!['foto_profile']  // sudah lengkap dari _loadUser()
+          : null;
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Profilku", style: TextStyle(color: Color.fromARGB(255, 234, 234, 234))),
+        title: const Text("Profilku",
+            style: TextStyle(color: Color.fromARGB(255, 234, 234, 234))),
         backgroundColor: const Color(0xFF0C4481),
-        foregroundColor: const Color.fromARGB(255, 255, 255, 255),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color.fromARGB(255, 255, 255, 255)),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // ===================== HEADER PROFIL =====================
+            // ===== HEADER PROFIL =====
             Container(
               color: const Color(0xFF0C4381),
               padding: const EdgeInsets.all(16),
@@ -207,29 +240,24 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
                           radius: 40,
                           backgroundColor: const Color(0xFFFFCC33),
                           backgroundImage: (userPhoto != null &&
-                              userPhoto
-                                  .toString()
-                                  .isNotEmpty)
+                                  userPhoto.toString().isNotEmpty)
                               ? NetworkImage(userPhoto)
                               : null,
-                          child: (userPhoto == null ||
-                              userPhoto
-                                  .toString()
-                                  .isEmpty)
+                          child: (userPhoto == null || userPhoto.isEmpty)
                               ? Text(
-                            userName.isNotEmpty
-                                ? userName
-                                .split(' ')
-                                .map((e) => e[0])
-                                .take(2)
-                                .join()
-                                : '',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          )
+                                  userName.isNotEmpty
+                                      ? userName
+                                          .split(' ')
+                                          .map((e) => e[0])
+                                          .take(2)
+                                          .join()
+                                      : '',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
                               : null,
                         ),
                         Positioned(
@@ -245,18 +273,18 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
                               ),
                               child: isUploading
                                   ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
                                   : const Icon(
-                                Icons.camera_alt,
-                                color: Colors.white,
-                                size: 18,
-                              ),
+                                      Icons.camera_alt,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
                             ),
                           ),
                         ),
@@ -270,10 +298,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
                           Text(
                             userName,
                             style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: Colors.black,
-                            ),
+                                fontWeight: FontWeight.bold, fontSize: 18),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -291,19 +316,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.edit, color: Color(0xFF0C4381)),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                ProfileEditPenggunaPage(
-                                  currentName: userName,
-                                  currentEmail: userEmail,
-                                  currentPhone: userPhone,
-                                ),
-                          ),
-                        );
-                      },
+                      onPressed: _openEdit,
                     ),
                   ],
                 ),
@@ -334,7 +347,7 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
                 );
               },
             ),
-
+            profileMenu("Tentang Aplikasi", Icons.info_outline),
 
             const SizedBox(height: 20),
             Container(
@@ -358,16 +371,13 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
             const SizedBox(height: 30),
           ],
         ),
-        
       ),
-      bottomNavigationBar: UserBottomNav(
-        selectedIndex: 4,)
+      bottomNavigationBar: UserBottomNav(selectedIndex: 4),
     );
   }
 
   // ===================== FUNGSI TAMBAHAN =====================
-  Widget sectionTitle(String title) =>
-      Padding(
+  Widget sectionTitle(String title) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Text(
           title,
@@ -379,12 +389,8 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
         ),
       );
 
-  // ✅ profileMenu sekarang support onTap custom
-  Widget profileMenu(String title,
-      IconData icon, {
-        String? trailing,
-        VoidCallback? onTap, // <-- tambahkan parameter ini
-      }) {
+  Widget profileMenu(String title, IconData icon,
+      {String? trailing, VoidCallback? onTap}) {
     return Container(
       color: Colors.white,
       child: ListTile(
@@ -392,60 +398,55 @@ class _ProfilePenggunaPageState extends State<ProfilePenggunaPage> {
         title: Text(title),
         trailing: trailing != null
             ? Text(
-          trailing,
-          style: const TextStyle(color: Color(0xFF0C4381)),
-        )
+                trailing,
+                style: const TextStyle(color: Color(0xFF0C4381)),
+              )
             : const Icon(Icons.chevron_right, color: Colors.grey),
-
-        onTap: () {
-          // Kalau ada onTap custom (contoh: Riwayat Komplain) pakai itu dulu
-          if (onTap != null) {
-            onTap();
-            return;
-          }
-
-          // ====== ROUTING DEFAULT BERDASARKAN JUDUL ======
-          switch (title) {
-            case "Keamanan akun":
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const KeamananAkunPage()),
-              );
-              break;
-
-            case "Alamat tersimpan":
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PilihAlamatPage()),
-              );
-              break;
-
-            case "Aktivitas":
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AktivitasPage()),
-              );
-              break;
-
-            case "Bantuan & laporan":
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const BantuanLaporanPage()),
-              );
-              break;
-
-            case "Kebijakan Privasi":
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const KebijakanPrivasiPage()),
-              );
-              break;
-
-            case "Atur akun":
-            // belum dipakai, biarkan kosong
-              break;
-          }
-        },
+        onTap: onTap ??
+            () {
+              switch (title) {
+                case "Keamanan akun":
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const KeamananAkunPage()),
+                  );
+                  break;
+                case "Alamat tersimpan":
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PilihAlamatPage()),
+                  );
+                  break;
+                case "Aktivitas":
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AktivitasPage()),
+                  );
+                  break;
+                case "Bantuan & laporan":
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const BantuanLaporanPage()),
+                  );
+                  break;
+                case "Kebijakan Privasi":
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const KebijakanPrivasiPage()),
+                  );
+                  break;
+                case "Tentang Aplikasi":
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const TentangAplikasiPage()),
+                  );
+                  break;
+              }
+            },
       ),
     );
   }

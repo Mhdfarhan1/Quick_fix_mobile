@@ -85,12 +85,45 @@ class StatusPopup {
   /// ✨ UI DATA PER STATUS
   static Map<String, dynamic> _getStatusUI(String status) {
     switch (status) {
-      case 'batal':
+
+      case 'diproses':
+      case 'menunggu':
+      case 'menunggu_konfirmasi':
+      case 'menunggu_diterima':  
         return {
-          "color": Colors.red,
-          "icon": Icons.cancel,
-          "title": "Pesanan Dibatalkan",
-          "subtitle": "Pelanggan atau teknisi membatalkan pesanan ini."
+          "color": Colors.orange,
+          "icon": Icons.hourglass_empty,
+          "title": "Menunggu Diproses",
+          "subtitle": "Pesanan Anda sedang menunggu konfirmasi."
+        };
+
+      case 'dalam_perjalanan':
+      case 'menuju':
+      case 'menuju_lokasi':
+        return {
+          "color": Colors.green,
+          "icon": Icons.directions_run,
+          "title": "Teknisi Menuju Lokasi",
+          "subtitle": "Teknisi sedang menuju lokasi Anda."
+        };
+
+      case 'proses':
+      case 'mulai':
+      case 'onprogress':
+      case 'sedang_bekerja':
+        return {
+          "color": Colors.green.shade700,
+          "icon": Icons.build,
+          "title": "Pekerjaan Sedang Berlangsung",
+          "subtitle": "Teknisi sedang mengerjakan pesanan Anda."
+        };
+
+      case 'dijadwalkan':
+        return {
+          "color": Colors.blue,
+          "icon": Icons.schedule,
+          "title": "Telah Dijadwalkan",
+          "subtitle": "Pekerjaan akan dilakukan sesuai jadwal."
         };
 
       case 'selesai':
@@ -101,29 +134,16 @@ class StatusPopup {
           "subtitle": "Terima kasih telah menggunakan layanan kami."
         };
 
-      case 'menuju_lokasi':
+      case 'batal':
+      case 'dibatalkan':
         return {
-          "color": Colors.green,
-          "icon": Icons.directions_run,
-          "title": "Teknisi Menuju Lokasi",
-          "subtitle": "Harap tunggu teknisi tiba di lokasi Anda."
+          "color": Colors.red,
+          "icon": Icons.cancel,
+          "title": "Pesanan Dibatalkan",
+          "subtitle": "Pelanggan atau teknisi membatalkan pesanan ini."
         };
 
-      case 'sedang_bekerja':
-        return {
-          "color": Colors.green.shade700,
-          "icon": Icons.build,
-          "title": "Teknisi Sedang Bekerja",
-          "subtitle": "Pekerjaan sedang berlangsung."
-        };
-
-      case 'dijadwalkan':
-        return {
-          "color": Colors.blue,
-          "icon": Icons.schedule,
-          "title": "Pekerjaan Dijadwalkan",
-          "subtitle": "Teknisi akan datang sesuai jadwal."
-        };
+      
 
       default:
         return {
@@ -134,4 +154,5 @@ class StatusPopup {
         };
     }
   }
+
 }

@@ -8,7 +8,9 @@ import '../auth/reset_password_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../teknisi/home/Home_page_teknisi.dart';
 import '../pengguna/home/home_page.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/auth_provider.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -66,6 +68,11 @@ class _LoginScreenState extends State<LoginScreen> {
           // 🔐 SIMPAN TOKEN DI SECURE STORAGE
           await ApiService.storage.write(key: "token", value: token);
           await Future.delayed(const Duration(milliseconds: 200));
+
+          // panggil AuthProvider agar state global update
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          auth.setUser(user);
+
 
 
           print("TOKEN DISIMPAN DI SECURE STORAGE: $token");

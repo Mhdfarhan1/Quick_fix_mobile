@@ -119,9 +119,6 @@ class _SearchLandingPageState extends State<SearchLandingPage> {
         _buildSearchHistory(),
 
         const Divider(height: 1, thickness: 8, color: Color(0xFFF0F0F0)),
-
-        // 👀 Recently Viewed
-        _buildRecentlyViewed(),
       ],
     );
   }

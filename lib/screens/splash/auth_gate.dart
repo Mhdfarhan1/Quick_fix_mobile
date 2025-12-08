@@ -29,8 +29,7 @@ class _AuthGateState extends State<AuthGate> {
     print("=================================");
     print("[AUTH_GATE] Cek login dipanggil");
     print("[AUTH_GATE] Token: ${auth.token}");
-    print("[AUTH_GATE] Role: ${auth.userRole}");
-    print("[AUTH_GATE] UserData: ${auth.userData}");
+    print("[AUTH_GATE] Role (before refresh): ${auth.userRole}");
     print("=================================");
 
     if (!mounted) return;
@@ -44,8 +43,13 @@ class _AuthGateState extends State<AuthGate> {
       return;
     }
 
-    // ✔ Token ada → cek role user
+    // 🔥 Tambahkan ini → memastikan role benar dari server
+    await auth.refreshUser();
+
+    // Setelah refresh, ambil role terbaru
     final role = auth.userRole?.toLowerCase();
+
+    print("[AUTH_GATE] Role (after refresh): $role");
 
     if (role == "teknisi") {
       Navigator.pushReplacement(
@@ -55,12 +59,12 @@ class _AuthGateState extends State<AuthGate> {
       return;
     }
 
-    // default → pelanggan
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const HomePage()),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {

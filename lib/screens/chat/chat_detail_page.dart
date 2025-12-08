@@ -623,9 +623,6 @@ void initState() {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 itemBuilder: (context) => [
                   PopupMenuItem(child: Text("Tampilkan Profil")),
-                  PopupMenuItem(child: Text("Kembali ke halaman utama")),
-                  PopupMenuItem(child: Text("Cari")),
-                  PopupMenuItem(child: Text("Senyapkan")),
                   PopupMenuItem(child: Text("Laporkan pengguna ini")),
                   PopupMenuItem(child: Text("Butuh bantuan?")),
                 ],

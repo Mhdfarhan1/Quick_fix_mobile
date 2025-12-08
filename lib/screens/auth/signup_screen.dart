@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import 'login_screen.dart';
 import 'otp_screen.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:flutter/services.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,10 +17,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
+  final _phoneFormatter = MaskTextInputFormatter(
+    mask: '####-####-####',
+    filter: { "#": RegExp(r'[0-9]') },
+    type: MaskAutoCompletionType.lazy,
+  );
+
   final _emailController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
+
+  String? _emailError;
+  String? _usernameError;
+  String? _passwordError;
+  String? _phoneError;
 
   String _selectedRole = 'pelanggan';
   final List<String> _roles = ['pelanggan', 'teknisi'];
@@ -38,10 +51,37 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final password = _passwordController.text.trim();
     final phone = _phoneController.text.trim();
 
-    if (email.isEmpty || username.isEmpty || password.isEmpty || phone.isEmpty) {
-      _showSnackBar('Semua field harus diisi!', Colors.red);
-      return;
+    setState(() {
+      _emailError = null;
+      _usernameError = null;
+      _passwordError = null;
+      _phoneError = null;
+    });
+
+    bool isValid = true;
+
+    if (email.isEmpty) {
+      setState(() => _emailError = 'Email wajib diisi');
+      isValid = false;
     }
+    if (username.isEmpty) {
+      setState(() => _usernameError = 'Username wajib diisi');
+      isValid = false;
+    }
+    if (password.isEmpty) {
+      setState(() => _passwordError = 'Kata sandi wajib diisi');
+      isValid = false;
+    }
+    if (phone.isEmpty) {
+      setState(() => _phoneError = 'Nomor HP wajib diisi');
+      isValid = false;
+    } else if (_phoneFormatter.getUnmaskedText().length != 12) {
+      // Validasi panjang input angka saja
+      setState(() => _phoneError = 'Nomor HP harus 12 digit');
+      isValid = false;
+    }
+
+    if (!isValid) return;
 
     setState(() => _isLoading = true);
 
@@ -51,7 +91,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         email: email,
         password: password,
         role: _selectedRole,
-        noHp: phone, // pastikan sesuai parameter API
+        noHp: phone,
       );
 
       final statusCode = response['statusCode'];
@@ -83,13 +123,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
         });
       } else if (statusCode == 422 && data['errors'] != null) {
         final errors = data['errors'] as Map<String, dynamic>;
-        String errorMsg = '';
-        errors.forEach((key, value) {
-          if (value != null && value is List && value.isNotEmpty) {
-            errorMsg += '${value[0]}\n';
-          }
+        
+        setState(() {
+          if (errors['email'] != null) _emailError = errors['email'][0];
+          if (errors['nama'] != null) _usernameError = errors['nama'][0];
+          if (errors['password'] != null) _passwordError = errors['password'][0];
+          if (errors['no_hp'] != null) _phoneError = errors['no_hp'][0];
         });
-        _showSnackBar(errorMsg.trim(), Colors.red);
+
+        _showSnackBar('Harap perbaiki data yang salah.', Colors.red);
       } else {
         final message = data['message'] ?? 'Terjadi kesalahan server.';
         _showSnackBar(message, Colors.red);
@@ -123,7 +165,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           height: screenSize.height,
           child: Stack(
             children: [
-              // Background
               Container(
                 height: screenSize.height * 0.4,
                 width: double.infinity,
@@ -136,8 +177,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ],
                 ),
               ),
-
-              // Form
               Positioned(
                 top: screenSize.height * 0.3,
                 left: 0,
@@ -162,6 +201,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         icon: Icons.email_outlined,
                         hintText: 'Email',
                         controller: _emailController,
+                        errorText: _emailError,
                       ),
                       const SizedBox(height: 16),
 
@@ -169,6 +209,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         icon: Icons.person_outline,
                         hintText: 'Username',
                         controller: _usernameController,
+                        errorText: _usernameError,
                       ),
                       const SizedBox(height: 16),
 
@@ -181,14 +222,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         controller: _passwordController,
                         onToggleVisibility: () =>
                             setState(() => _obscurePassword = !_obscurePassword),
+                        errorText: _passwordError,
                       ),
                       const SizedBox(height: 16),
 
-                      // NOMOR HP (baru)
                       _buildTextField(
                         icon: Icons.phone_android,
                         hintText: 'Nomor HP',
                         controller: _phoneController,
+                        errorText: _phoneError,
+                        inputFormatters: [
+                          _phoneFormatter,
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
                       ),
 
                       const SizedBox(height: 24),
@@ -252,7 +298,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: const Color(0xFFF4FCFD),
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButton<String>(
@@ -274,17 +320,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
     required IconData icon,
     required String hintText,
     required TextEditingController controller,
+    String? errorText,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextField(
       controller: controller,
+      inputFormatters: inputFormatters,
+      keyboardType: TextInputType.number,
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Colors.grey),
         hintText: hintText,
+        errorText: errorText,
         filled: true,
-        fillColor: Colors.grey[200],
+        fillColor: const Color(0xFFF4FCFD),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF20C9E2)),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEA0C0C)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEA0C0C)),
         ),
       ),
     );
@@ -295,6 +362,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     required bool obscureText,
     required VoidCallback onToggleVisibility,
     required TextEditingController controller,
+    String? errorText,
   }) {
     return TextField(
       controller: controller,
@@ -302,11 +370,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
         hintText: hintText,
+        errorText: errorText,
         filled: true,
-        fillColor: Colors.grey[200],
+        fillColor: const Color(0xFFF4FCFD),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF20C9E2)),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEA0C0C)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEA0C0C)),
         ),
         suffixIcon: IconButton(
           icon: Icon(

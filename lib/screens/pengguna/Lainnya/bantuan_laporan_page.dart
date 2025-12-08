@@ -43,12 +43,6 @@ class BantuanLaporanPage extends StatelessWidget {
             subtitle: "Email: support@example.com\nWA: 0812-3456-7890",
             onTap: () {},
           ),
-          _buildCard(
-            icon: CupertinoIcons.info,
-            title: "Tentang Aplikasi",
-            subtitle: "Versi 1.0.0 - Build Stable",
-            onTap: () {},
-          ),
         ],
       ),
     );

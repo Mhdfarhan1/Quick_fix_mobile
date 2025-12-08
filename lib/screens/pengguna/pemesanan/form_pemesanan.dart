@@ -20,6 +20,7 @@ class FormPemesanan extends StatefulWidget {
   final String namaTeknisi;
   final String namaKeahlian;
   final int harga;
+  final String fotoProfile; 
 
   const FormPemesanan({
     super.key,
@@ -29,6 +30,7 @@ class FormPemesanan extends StatefulWidget {
     required this.namaTeknisi,
     required this.namaKeahlian,
     required this.harga,
+    required this.fotoProfile
   });
 
   @override
@@ -441,36 +443,56 @@ class _FormPemesananState extends State<FormPemesanan> {
   }
 
   // ======== Sub-Widgets ========
-  Widget _layananCard() => Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: const Offset(0, 4))
-        ]),
-        child: Row(children: [
+  Widget _layananCard() {
+    final foto = widget.fotoProfile;
+    final imageUrl = (foto == null || foto.isEmpty)
+        ? "${BaseUrl.storage}/foto/default_profile.jpg"
+        : "${BaseUrl.storage}/foto_profile/$foto";
+
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))
+        ],
+      ),
+      child: Row(
+        children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.network(
-              "${BaseUrl.storage}/gambar_layanan/default_layanan.jpg",
+              imageUrl,
               width: 80,
               height: 80,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(width: 80, height: 80, color: Colors.grey[200]),
+              errorBuilder: (_, __, ___) => Container(
+                width: 80,
+                height: 80,
+                color: Colors.grey[200],
+              ),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(widget.namaTeknisi, style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Text(widget.namaKeahlian, style: const TextStyle(color: Colors.black54)),
-              const SizedBox(height: 6),
-              Text(fmt(widget.harga), style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              const Text("*Garansi layanan hingga 7 hari", style: TextStyle(fontSize: 12, color: Colors.black54))
-            ]),
-          )
-        ]),
-      );
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.namaTeknisi, style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text(widget.namaKeahlian, style: TextStyle(color: Colors.black54)),
+                const SizedBox(height: 6),
+                Text(fmt(widget.harga), style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _deskripsiMasalah() => Container(
     decoration: BoxDecoration(

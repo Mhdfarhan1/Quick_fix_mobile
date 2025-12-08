@@ -63,6 +63,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     loadData();
     _startBannerAutoSlide();
+    fetchPesanan();
   }
 
   @override
@@ -188,9 +189,13 @@ class _HomePageState extends State<HomePage> {
 
         if (data['status'] == true && data['data'] != null) {
           final List<dynamic> result = (data['data'] as List)
+          
               .where((item) => item['status']?.toLowerCase() != 'dibatalkan')
               .take(6)
               .toList();
+              debugPrint("📦 Total pesanan sebelum filter: ${data['data'].length}");
+              debugPrint("📦 Total pesanan sesudah filter (dibatalkan dihapus): ${result.length}");
+
 
           debugPrint('✅ [fetchPesanan] Berhasil memuat ${result.length} pesanan.');
 
@@ -207,6 +212,8 @@ class _HomePageState extends State<HomePage> {
             } else if (currentStatus != lastStatus) {
               // --- MUNCULKAN POPUP HANYA SAAT STATUS BERUBAH ---
               debugPrint("🔥 STATUS BERUBAH dari $lastStatus → $currentStatus");
+              debugPrint("📍 Status dari API: $currentStatus");
+
               lastStatus = currentStatus;
 
               StatusPopup.show(context, status: currentStatus);
@@ -320,6 +327,7 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                
                 _buildHeader(context),
                 const SizedBox(height: 50),
 
@@ -330,9 +338,6 @@ class _HomePageState extends State<HomePage> {
                 // Status pesanan
                 _buildPesananSection(),
                 const SizedBox(height: 20),
-
-                
-
                 // 🔹 Banner promosi (di bawah status pesanan)
                 _buildBannerSection(),
                 const SizedBox(height: 20),
@@ -659,114 +664,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGallerySection() {
-    if (isLoadingPesanan) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Memuat galeri pekerjaan...',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 160,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: 3,
-                itemBuilder: (_, __) => Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: shimmerBox(160, 260),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (pesananList.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            "Galeri Pekerjaan Terbaru",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-        ),
-        SizedBox(
-          height: 160,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: pesananList.length,
-            itemBuilder: (context, index) {
-              final pesanan = pesananList[index];
-              final foto = pesanan['foto_bukti'] ?? '';
-              final nama = pesanan['nama_teknisi'] ?? '-';
-              final fullUrl = '${BaseUrl.server}/storage/foto/bukti/$foto';
-
-              return Container(
-                width: 260,
-                margin: EdgeInsets.only(left: index == 0 ? 16 : 8, right: 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 5,
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: Stack(
-                    children: [
-                      NetworkImageWithFallback(
-                        imageUrl: fullUrl,
-                        fit: BoxFit.cover,
-                      ),
-                      Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [Colors.black54, Colors.transparent],
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        left: 10,
-                        bottom: 8,
-                        child: Text(
-                          nama,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 5,
-                                color: Colors.black45,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               );

@@ -38,10 +38,14 @@ class NotificationPage extends StatelessWidget {
               backgroundColor: const Color(0xFF0C4481),
               foregroundColor: Colors.white,
               title: const Text("Notifikasi"),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
-              ),
+
+              // 🔥 Hilangkan panah back jika role = pelanggan
+              leading: auth.userRole == "pelanggan"
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () => Navigator.pop(context),
+                    ),
             ),
 
             body: const _NotificationList(),

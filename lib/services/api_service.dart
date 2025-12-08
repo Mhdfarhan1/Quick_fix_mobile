@@ -861,8 +861,43 @@ static Future<Map<String, dynamic>> deleteLayananTeknisi({
     };
   }
 
+  static Future<Map<String, dynamic>> updateProfile({
+    required String token,
+    required String nama,
+    required String email,
+    String? noHp,
+  }) async {
+    final url = Uri.parse('${BaseUrl.api}/user/update');
 
+    final response = await http.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'nama': nama,
+        'email': email,
+        'no_hp': noHp,
+      }),
+    );
 
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return {'success': true, 'data': body};
+    } else if (response.statusCode == 422) {
+      // validasi gagal
+      return {'success': false, 'status': 422, 'errors': body};
+    } else {
+      return {
+        'success': false,
+        'status': response.statusCode,
+        'message': body['message'] ?? 'Terjadi kesalahan'
+      };
+    }
+  }
 
   
 

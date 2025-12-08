@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
 import '../../../config/base_url.dart';
 import '../pengguna/pemesanan/form_pemesanan.dart';
-import '../../services/keranjang_service.dart';
+import '../teknisi/profile/list_ulasan_page.dart';
+import '../../models/review_model.dart';
 
 class HalamanLayanan extends StatefulWidget {
   final int idTeknisi;
@@ -16,6 +19,7 @@ class HalamanLayanan extends StatefulWidget {
   final double rating;
   final int harga;
   final String gambarUtama;
+  final String? fotoProfile;
   final List<String> gambarLayanan;
 
   const HalamanLayanan({
@@ -28,6 +32,7 @@ class HalamanLayanan extends StatefulWidget {
     required this.harga,
     required this.gambarUtama,
     required this.gambarLayanan,
+    required this.fotoProfile,
   });
 
   @override
@@ -42,9 +47,18 @@ class _HalamanLayananState extends State<HalamanLayanan> {
   int? harga;
   List<String> gambar = [];
   List<dynamic> ulasan = [];
-  int garansi = 0 ;
   String lokasi = "";
-  int totalPesanan = 0;
+  String deskripsiLayanan = "";
+
+  String formatRupiah(num number) {
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    return formatter.format(number);
+  }
+
 
   @override
   void initState() {
@@ -68,18 +82,18 @@ class _HalamanLayananState extends State<HalamanLayanan> {
   Future<void> fetchDetail() async {
     final url = Uri.parse(
         "${BaseUrl.api}/layanan-detail?id_teknisi=${widget.idTeknisi}&id_keahlian=${widget.idKeahlian}");
-        print("🔎 URL dipanggil: $url");
-
-        print("🖼️ Data gambar dari API: $gambar");
-
+    print("🔎 URL dipanggil: $url");
 
     try {
       final res = await http.get(url).timeout(const Duration(seconds: 8));
+      print("📥 STATUS CODE: ${res.statusCode}");
+      print("📥 RAW BODY: ${res.body}");
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
-        print("🔥 BODY DETAIL: ${res.body}");
 
+        print("📌 DESKRIPSI DARI API: ${body["deskripsi"]}");
+        print("📌 GAMBAR DARI API: ${body["gambar"]}");
 
         if (!mounted) return;
 
@@ -87,20 +101,24 @@ class _HalamanLayananState extends State<HalamanLayanan> {
           harga = int.tryParse(body["harga"].toString()) ?? 0;
           gambar = List<String>.from(body["gambar"]);
           ulasan = body["ulasan"];
-          garansi = body["garansi"] ?? 0;
           lokasi = body["lokasi"];
-          totalPesanan = body["total_pesanan"];
+
+          deskripsiLayanan = body["deskripsi"] ?? "";
+          print("📌 DESKRIPSI MASUK STATE: $deskripsiLayanan");
+
           loading = false;
         });
       } else {
+        print("❌ ERROR DETAIL: ${res.body}");
         setState(() => loading = false);
       }
     } catch (e) {
+      print("🚨 EXCEPTION DETAIL: $e");
       if (!mounted) return;
       setState(() => loading = false);
-      print("Fetch Error: $e");
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -182,6 +200,7 @@ class _HalamanLayananState extends State<HalamanLayanan> {
                 }
 
                 Navigator.push(
+                  
                   context,
                   MaterialPageRoute(
                     builder: (_) => FormPemesanan(
@@ -191,6 +210,7 @@ class _HalamanLayananState extends State<HalamanLayanan> {
                       namaTeknisi: widget.nama,
                       namaKeahlian: widget.nama,
                       harga: harga ?? 0,
+                      fotoProfile: widget.fotoProfile ?? "",
                     ),
                   ),
                 );
@@ -220,48 +240,73 @@ class _HalamanLayananState extends State<HalamanLayanan> {
   Widget _headerInfo() {
     return Container(
       padding: const EdgeInsets.all(16),
-      color: Colors.blue[800],
+      color: const Color(0xFF0C4481),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.deskripsi,
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              )),
-          const SizedBox(height: 6),
-          Text(widget.nama,
-              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(Icons.star, color: Colors.amber, size: 18),
-              Text(widget.rating.toString(),
-                  style: const TextStyle(color: Colors.white)),
-              const SizedBox(width: 6),
-              Text("$totalPesanan+ Pesanan",
-                  style: const TextStyle(color: Colors.white70)),
-            ],
-          ),
-          const SizedBox(height: 6),
           Text(
-            "Rp ${harga ?? 0}",
-            style: const TextStyle(
-              color: Colors.amber,
+            widget.deskripsi,
+            style: GoogleFonts.poppins(
+              color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 6),
-          Text("Garansi $garansi hari",
-              style: const TextStyle(color: Colors.white70)),
-          Text(lokasi,
-              style: const TextStyle(color: Colors.white70)),
+          Text(
+            widget.nama,
+            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.star, color: Colors.amber, size: 18),
+              Text(
+                widget.rating.toString(),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(width: 6),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // Row untuk harga dan tombol nama teknisi
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                formatRupiah(harga ?? 0),
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // Aksi saat tombol ditekan
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 172, 245, 255),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8), // sudut melengkung
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8), // ukuran tombol
+                ),
+                child: Text(
+                  widget.nama,
+                  style: const TextStyle(color: Color(0xFF0C4481)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
         ],
       ),
     );
   }
+
+
 
   Widget _spesifikasiSection() {
     return Padding(
@@ -269,10 +314,30 @@ class _HalamanLayananState extends State<HalamanLayanan> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Spesifikasi Layanan",
-              style: GoogleFonts.poppins(
-                  fontSize: 16, fontWeight: FontWeight.bold)),
+
+          // JUDUL
+          Text(
+            "Spesifikasi Layanan",
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
           const SizedBox(height: 10),
+
+          // ⬅️ DESKRIPSI LAYANAN DARI API
+          Text(
+            deskripsiLayanan,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.black87,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // GAMBAR SHORIZONTAL SCROLL
           SizedBox(
             height: 150,
             child: ListView.separated(
@@ -292,6 +357,7 @@ class _HalamanLayananState extends State<HalamanLayanan> {
               },
             ),
           ),
+
           const SizedBox(height: 10),
           const Divider(),
         ],
@@ -299,18 +365,62 @@ class _HalamanLayananState extends State<HalamanLayanan> {
     );
   }
 
+
   Widget _ulasanHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
           const Icon(Icons.star, color: Colors.amber),
-          Text(" • Ulasan Pelanggan",
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          const SizedBox(width: 6),
+
+          Text(
+            "Ulasan Pelanggan",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+
+          const Spacer(),
+
+          // 👉 PANAH KE HALAMAN LIST ULASAN
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ListUlasanPage(
+                    reviews: ulasan.map<TechnicianReview>((u) {
+                      return TechnicianReview(
+                        id: u["id"] ?? 0,
+                        idPemesanan: u["id_pemesanan"] ?? 0,
+                        idPelanggan: u["id_pelanggan"] ?? 0,
+                        idTeknisi: u["id_teknisi"] ?? 0,
+                        namaPelanggan: u["nama"] ?? "-",
+                        komentar: u["komentar"] ?? "",
+                        rating: (u["rating"] is int)
+                            ? u["rating"]
+                            : int.tryParse("${u["rating"]}") ?? 0,
+                        createdAt: DateTime.tryParse(u["created_at"] ?? "") ?? DateTime.now(),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              );
+            },
+            child: Icon(
+              Icons.arrow_forward_ios,
+              size: 18,
+              color: Colors.blue[800],
+            ),
+          ),
         ],
       ),
     );
   }
+
+
 
   Widget _ulasanList() {
     if (ulasan.isEmpty) {
@@ -320,12 +430,16 @@ class _HalamanLayananState extends State<HalamanLayanan> {
       );
     }
 
+    // Ambil hanya 3 ulasan pertama
+    final limitedUlasan = ulasan.take(3).toList();
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: ulasan.length,
+      itemCount: limitedUlasan.length,
       itemBuilder: (context, index) {
-        final u = ulasan[index];
+        final u = limitedUlasan[index];
+
         return ListTile(
           leading: const CircleAvatar(child: Icon(Icons.person)),
           title: Text(u["nama"]),
