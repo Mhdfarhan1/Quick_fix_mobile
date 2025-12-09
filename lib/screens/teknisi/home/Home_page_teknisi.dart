@@ -15,6 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/api_service.dart';
 import '../verifikasi/verifikasi_teknisi_page.dart';
 import '../../chat/chat_list_page.dart';
+import '../pesan/terima_pesanan_page.dart';
+
 
 
 
@@ -35,6 +37,11 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
 
   bool _loadingTasks = true;
   bool _loadingPesananBaru = true;
+
+  String limitText(String text, int limit) {
+    if (text.length <= limit) return text;
+    return text.substring(0, limit) + "...";
+  }
 
 
   @override
@@ -508,8 +515,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                   children: [
                     _statusBox("Dijadwalkan", dijadwalkanCount),
                     _statusBox("Sedang bekerja", sedangCount),
-                    _statusBox("Terlambat", 0),
-                    _statusBox("Selesai", selesaiCount),
+                    
 
                   ],
                 ),
@@ -532,11 +538,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
         _loadingPesananBaru
             ? shimmerPesananBaru()
             : Column(
-                children: menungguList.map((t) => _pesananBaruCard(
-                  t.namaPelanggan,
-                  t.deskripsi,
-                  DateFormat('HH:mm').format(t.createdAt),
-                )).toList(),
+                children: menungguList.map((t) => _pesananBaruCard(t.toJson())).toList(),
               ),
 
 
@@ -564,67 +566,71 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
     );
   }
 
-  Widget _pesananBaruCard(String nama, String deskripsi, String jam) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+  Widget _pesananBaruCard(Map<String, dynamic> order) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DetailPesananPage(order: order),
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            radius: 25,
-            backgroundImage: AssetImage('assets/images/teknisi_avatar.png'),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  nama,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.15),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 25,
+              backgroundImage: AssetImage('assets/images/teknisi_avatar.png'),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    order["nama_pelanggan"] ?? "-",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-                Text(
-                  deskripsi,
-                  style: const TextStyle(fontSize: 12, color: Colors.black87),
-                ),
-                Text(
-                  jam,
-                  style: const TextStyle(fontSize: 11, color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFCC33),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                  Text(
+                    limitText(order["keluhan"] ?? "-", 40),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    order["jam_booking"] ?? "-",
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             ),
-            child: const Text(
-              "Terima",
-              style: TextStyle(color: Colors.black, fontSize: 12),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
 
   
 

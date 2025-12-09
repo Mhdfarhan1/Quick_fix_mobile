@@ -88,4 +88,28 @@ class Task {
           : DateTime.now(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "id_pemesanan": id,
+      "kode_pemesanan": kodePemesanan,
+      "nama_pelanggan": namaPelanggan,
+      "keluhan": deskripsi,
+      "status_pekerjaan": statusPekerjaan,
+      "harga": harga,
+      "tanggal_booking": tanggalBooking?.toIso8601String(),
+      "jam_booking": jamBooking,
+      "alamat_lengkap": alamatLengkap,
+      "kota": kota,
+      "provinsi": provinsi,
+      "latitude": latitude,
+      "longitude": longitude,
+      "nama_kategori": namaKategori,
+      "nama_keahlian": namaKeahlian,
+      "nama_teknisi": namaTeknisi,
+      "id_teknisi": idTeknisi,
+      "created_at": createdAt.toIso8601String(),
+    };
+  }
+
 }

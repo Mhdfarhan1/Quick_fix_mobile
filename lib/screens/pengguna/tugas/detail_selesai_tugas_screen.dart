@@ -208,7 +208,7 @@ class _OrderDetailSelesaiScreenState extends State<OrderDetailSelesaiScreen> {
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: const Color(0xFFFFCC33),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           onPressed: () async {
@@ -222,7 +222,13 @@ class _OrderDetailSelesaiScreenState extends State<OrderDetailSelesaiScreen> {
                             await _submitReview(rating: rating, komentar: komentarController.text.trim());
                             Navigator.of(context).pop(); // tutup loading
                           },
-                          child: const Text("Kirim", style: TextStyle(fontWeight: FontWeight.bold)),
+                          child: const Text(
+                            "Kirim",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
                         ),
                       ),
                     ],
