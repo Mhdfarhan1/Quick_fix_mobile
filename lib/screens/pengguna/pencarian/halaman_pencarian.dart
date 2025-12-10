@@ -67,6 +67,9 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
   String? selectedKota;
   double minRating = 0.0;
 
+  final ScrollController _scrollController = ScrollController();
+
+
   // Dummy data provinsi → kota
   final List<Map<String, dynamic>> provinsiList = [
     {"nama": "Jawa Barat", "id": 1},
@@ -90,6 +93,9 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
 
   TextEditingController minHargaController = TextEditingController();
   TextEditingController maxHargaController = TextEditingController();
+
+  late TextEditingController searchController;
+
 
   bool onlyOnline = false;
 
@@ -128,17 +134,27 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
   @override
   void initState() {
     super.initState();
+    searchController = TextEditingController(text: widget.searchQuery);
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
+        fetchTeknisi(loadMore: true);   // ⬅️ auto load
+      }
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      fetchKategori(); // <-- WAJIB dipanggil dulu
+      fetchKategori();
       fetchTeknisi();
     });
   }
 
 
+
   @override
   void dispose() {
     _debounce?.cancel();
+    searchController.dispose();
     super.dispose();
   }
 
@@ -151,6 +167,13 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     return int.tryParse(digits) ?? 0;
   }
 
+  void _trimListMemory() {
+    if (teknisiList.length > 40) {        // simpan 40 item terakhir saja
+      teknisiList.removeRange(0, teknisiList.length - 40);
+    }
+  }
+
+
 
   Future<void> fetchTeknisi({bool loadMore = false}) async {
     if (_isLoading && !loadMore) return;
@@ -162,60 +185,62 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
       setState(() => _isLoadMore = true);
     }
 
-    // Parse input harga
     final minHarga = parseRupiah(minHargaController.text);
     final maxHarga = parseRupiah(maxHargaController.text);
 
-    // Build query parameters
     final Map<String, String> queryParams = {};
 
-    // Filter dari search bar & kategori
-    if (widget.searchQuery.isNotEmpty) queryParams['search'] = widget.searchQuery;
+    if (searchController.text.isNotEmpty) {
+      queryParams['search'] = searchController.text;
+    }
     if (_selectedCategory != "Semua") queryParams['kategori'] = _selectedCategory;
     if (lokasi.isNotEmpty) queryParams['lokasi'] = lokasi;
     if (sortBy.isNotEmpty) queryParams['sort'] = sortBy;
 
-    // Filter bottomsheet
     if (selectedKategoriId != null) queryParams['id_kategori'] = selectedKategoriId.toString();
     if (selectedSubKategoriId != null) queryParams['id_keahlian'] = selectedSubKategoriId.toString();
     if (minHarga > 0) queryParams['min_harga'] = minHarga.toString();
     if (maxHarga > 0) queryParams['max_harga'] = maxHarga.toString();
 
-    // Filter Provinsi / Kota
     if (selectedProvinsi != null) queryParams['provinsi'] = selectedProvinsi!;
     if (selectedKota != null) queryParams['kota'] = selectedKota!;
-
-    // Filter rating
     if (minRating > 0) queryParams['min_rating'] = minRating.toString();
 
-    // Saat pertama kali search, pakai lokasi default
-    if (widget.searchQuery.isEmpty && lokasi.isEmpty) {
-      lokasi = "Jakarta"; // dummy alamat default
-      queryParams['lokasi'] = lokasi;
-    }
-
-    // Pagination
     queryParams['page'] = page.toString();
     queryParams['limit'] = '6';
-
 
     final uri = Uri.parse("${BaseUrl.api}/search-teknisi")
         .replace(queryParameters: queryParams);
 
     try {
-      final response =
-          await http.get(uri).timeout(const Duration(seconds: 8));
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
+        final List data = body["data"] ?? [];
 
         setState(() {
           if (!loadMore) teknisiList.clear();
 
-          teknisiList.addAll(body["data"] ?? []);
-          hasMore = body["has_more"] ?? false;
+          teknisiList.addAll(data);
 
-          if (hasMore) page++;
+          // ★ Cegah duplikasi
+          final ids = <String>{};
+          teknisiList = teknisiList.where((item) {
+            final id = item["id_teknisi"].toString();
+            if (ids.contains(id)) return false;
+            ids.add(id);
+            return true;
+          }).toList();
+
+          _trimListMemory();
+
+          // ★ Perbaikan pagination
+          if (data.length < 6) {
+            hasMore = false;
+          } else {
+            page++;
+          }
         });
       }
     } catch (e) {
@@ -268,13 +293,14 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     teknisiList.clear();
     hasMore = true;
 
-    // 🚨 Jika filter kategori atau subkategori dipilih, kosongkan search
-    if (selectedKategoriId != null || selectedSubKategoriId != null) {
-      widget.searchQuery = '';
-    }
+    // ❌ jangan kosongkan search!
+    // if (selectedKategoriId != null || selectedSubKategoriId != null) {
+    //   widget.searchQuery = '';
+    // }
 
     fetchTeknisi();
   }
+
 
 
   @override
@@ -284,26 +310,28 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSearchBarWithFilter(),
-            const SizedBox(height: 10),
-            _buildHeaderRow(yellow),
-            const SizedBox(height: 14),
+      body: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          SliverToBoxAdapter(child: _buildSearchBarWithFilter()),
+          SliverToBoxAdapter(child: _buildHeaderRow(const Color(0xFFFFCC33))),
+          
+          if (_isLoading)
+            SliverToBoxAdapter(child: _buildSkeletonGrid())
+          else
+            _buildResultsGrid(),
 
-            // hasil pencarian
-            if (_isLoading)
-              _buildSkeletonGrid()
-            else
-              _buildResultsList(yellow),
-
-            _buildLoadMoreButton(),
-          ],
-        ),
-      ),
+          // ⬅️ Loader infinite scroll
+          SliverToBoxAdapter(
+            child: _isLoadMore
+              ? Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : SizedBox.shrink(),
+          ),
+        ],
+      )
     );
   }
 
@@ -340,17 +368,16 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
         // 🔍 Kotak pencarian
         Expanded(
           child: TextField(
-            controller: TextEditingController(text: widget.searchQuery),
+            controller: searchController,
             onChanged: (value) {
               widget.searchQuery = value;
+              searchController.text = value;
 
-              // 🔄 Reset filter kecuali harga
-              selectedKategoriId = null;
-              selectedSubKategoriId = null;
-              onlyOnline = false;
+              if (_debounce?.isActive ?? false) _debounce!.cancel();
 
-              // Fetch teknisi dengan search + harga saja
-              resetAndFetch();
+              _debounce = Timer(const Duration(milliseconds: 500), () {
+                resetAndFetch();
+              });
             },
             onSubmitted: (value) {
               widget.searchQuery = value;
@@ -463,7 +490,12 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
                               selectedKategoriId = e['id_kategori'];
                               selectedSubKategoriId = null;
                               subKategoriList = [];
+
+                              // ⬅️ Hapus keyword pencarian
+                              searchController.clear();
+                              widget.searchQuery = "";
                             });
+
                             final data = await fetchSubKategoriRaw(e['id_kategori']);
                             setModalState(() {
                               subKategoriList = data;
@@ -489,7 +521,13 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
                           label: Text(e['nama_keahlian']),
                           selected: selected,
                           onSelected: (_) {
-                            setModalState(() => selectedSubKategoriId = e['id_keahlian']);
+                            setModalState(() {
+                              selectedSubKategoriId = e['id_keahlian'];
+
+                              // ⬅️ Hapus keyword pencarian
+                              searchController.clear();
+                              widget.searchQuery = "";
+                            });
                           },
                           selectedColor: const Color(0xFF0C4481),
                           labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
@@ -616,6 +654,11 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
                         ),
                         onPressed: () {
                           Navigator.pop(context);
+
+                          // ⬅️ Pastikan keyword hilang sebelum fetch
+                          searchController.clear();
+                          widget.searchQuery = "";
+
                           resetAndFetch();
                         },
                         child: const Text("Terapkan", style: TextStyle(color: Colors.white)),
@@ -650,24 +693,20 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     );
   }
 
-  Widget _buildResultsList(Color yellow) {
-    if (teknisiList.isEmpty && !_isLoading) {
-      return const Center(child: Text("Tidak ada teknisi ditemukan."));
-    }
-
-    return GridView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+  SliverGrid _buildResultsGrid() {
+    return SliverGrid(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
         childAspectRatio: 0.8,
       ),
-      itemCount: teknisiList.length,
-      itemBuilder: (context, index) {
-        return _buildTeknisiCard(teknisiList[index], yellow);
-      },
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          return _buildTeknisiCard(teknisiList[index], const Color(0xFFFFCC33));
+        },
+        childCount: teknisiList.length,
+      ),
     );
   }
 
@@ -696,25 +735,32 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
 
     double rating = double.tryParse(teknisi["rating"].toString()) ?? 0.0;
 
+    
+
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HalamanLayanan(
-              idTeknisi: int.parse(teknisi["id_teknisi"].toString()),
-              idKeahlian: int.parse(teknisi["id_keahlian"].toString()),
-              nama: teknisi["nama"] ?? '',
-              deskripsi: teknisi["nama_keahlian"] ?? '',
-              rating: rating,
-              harga: harga,
-              gambarUtama: gambarUrl,
-              gambarLayanan: [gambarUrl],
-              fotoProfile: teknisi["foto_profile"] ?? "",
-            ),
+      onTap: () async {
+
+      final prefs = await SharedPreferences.getInstance();
+      final idUser = prefs.getInt("id_user");
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HalamanLayanan(
+            idTeknisi: int.parse(teknisi["id_teknisi"].toString()),
+            idKeahlian: int.parse(teknisi["id_keahlian"].toString()),
+            nama: teknisi["nama"] ?? '',
+            deskripsi: teknisi["nama_keahlian"] ?? '',
+            rating: rating,
+            harga: harga,
+            gambarUtama: gambarUrl,
+            gambarLayanan: [gambarUrl],
+            fotoProfile: teknisi["foto_profile"] ?? "",
+            data: teknisi, // ⬅️ perbaikan penting
           ),
-        );
-      },
+        ),
+      );
+    },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -807,16 +853,4 @@ class _HalamanPencarianState extends State<HalamanPencarian> {
     );
   }
 
-  Widget _buildLoadMoreButton() {
-    if (!hasMore) return const SizedBox();
-
-    return Center(
-      child: ElevatedButton(
-        onPressed: () => fetchTeknisi(loadMore: true),
-        child: _isLoadMore
-            ? const CircularProgressIndicator(color: Colors.white)
-            : const Text("Load More"),
-      ),
-    );
-  }
 }

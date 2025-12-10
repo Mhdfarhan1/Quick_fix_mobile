@@ -15,25 +15,54 @@ class _VerifyResetOtpPageState extends State<VerifyResetOtpPage> {
   final TextEditingController _confirmController = TextEditingController();
   bool _isLoading = false;
 
+  // State untuk validasi
+  bool _otpError = false;
+  bool _passwordError = false;
+  bool _confirmError = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Real-time validation: hapus error saat user mengetik
+    _otpController.addListener(() {
+      if (_otpError && _otpController.text.isNotEmpty) {
+        setState(() => _otpError = false);
+      }
+    });
+
+    _passwordController.addListener(() {
+      if (_passwordError && _passwordController.text.isNotEmpty) {
+        setState(() => _passwordError = false);
+      }
+      if (_confirmError && _passwordController.text == _confirmController.text) {
+        setState(() => _confirmError = false);
+      }
+    });
+
+    _confirmController.addListener(() {
+      if (_confirmError && _passwordController.text == _confirmController.text) {
+        setState(() => _confirmError = false);
+      }
+    });
+  }
+
   Future<void> _verifyOtp() async {
     final otp = _otpController.text.trim();
     final password = _passwordController.text.trim();
     final confirm = _confirmController.text.trim();
 
-    if (otp.isEmpty || password.isEmpty || confirm.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Semua field wajib diisi!'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+    setState(() {
+      // Reset error
+      _otpError = otp.isEmpty;
+      _passwordError = password.isEmpty;
+      _confirmError = confirm.isEmpty || password != confirm;
+    });
 
-    if (password != confirm) {
+    if (_otpError || _passwordError || _confirmError) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Kata sandi dan konfirmasi tidak sama!'),
+          content: Text('Periksa kembali input Anda!'),
           backgroundColor: Colors.red,
         ),
       );
@@ -43,7 +72,7 @@ class _VerifyResetOtpPageState extends State<VerifyResetOtpPage> {
     setState(() => _isLoading = true);
 
     final result = await ApiService.post(
-      endpoint: '/password/verify-otp', // endpoint Laravel OTP
+      endpoint: '/password/verify-otp',
       data: {
         'email': widget.email,
         'otp': otp,
@@ -61,7 +90,7 @@ class _VerifyResetOtpPageState extends State<VerifyResetOtpPage> {
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.popUntil(context, (route) => route.isFirst); // kembali ke login
+      Navigator.popUntil(context, (route) => route.isFirst);
     } else {
       final data = result['data'];
       ScaffoldMessenger.of(context).showSnackBar(
@@ -70,7 +99,36 @@ class _VerifyResetOtpPageState extends State<VerifyResetOtpPage> {
           backgroundColor: Colors.red,
         ),
       );
+
+      // Hanya field yang bermasalah
+      setState(() {
+        if (data['field'] == 'otp') _otpError = true;
+        if (data['field'] == 'password') _passwordError = true;
+      });
     }
+  }
+
+  InputDecoration _inputDecoration(String hint, IconData icon, bool error) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(icon),
+      filled: true,
+      fillColor: Colors.grey[200],
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: error ? const BorderSide(color: Colors.red, width: 2) : BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: error ? const BorderSide(color: Colors.red, width: 2) : BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: error
+            ? const BorderSide(color: Colors.red, width: 2)
+            : const BorderSide(color: Colors.blue, width: 2),
+      ),
+    );
   }
 
   @override
@@ -94,46 +152,19 @@ class _VerifyResetOtpPageState extends State<VerifyResetOtpPage> {
             TextField(
               controller: _otpController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: 'Kode OTP',
-                prefixIcon: const Icon(Icons.lock_outline),
-                filled: true,
-                fillColor: Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+              decoration: _inputDecoration('Kode OTP', Icons.lock_outline, _otpError),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _passwordController,
               obscureText: true,
-              decoration: InputDecoration(
-                hintText: 'Kata sandi Baru',
-                prefixIcon: const Icon(Icons.password),
-                filled: true,
-                fillColor: Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+              decoration: _inputDecoration('Kata sandi Baru', Icons.password, _passwordError),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _confirmController,
               obscureText: true,
-              decoration: InputDecoration(
-                hintText: 'Konfirmasi kata sandi',
-                prefixIcon: const Icon(Icons.password_outlined),
-                filled: true,
-                fillColor: Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+              decoration: _inputDecoration('Konfirmasi kata sandi', Icons.password_outlined, _confirmError),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
