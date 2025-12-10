@@ -76,8 +76,12 @@ class _MyOrderScreenState extends State<MyOrderScreen>
         final List<dynamic> data = jsonDecode(response.body);
 
         setState(() {
-          ongoingOrders = data.where((p) => p['status'] != 'selesai').toList();
-          completedOrders = data.where((p) => p['status'] == 'selesai').toList();
+          // ⚠️ Pesanan berlangsung hanya yang BELUM selesai & BELUM batal
+          ongoingOrders = data.where((p) => p['status'] != 'selesai' && p['status'] != 'batal').toList();
+
+          // 🎉 Pesanan selesai TERMASUK yang batal
+          completedOrders = data.where((p) => p['status'] == 'selesai' || p['status'] == 'batal').toList();
+
           isLoading = false;
         });
 
@@ -115,6 +119,16 @@ class _MyOrderScreenState extends State<MyOrderScreen>
     final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final hargaFormatted = formatter.format(harga);
 
+    Color statusColor;
+    if (status == "selesai") {
+      statusColor = Colors.green;
+    } else if (status == "batal") {
+      statusColor = Colors.red;
+    } else {
+      statusColor = Colors.orange;
+    }
+
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Material(
@@ -123,21 +137,28 @@ class _MyOrderScreenState extends State<MyOrderScreen>
         color: Colors.white,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {
+          onTap: () async {
+            bool? refreshed;
+
             if (order['status'] == 'selesai') {
-              Navigator.push(
+              refreshed = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => OrderDetailSelesaiScreen(order: Map<String, dynamic>.from(order)),
                 ),
               );
             } else {
-              Navigator.push(
+              refreshed = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => OrderDetailScreen(order: Map<String, dynamic>.from(order)),
                 ),
               );
+            }
+
+            // 🔄 kalau dari detail return true, refresh list
+            if (refreshed == true) {
+              fetchPesanan();
             }
           },
           child: Padding(
@@ -184,15 +205,15 @@ class _MyOrderScreenState extends State<MyOrderScreen>
 
                       const SizedBox(height: 6),
 
-                      // Status kecil warna hijau
-                      Text(
-                        status.replaceAll("_", " "),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
+                        Text(
+                          status.replaceAll("_", " "),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
+
 
                       const SizedBox(height: 8),
 

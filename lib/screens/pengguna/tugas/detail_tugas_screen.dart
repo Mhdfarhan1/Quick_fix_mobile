@@ -3,8 +3,6 @@ import 'dart:math' as math;
 import '../../chat/chat_page.dart';
 import '../../../services/api_service.dart';
 import '../../../config/base_url.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class OrderDetailScreen extends StatefulWidget {
   final Map<String, dynamic> order;
@@ -21,8 +19,14 @@ class OrderDetailScreen extends StatefulWidget {
 class _OrderDetailScreenState extends State<OrderDetailScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  bool _isCancelling = false;
 
-  int get step => _getStep(widget.order['status']);
+  // STATUS FUNCS
+  bool isCancellable(String status) {
+    final s = status.trim().toLowerCase();
+    return s == 'menunggu_diterima' || s == 'dijadwalkan';
+  }
+
 
   int _getStep(String status) {
     switch (status) {
@@ -36,7 +40,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
         return 3;
       case 'selesai':
         return 4;
-      case 'dibatalkan':
+      case 'batal':
         return 5;
       default:
         return 0;
@@ -44,7 +48,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
   }
 
   Color getStatusColor() {
-    switch (widget.order['status']) {
+    final status = widget.order['status']?.toString() ?? '';
+    switch (status) {
       case 'menunggu_diterima':
         return Colors.orange;
       case 'dijadwalkan':
@@ -55,10 +60,29 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
         return Colors.green;
       case 'selesai':
         return Colors.black;
-      case 'dibatalkan':
+      case 'batal':
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  String statusLabel(String status) {
+    switch (status) {
+      case 'batal':
+        return 'Dibatalkan';
+      case 'menunggu_diterima':
+        return 'Menunggu Diterima';
+      case 'dijadwalkan':
+        return 'Dijadwalkan';
+      case 'menuju_lokasi':
+        return 'Menuju Lokasi';
+      case 'sedang_bekerja':
+        return 'Sedang Bekerja';
+      case 'selesai':
+        return 'Selesai';
+      default:
+        return status.toString().replaceAll('_', ' ');
     }
   }
 
@@ -66,12 +90,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(seconds: 20))
-      ..repeat();
-      print("=== ORDER DETAIL DATA ===");
-      print(widget.order);
-      print("API dipanggil: $BaseUrl/get_pemesanan_by_user");
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    )..repeat();
 
+    print("=== ORDER DETAIL DATA ===");
+    print(widget.order);
+    print("API dipanggil: $BaseUrl/get_pemesanan_by_user");
   }
 
   @override
@@ -80,8 +105,105 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
     super.dispose();
   }
 
+  Future<void> _cancelOrder() async {
+    if (_isCancelling) return;
+
+    print("DEBUG: _cancelOrder DIPANGGIL!");
+
+    setState(() => _isCancelling = true);
+
+    final o = widget.order;
+    final idPemesananRaw = o['id_pemesanan'] ?? o['id'];
+    final idPemesanan = int.tryParse(idPemesananRaw.toString()) ?? 0;
+
+    if (idPemesanan == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("ID pesanan tidak valid")),
+      );
+      setState(() => _isCancelling = false);
+      return;
+    }
+
+    final currentStatus = o['status']?.toString() ?? '';
+    if (!isCancellable(currentStatus)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Pesanan tidak dapat dibatalkan (status: $currentStatus)")),
+      );
+      setState(() => _isCancelling = false);
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Konfirmasi Pembatalan"),
+        content: const Text("Apakah Anda yakin ingin membatalkan pesanan ini?"),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Batal")),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Ya, Batalkan")),
+        ],
+      ),
+    );
+
+    if (confirm != true) {
+      setState(() => _isCancelling = false);
+      return;
+    }
+
+    try {
+      final endpoint = "/pemesanan/$idPemesanan/batalkan";
+      final resp = await ApiService.post(endpoint: endpoint, data: {});
+      print("CANCEL RESPONSE: $resp");
+
+      final success = resp?['data']?['status'] == true;
+
+      if (success) {
+        print("DEBUG: STATUS UPDATE SELESAI");
+
+        setState(() {
+          o['status'] = 'batal';
+        });
+
+        ScaffoldMessenger.of(context)
+            .showSnackBar(
+              SnackBar(
+                content: Text(resp?['data']?['message'] ?? "Pesanan dibatalkan"),
+                duration: const Duration(milliseconds: 800),
+              ),
+            )
+            .closed
+            .then((_) {
+              print("DEBUG: NAVIGATOR POP AKAN DIJALANKAN");
+              if (mounted) Navigator.pop(context, true);
+            });
+
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(resp?['data']?['message'] ?? "Gagal membatalkan pesanan")),
+        );
+      }
+
+
+    } catch (e) {
+      print("ERROR CANCEL: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Terjadi kesalahan, coba lagi")),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isCancelling = false);
+      }
+    }
+  }
+
+
   Widget buildStepItem(String label, int index) {
-    bool active = index <= step;
+    final status = widget.order['status']?.toString() ?? '';
+    bool active = index <= _getStep(status);
     return Column(
       children: [
         Container(
@@ -107,9 +229,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
   Future<int?> startChat(int idTeknisi) async {
     final response = await ApiService.post(
       endpoint: "chat/start",
-      data: {
-        "id_teknisi": idTeknisi,
-      },
+      data: {"id_teknisi": idTeknisi},
     );
 
     print("CHAT START RESPONSE: $response");
@@ -130,15 +250,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
     return null;
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-    var o = widget.order;
+    final o = widget.order;
+    final status = o['status']?.toString() ?? '';
+    print("STATUS PEKERJAAN: $status");
+    print("DEBUG STATUS RAW: '${o['status']}'");
+    print("DEBUG NORMALIZED: '${o['status'].toString().trim().toLowerCase()}'");
+    print("CANCELLABLE? ${isCancellable(o['status'].toString())}");
+
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Detail Pesanan"),
+        title: const Text("Detail Pesanan"),
         backgroundColor: const Color(0xFF0A4CA7),
         foregroundColor: Colors.white,
       ),
@@ -148,19 +272,32 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
           children: [
             Expanded(
               child: OutlinedButton(
+                onPressed: isCancellable(o['status']?.toString() ?? '') && !_isCancelling
+                    ? _cancelOrder
+                    : null,
+
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.all(14),
-                  backgroundColor: Colors.red,        // 🔴 Warna tombol
-                  side: const BorderSide(color: Colors.red), // Border merah
+                  backgroundColor: isCancellable(o['status']?.toString() ?? '')
+                      ? Colors.red
+                      : Colors.grey.shade300,
+                  side: BorderSide(
+                    color: isCancellable(o['status']?.toString() ?? '')
+                        ? Colors.red
+                        : Colors.grey.shade300,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                onPressed: () {},
-                child: const Text(
-                  "Batalkan",
+                child: Text(
+                  _isCancelling ? "Memproses..." : "Batalkan",
                   style: TextStyle(
-                    color: Colors.white,              // ⚪ Teks putih
+                    color: _isCancelling
+                        ? Colors.white70
+                        : isCancellable(o['status']?.toString() ?? '')
+                            ? Colors.white
+                            : Colors.black38,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -169,71 +306,50 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
             ),
             const SizedBox(width: 10),
             IconButton(
-              icon: Icon(Icons.chat),
+              icon: const Icon(Icons.chat),
               onPressed: () async {
-                // ambil idTeknisi
                 final idTeknisiRaw = o['id_teknisi'];
-
-                // jika null → TOLAK
                 if (idTeknisiRaw == null) {
-                  print("ERROR: id_teknisi NULL");
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Teknisi belum ditentukan")),
                   );
                   return;
                 }
 
-                final int idTeknisi = int.tryParse(idTeknisiRaw.toString()) ?? 0;
+                final idTeknisi = int.tryParse(idTeknisiRaw.toString()) ?? 0;
+                if (idTeknisi == 0) return;
 
-                if (idTeknisi == 0) {
-                  print("ERROR: id_teknisi bukan angka");
-                  return;
-                }
-
-                // cek chat id
                 final idChat = o['id_chat'] == null
                     ? null
                     : int.tryParse(o['id_chat'].toString());
 
-
-                // jika chat belum ada → buat
                 if (idChat == null) {
                   final newChatId = await startChat(idTeknisi);
-
                   if (newChatId == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Gagal membuat chat")),
                     );
                     return;
                   }
-
                   setState(() {
                     o['id_chat'] = newChatId;
                   });
-
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ChatPage(
-                        chatId: newChatId,
-                        idTeknisi: idTeknisi,
-                      ),
-                    ),
+                        builder: (_) =>
+                            ChatPage(chatId: newChatId, idTeknisi: idTeknisi)),
                   );
                 } else {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ChatPage(
-                        chatId: idChat,
-                        idTeknisi: idTeknisi,
-                      ),
-                    ),
+                        builder: (_) =>
+                            ChatPage(chatId: idChat, idTeknisi: idTeknisi)),
                   );
                 }
               },
-            )
-
+            ),
           ],
         ),
       ),
@@ -241,7 +357,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // **************** TOP ANIMATION ****************
+            // Top animation
             Stack(
               alignment: Alignment.center,
               children: [
@@ -255,21 +371,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                   ),
                 ),
                 AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, child) {
-                      return Transform.rotate(
-                        angle: _controller.value * 2 * math.pi,
-                        child: child,
-                      );
-                    },
-                    child: Image.asset('assets/images/cog.png',
-                        height: 140, width: 140))
+                  animation: _controller,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                        angle: _controller.value * 2 * math.pi, child: child);
+                  },
+                  child: Image.asset('assets/images/cog.png',
+                      height: 140, width: 140),
+                ),
               ],
             ),
-
             const SizedBox(height: 20),
 
-            // **************** STATUS ****************
+            // Status
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -278,19 +392,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
               ),
               child: Center(
                 child: Text(
-                  o['status'].toString().replaceAll('_', ' ').toUpperCase(),
+                  statusLabel(status),
                   style: TextStyle(
-                    color: getStatusColor(),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      color: getStatusColor(),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ),
 
             const SizedBox(height: 24),
 
-            // **************** PROGRESS STEP ****************
+            // Progress step
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -304,15 +417,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
 
             const SizedBox(height: 30),
 
-            // **************** TEKNISI CARD ****************
+            // Teknisi card
             Row(
               children: [
                 CircleAvatar(
                   radius: 35,
                   backgroundImage: NetworkImage(
-                    "${BaseUrl.server}/storage/foto/foto_teknisi/${o['foto_teknisi'] ?? 'default.png'}"
-                  ),
-
+                      "${BaseUrl.server}/storage/foto/foto_teknisi/${o['foto_teknisi'] ?? 'default.png'}"),
                 ),
                 const SizedBox(width: 16),
                 Column(
@@ -339,7 +450,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                 rowItem("Jam", o['jam_booking']?.toString() ?? "-"),
                 rowItem("Harga", "Rp ${o['harga']?.toString() ?? '0'}"),
                 rowItem("Keluhan", o['keluhan']?.toString() ?? "-"),
-
               ],
             ),
 
@@ -391,11 +501,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w600)),
-          Flexible(
-              child:
-                  Text(value, style: const TextStyle(fontSize: 15))),
+              style:
+                  const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          Flexible(child: Text(value, style: const TextStyle(fontSize: 15))),
         ],
       ),
     );
