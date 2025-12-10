@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'kategori_laporan_page.dart';
+import '../../pengguna/Lainnya/kategori_laporan_page.dart';
 import 'pusat_bantuan_FAQ_page.dart';
 
-class BantuanLaporanPage extends StatelessWidget {
-  const BantuanLaporanPage({super.key});
+class BantuanLaporanPageTeknisi extends StatelessWidget {
+  const BantuanLaporanPageTeknisi({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,19 +23,19 @@ class BantuanLaporanPage extends StatelessWidget {
         children: [
           _buildCard(
             icon: CupertinoIcons.chat_bubble_2_fill,
-            title: "Pusat Bantuan Pelanggan",
-            subtitle: "Cari jawaban dan panduan penggunaan",
+            title: "Pusat Bantuan Teknisi",
+            subtitle: "FAQ khusus teknisi",
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const PusatBantuanFAQPage()),
+                MaterialPageRoute(builder: (_) => PusatBantuanFAQTeknisi()),
               );
             },
           ),
           _buildCard(
             icon: CupertinoIcons.exclamationmark_bubble,
             title: "Laporkan Masalah",
-            subtitle: "Laporkan masalah pesanan, pembayaran, atau aplikasi",
+            subtitle: "Masalah terkait pesanan atau akun teknisi",
             onTap: () {
               Navigator.of(context).push(_slideRouteToKategori());
             },

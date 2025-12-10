@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:quick_fix/screens/teknisi/pesan/pesan_teknisi_page.dart';
 import 'package:quick_fix/screens/teknisi/riwayat/riwayat_teknisi_page.dart';
 import 'package:quick_fix/screens/teknisi/lainnya/pendapatan_page.dart';
+import 'package:quick_fix/screens/teknisi/lainnya/bantuan_laporan_page.dart';
+
 
 // Import halaman lain
 import '../home/Home_page_teknisi.dart';
@@ -10,6 +12,8 @@ import '../../../screens/auth/login_screen.dart';
 import '../../pengguna/Lainnya/bantuan_laporan_page.dart';
 import '../../pengguna/Lainnya/kebijakan_privasi_page.dart';
 import '../../pengguna/Lainnya/tentang_aplikasi.dart';
+import 'bantuan_laporan_page.dart';
+
 
 class LainnyaPage extends StatefulWidget {
   const LainnyaPage({super.key});
@@ -137,7 +141,7 @@ class _LainnyaPageState extends State<LainnyaPage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const BantuanLaporanPage()),
+                    MaterialPageRoute(builder: (_) => const BantuanLaporanPageTeknisi()),
                   );
                 },
               ),
