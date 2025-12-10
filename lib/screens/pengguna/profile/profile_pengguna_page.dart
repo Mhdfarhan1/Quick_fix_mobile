@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/api_service.dart';
 import 'package:quick_fix/screens/pengguna/Lainnya/riwayat_komplain_page.dart';
+import 'package:quick_fix/screens/pengguna/Lainnya/bantuan_laporan_page.dart';
+
 
 import '../../auth/login_screen.dart';
 import 'profile_edit_pengguna_page.dart';
