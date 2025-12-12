@@ -27,6 +27,25 @@ class _MyOrderScreenState extends State<MyOrderScreen>
   List<dynamic> completedOrders = [];
   bool isLoading = true;
 
+  // -----------------------------
+  // Helper normalisasi status
+  // -----------------------------
+  String _normalizeStatus(Map<String, dynamic> order) {
+    return (order['status_pekerjaan'] ?? order['status'] ?? '').toString();
+  }
+
+  bool _isCompletedStatus(String? s) {
+    if (s == null) return false;
+    const completed = {
+      'selesai',
+      'selesai_pending_verifikasi',
+      'selesai_confirmed',
+      'batal',
+    };
+    return completed.contains(s);
+  }
+
+
   @override
   void initState() {
     super.initState();
@@ -73,20 +92,28 @@ class _MyOrderScreenState extends State<MyOrderScreen>
       debugPrint("📥 BODY: ${response.body}");
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+      final List<dynamic> data = jsonDecode(response.body);
 
-        setState(() {
-          // ⚠️ Pesanan berlangsung hanya yang BELUM selesai & BELUM batal
-          ongoingOrders = data.where((p) => p['status'] != 'selesai' && p['status'] != 'batal').toList();
+      setState(() {
+        // normalisasi tiap order → tambahkan field 'status_normal' biar mudah dipakai di UI
+        final normalized = data.map<Map<String, dynamic>>((p) {
+          final copy = Map<String, dynamic>.from(p);
+          copy['status_normal'] = _normalizeStatus(copy);
+          return copy;
+        }).toList();
 
-          // 🎉 Pesanan selesai TERMASUK yang batal
-          completedOrders = data.where((p) => p['status'] == 'selesai' || p['status'] == 'batal').toList();
+        // ongoing: yang bukan completed
+        ongoingOrders = normalized.where((p) => !_isCompletedStatus(p['status_normal'] as String?)).toList();
 
-          isLoading = false;
-        });
+        // completed: termasuk variasi selesai dan batal
+        completedOrders = normalized.where((p) => _isCompletedStatus(p['status_normal'] as String?)).toList();
 
-        return;
-      }
+        isLoading = false;
+      });
+
+      return;
+    }
+
 
 
       setState(() => isLoading = false);
@@ -110,7 +137,7 @@ class _MyOrderScreenState extends State<MyOrderScreen>
     final tanggal = order['tanggal_booking'] ?? '-';
     final alamat = order['alamat_lengkap'] ?? '-';
     final harga = (order['harga'] is num) ? order['harga'] as num : num.tryParse('${order['harga']}') ?? 0;
-    final status = (order['status'] ?? '-').toString();
+    final status = (order['status_pekerjaan'] ?? order['status'] ?? '-').toString();
     final imageUrl = order['foto_teknisi'] != null 
         ? "${BaseUrl.server}/storage/foto/foto_teknisi/${order['foto_teknisi']}"
         : "${BaseUrl.server}/storage/default.png";
@@ -140,7 +167,7 @@ class _MyOrderScreenState extends State<MyOrderScreen>
           onTap: () async {
             bool? refreshed;
 
-            if (order['status'] == 'selesai') {
+            if (status == 'selesai' || status == 'selesai_pending_verifikasi' || status == 'selesai_confirmed') {
               refreshed = await Navigator.push(
                 context,
                 MaterialPageRoute(
