@@ -149,10 +149,11 @@ class _VerifikasiTeknisiPageState extends State<VerifikasiTeknisiPage> {
       return showMsg("Lengkapi semua dokumen (KTP dan SKCK).");
     }
 
-    final token = await ApiService.getToken();
-    if (token == null) {
+    final token = await ApiService.storage.read(key: "token");
+    if (token == null || token.isEmpty) {
       return showMsg("Token tidak ditemukan. Silakan login ulang.");
     }
+
 
     final uri = Uri.parse("${BaseUrl.api}/verifikasi-teknisi");
     final req = http.MultipartRequest("POST", uri);
