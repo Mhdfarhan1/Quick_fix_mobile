@@ -205,6 +205,7 @@ class ApiService {
           await prefs.setString('email', user['email'] ?? '');
           await prefs.setString('role', user['role'] ?? '');
           await prefs.setString('no_hp', user['no_hp'] ?? '');
+          await prefs.setString('user', jsonEncode(user));
 
           if (user['id_teknisi'] != null) {
             await prefs.setInt('id_teknisi', user['id_teknisi']);

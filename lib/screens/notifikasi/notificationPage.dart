@@ -77,18 +77,33 @@ class _NotificationList extends StatelessWidget {
   }
 }
 
-class _NotificationItem extends StatelessWidget {
+class _NotificationItem extends StatefulWidget {
   final NotificationModel item;
 
   const _NotificationItem({super.key, required this.item});
 
   @override
+  State<_NotificationItem> createState() => _NotificationItemState();
+}
+
+class _NotificationItemState extends State<_NotificationItem> {
+  bool expanded = false;
+
+  @override
   Widget build(BuildContext context) {
     final prov = Provider.of<NotificationProvider>(context, listen: false);
+    final item = widget.item;
 
     return GestureDetector(
-      onTap: () => prov.markRead(item),
-      child: Container(
+      onTap: () {
+        setState(() => expanded = !expanded);
+
+        if (!item.isRead) {
+          prov.markRead(item);
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
@@ -102,15 +117,15 @@ class _NotificationItem extends StatelessWidget {
             )
           ],
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // LEFT SIDE
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            // === HEADER ===
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
                     item.judul,
                     style: TextStyle(
                       fontSize: 15,
@@ -120,35 +135,34 @@ class _NotificationItem extends StatelessWidget {
                           : const Color(0xFF0C4481),
                     ),
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    item.pesan,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        TextStyle(fontSize: 14, color: Colors.grey[700]),
+                ),
+                Text(
+                  timeago.format(
+                    DateTime.parse(item.createdAt),
+                    locale: 'id_short',
                   ),
-                ],
-              ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
             ),
 
-            // RIGHT SIDE
-            Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: Text(
-                timeago.format(
-                  DateTime.parse(item.createdAt),
-                  locale: 'id_short',
-                ),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
+            const SizedBox(height: 6),
+
+            // === PESAN (RINGKAS / FULL) ===
+            Text(
+              item.pesan,
+              maxLines: expanded ? null : 1,
+              overflow:
+                  expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
             ),
+
+            // === INDIKATOR ===
+            const SizedBox(height: 8),
           ],
         ),
       ),
     );
   }
 }
+

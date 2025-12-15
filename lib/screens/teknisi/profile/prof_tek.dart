@@ -702,7 +702,13 @@ String? _authToken;
           : Column(
               children: _reviews
                   .take(3) // ⬅ hanya ambil 3 ulasan
-                  .map((r) => _buildReview(r.namaPelanggan, r.komentar))
+                  .map(
+                    (r) => _buildReview(
+                      r.namaPelanggan,
+                      r.komentar,
+                      photoUrl: r.fotoUrl, // ✅ INI KUNCINYA
+                    ),
+                  )
                   .toList(),
             ),
       ]),
@@ -735,8 +741,23 @@ String? _authToken;
     );
   }
 
+  String getInitials(String name) {
+    if (name.trim().isEmpty) return "?";
+    final parts = name.trim().split(" ");
+    if (parts.length == 1) {
+      return parts.first[0].toUpperCase();
+    }
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
+
 
   Widget _buildReview(String name, String text, {String? photoUrl}) {
+    // 🔎 DEBUG YANG BENAR
+    print("🧪 REVIEW FOTO RAW : $photoUrl");
+
+    final hasPhoto = photoUrl != null && photoUrl.trim().isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
@@ -747,20 +768,46 @@ String? _authToken;
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 👤 AVATAR
           CircleAvatar(
             radius: 20,
-            backgroundImage: photoUrl != null && photoUrl.isNotEmpty
-                ? NetworkImage(photoUrl)
-                : const NetworkImage("https://i.pravatar.cc/150?img=3"), // fallback
+            backgroundColor: const Color(0xFF0C4481),
+
+            // ✅ LANGSUNG PAKAI URL DARI API
+            backgroundImage: hasPhoto ? NetworkImage(photoUrl!) : null,
+
+            // ✅ FALLBACK INISIAL
+            child: hasPhoto
+                ? null
+                : Text(
+                    getInitials(name),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
           ),
+
           const SizedBox(width: 10),
+
+          // 💬 ISI REVIEW
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(text, style: const TextStyle(fontSize: 13)),
+                Text(
+                  text,
+                  style: const TextStyle(fontSize: 13),
+                ),
               ],
             ),
           ),
@@ -768,6 +815,8 @@ String? _authToken;
       ),
     );
   }
+
+
 
 
   Widget _buildServiceTab() {

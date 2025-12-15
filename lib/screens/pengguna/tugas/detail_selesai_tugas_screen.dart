@@ -620,13 +620,6 @@ class _OrderDetailSelesaiScreenState extends State<OrderDetailSelesaiScreen> {
             ),
           const SizedBox(height: 30),
 
-          Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(8)),
-            child: Text("DEBUG status_pekerjaan: $statusPekerjaan", style: const TextStyle(fontSize: 12, color: Colors.black87)),
-          ),
-
 
           // ACTION AREA
           if (_isProcessingAction) const Center(child: CircularProgressIndicator()) else Column(
@@ -674,11 +667,20 @@ class _OrderDetailSelesaiScreenState extends State<OrderDetailSelesaiScreen> {
               if (_isConfirmedLocal || order['status_pekerjaan'] == 'selesai_confirmed' || order['status_pekerjaan'] == 'selesai')
                 const SizedBox(height: 8),
 
-              if ((_isConfirmedLocal || order['status_pekerjaan'] == 'selesai_confirmed' || order['status_pekerjaan'] == 'selesai') && !_loadingCheck)
-                ElevatedButton(
+              if ((_isConfirmedLocal ||
+                    order['status_pekerjaan'] == 'selesai_confirmed' ||
+                    order['status_pekerjaan'] == 'selesai') &&
+                !_loadingCheck)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _hasReviewed ? Colors.blue : const Color(0xFFFFCC33),
+                    backgroundColor:
+                        _hasReviewed ? Colors.blue : const Color(0xFFFFCC33),
                     padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   onPressed: () {
                     if (_hasReviewed) {
@@ -696,6 +698,8 @@ class _OrderDetailSelesaiScreenState extends State<OrderDetailSelesaiScreen> {
                     ),
                   ),
                 ),
+              ),
+
 
               // Jika order sedang dispute tampilkan info
               if (_isInDisputeLocal || order['status_pekerjaan'] == 'in_dispute')

@@ -25,16 +25,6 @@ class KeamananAkunPage extends StatelessWidget {
               title: "Ganti Password",
               subtitle: "Ubah sandi akun Anda",
             ),
-            _buildCard(
-              icon: CupertinoIcons.shield,
-              title: "Verifikasi Keamanan",
-              subtitle: "Aktifkan verifikasi tambahan",
-            ),
-            _buildCard(
-              icon: CupertinoIcons.device_phone_portrait,
-              title: "Nomor Pemulihan",
-              subtitle: "Tambahkan nomor untuk pemulihan akun",
-            ),
           ],
         ),
       ),

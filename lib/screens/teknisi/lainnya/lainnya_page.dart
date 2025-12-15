@@ -3,6 +3,9 @@ import 'package:quick_fix/screens/teknisi/pesan/pesan_teknisi_page.dart';
 import 'package:quick_fix/screens/teknisi/riwayat/riwayat_teknisi_page.dart';
 import 'package:quick_fix/screens/teknisi/lainnya/pendapatan_page.dart';
 import 'package:quick_fix/screens/teknisi/lainnya/bantuan_laporan_page.dart';
+import 'package:provider/provider.dart';
+import '../../../config/base_url.dart';
+import '../../../providers/auth_provider.dart';
 
 
 // Import halaman lain
@@ -12,6 +15,7 @@ import '../../../screens/auth/login_screen.dart';
 import '../../pengguna/Lainnya/bantuan_laporan_page.dart';
 import '../../pengguna/Lainnya/kebijakan_privasi_page.dart';
 import '../../pengguna/Lainnya/tentang_aplikasi.dart';
+import '../profile/profile_edit_teknisi_page.dart';
 import 'bantuan_laporan_page.dart';
 
 
@@ -98,6 +102,7 @@ class _LainnyaPageState extends State<LainnyaPage> {
       },
     );
   }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +192,11 @@ class _LainnyaPageState extends State<LainnyaPage> {
 
   // ==== HEADER PROFIL ====
   Widget _buildHeader() {
+    final auth = context.watch<AuthProvider>();
+    final user = auth.userData;
+
+    final foto = user?['foto_profile'];
+
     return Stack(
       children: [
         Container(
@@ -210,32 +220,44 @@ class _LainnyaPageState extends State<LainnyaPage> {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const CircleAvatar(
+                  // 🔥 FOTO TEKNISI
+                  CircleAvatar(
                     radius: 30,
-                    backgroundColor: Colors.grey,
-                    child: Icon(Icons.person, size: 36, color: Colors.white),
+                    backgroundColor: Colors.grey.shade200,
+                    backgroundImage: foto != null && foto.toString().isNotEmpty
+                        ? NetworkImage(
+                            "${BaseUrl.storage}/foto/foto_teknisi/$foto",
+                          )
+                        : const AssetImage(
+                            'assets/images/teknisi_avatar.png',
+                          ) as ImageProvider,
                   ),
+
                   const SizedBox(width: 16),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
-                          "Budi Teknisi",
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          user?['nama'] ?? '-',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                         Text(
-                          "+6286399101234",
-                          style: TextStyle(color: Colors.black54, fontSize: 13),
+                          user?['no_hp'] ?? '-',
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 13,
+                          ),
                         ),
-                        SizedBox(height: 6),
-                        Row(
+                        const SizedBox(height: 6),
+                        const Row(
                           children: [
-                            Icon(
-                              Icons.star,
-                              color: Color(0xFFFFCC33),
-                              size: 18,
-                            ),
+                            Icon(Icons.star,
+                                color: Color(0xFFFFCC33), size: 18),
                             SizedBox(width: 4),
                             Text("4.9", style: TextStyle(fontSize: 14)),
                           ],
@@ -243,9 +265,32 @@ class _LainnyaPageState extends State<LainnyaPage> {
                       ],
                     ),
                   ),
+
+                  // ✏️ EDIT BUTTON
                   IconButton(
                     icon: const Icon(Icons.edit, color: Colors.black54),
-                    onPressed: () {},
+                    onPressed: () async {
+      final auth = context.read<AuthProvider>();
+      final user = auth.userData;
+
+      final updated = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProfileEditTeknisiPage(
+            currentName: user?['nama'] ?? '',
+            currentEmail: user?['email'] ?? '',
+            currentPhone: user?['no_hp'] ?? '',
+          ),
+        ),
+      );
+
+      if (updated == true) {
+        // opsional: snackBar
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil berhasil diperbarui')),
+        );
+      }
+    },
                   ),
                 ],
               ),
@@ -255,6 +300,8 @@ class _LainnyaPageState extends State<LainnyaPage> {
       ],
     );
   }
+
+
 
   // ==== BAGIAN MENU ====
   Widget _buildSectionTitle(String title) {

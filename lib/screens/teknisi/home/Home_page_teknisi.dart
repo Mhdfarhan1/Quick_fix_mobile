@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../../models/task_model.dart';
 import '../profile/prof_tek.dart';
 import '../riwayat/riwayat_teknisi_page.dart';
@@ -8,7 +9,8 @@ import '../pesan/pesan_teknisi_page.dart';
 import '../kerja/sedang_bekerja_page.dart';
 import '../kerja/menuju_kerja_page.dart';
 import '../home/chat_teknisi_page.dart';
-import '../home/notifikasi_page.dart';
+import '../../notifikasi/notificationPage.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../services/task_service.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,7 +18,7 @@ import '../../../services/api_service.dart';
 import '../verifikasi/verifikasi_teknisi_page.dart';
 import '../../chat/chat_list_page.dart';
 import '../pesan/terima_pesanan_page.dart';
-
+import '../../../config/base_url.dart';
 
 
 
@@ -69,6 +71,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
 
     final service = TaskService();
     final data = await service.fetchPesananBaru(  );
+    
 
     setState(() {
       pesananBaru = data;
@@ -137,13 +140,17 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                                 color: Colors.white,
                               ),
                               onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const NotifikasiPage(),
+                              final auth = context.read<AuthProvider>();
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => NotificationPage(
+                                    userId: auth.userId!, // ✅ KIRIM userId
                                   ),
-                                );
-                              },
+                                ),
+                              );
+                            },
                             ),
                             Positioned(
                               right: 10,
@@ -307,6 +314,8 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
 
   // --- 🟢 PROSES SEDANG BERLANGSUNG --- 
   Widget _buildProsesBerlangsung(List<Task> sedang) {
+  print("🧪 MASUK _buildProsesBerlangsung");
+  print("🧪 JUMLAH SEDANG: ${sedang.length}");
     if (sedang.isEmpty && !_loadingTasks) return SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(12),
@@ -336,6 +345,9 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                     itemBuilder: (context, i) {
                       final t = sedang[i];
                       final screenWidth = MediaQuery.of(context).size.width;
+
+                      print("🧪 FOTO RAW       : ${t.fotoPelanggan}");
+                      print("🧪 FOTO URL       : ${BaseUrl.storage}/foto/foto_teknisi/${t.fotoPelanggan}");
 
                       return Material(
                         color: Colors.transparent,
@@ -404,9 +416,15 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
                             ),
                             child: Row(
                               children: [
-                                const CircleAvatar(
+                                CircleAvatar(
                                   radius: 25,
-                                  backgroundImage: AssetImage('assets/images/teknisi_avatar.png'),
+                                  backgroundColor: Colors.grey.shade200,
+                                  backgroundImage: t.fotoPelanggan != null && t.fotoPelanggan!.isNotEmpty
+                                      ? NetworkImage(
+                                          "${BaseUrl.storage}/foto/foto_teknisi/${t.fotoPelanggan}",
+                                        )
+                                      : const AssetImage('assets/images/teknisi_avatar.png')
+                                          as ImageProvider,
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
@@ -538,7 +556,7 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
         _loadingPesananBaru
             ? shimmerPesananBaru()
             : Column(
-                children: menungguList.map((t) => _pesananBaruCard(t.toJson())).toList(),
+                children: menungguList.map((t) => _pesananBaruCard(t)).toList(),
               ),
 
 
@@ -566,13 +584,21 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
     );
   }
 
-  Widget _pesananBaruCard(Map<String, dynamic> order) {
+  Widget _pesananBaruCard(Task t) {
+    // 🔎 DEBUG
+    print("🧪 PESANAN BARU FOTO RAW : ${t.fotoPelanggan}");
+    print(
+      "🧪 PESANAN BARU FOTO URL : ${BaseUrl.storage}/foto/foto_teknisi/${t.fotoPelanggan}",
+    );
+
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DetailPesananPage(order: order),
+            builder: (_) => DetailPesananPage(
+              order: t.toJson(), // ⬅️ kalau halaman detail masih pakai Map
+            ),
           ),
         );
       },
@@ -592,31 +618,48 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            const CircleAvatar(
+            // 🔥 AVATAR (SAMA PERSIS DENGAN ProsesBerlangsung)
+            CircleAvatar(
               radius: 25,
-              backgroundImage: AssetImage('assets/images/teknisi_avatar.png'),
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage:
+                  t.fotoPelanggan != null && t.fotoPelanggan!.isNotEmpty
+                      ? NetworkImage(
+                          "${BaseUrl.storage}/foto/foto_teknisi/${t.fotoPelanggan}",
+                        )
+                      : const AssetImage('assets/images/teknisi_avatar.png')
+                          as ImageProvider,
             ),
+
             const SizedBox(width: 10),
+
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 👤 NAMA PELANGGAN
                   Text(
-                    order["nama_pelanggan"] ?? "-",
+                    t.namaPelanggan,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
+
+                  // 🛠️ KELUHAN
                   Text(
-                    limitText(order["keluhan"] ?? "-", 40),
+                    limitText(t.deskripsi, 40),
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.black87,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
+
+                  // ⏰ JAM BOOKING
                   Text(
-                    order["jam_booking"] ?? "-",
+                    t.jamBooking ?? "-",
                     style: const TextStyle(
                       fontSize: 11,
                       color: Colors.black54,
@@ -630,6 +673,8 @@ class _HomeTeknisiPageState extends State<HomeTeknisiPage> {
       ),
     );
   }
+
+
 
 
   

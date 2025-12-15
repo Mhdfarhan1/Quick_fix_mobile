@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/api_service.dart';
+import '../config/base_url.dart';
 
 class AuthProvider extends ChangeNotifier {
   int? userId;
@@ -35,6 +37,31 @@ class AuthProvider extends ChangeNotifier {
       setUser(res['data']);
     }
   }
+
+  Future<void> fetchUser() async {
+    if (token == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('${BaseUrl.api}/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        userData = data['data'] ?? data;
+
+        notifyListeners(); // 🔥 PENTING
+      }
+    } catch (e) {
+      debugPrint('❌ fetchUser error: $e');
+    }
+  }
+
 
 
   void setUser(Map<String, dynamic> user) async {

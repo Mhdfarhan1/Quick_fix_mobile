@@ -17,6 +17,7 @@ class Task {
   final String? namaTeknisi;
   final int? idTeknisi;
   final DateTime createdAt;
+  final String? fotoPelanggan;
 
   Task({
     required this.id,
@@ -36,6 +37,7 @@ class Task {
     this.namaTeknisi,
     this.namaKeahlian,
     this.idTeknisi,
+    this.fotoPelanggan,
     required this.createdAt,
   });
 
@@ -78,6 +80,13 @@ class Task {
 
       namaKategori: json['nama_kategori'],
       namaKeahlian: json['nama_keahlian'],
+
+      fotoPelanggan: (json['foto_profile']
+          ?? json['foto_pelanggan']
+          ?? json['foto_teknisi'])
+          ?.toString()
+          .trim(),
+
 
       idTeknisi: json['id_teknisi'] != null
           ? int.tryParse(json['id_teknisi'].toString())
