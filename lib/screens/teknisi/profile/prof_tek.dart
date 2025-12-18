@@ -14,6 +14,7 @@ import '../../../config/base_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../widgets/teknisi_bottom_nav.dart';
 import '../../../widgets/user_bottom_nav.dart';
+import '../halaman_layanan.dart';
 
 
 class Service {
@@ -701,7 +702,13 @@ String? _authToken;
           : Column(
               children: _reviews
                   .take(3) // ⬅ hanya ambil 3 ulasan
-                  .map((r) => _buildReview(r.namaPelanggan, r.komentar))
+                  .map(
+                    (r) => _buildReview(
+                      r.namaPelanggan,
+                      r.komentar,
+                      photoUrl: r.fotoUrl, // ✅ INI KUNCINYA
+                    ),
+                  )
                   .toList(),
             ),
       ]),
@@ -734,8 +741,23 @@ String? _authToken;
     );
   }
 
+  String getInitials(String name) {
+    if (name.trim().isEmpty) return "?";
+    final parts = name.trim().split(" ");
+    if (parts.length == 1) {
+      return parts.first[0].toUpperCase();
+    }
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
+
 
   Widget _buildReview(String name, String text, {String? photoUrl}) {
+    // 🔎 DEBUG YANG BENAR
+    print("🧪 REVIEW FOTO RAW : $photoUrl");
+
+    final hasPhoto = photoUrl != null && photoUrl.trim().isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
@@ -746,20 +768,46 @@ String? _authToken;
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 👤 AVATAR
           CircleAvatar(
             radius: 20,
-            backgroundImage: photoUrl != null && photoUrl.isNotEmpty
-                ? NetworkImage(photoUrl)
-                : const NetworkImage("https://i.pravatar.cc/150?img=3"), // fallback
+            backgroundColor: const Color(0xFF0C4481),
+
+            // ✅ LANGSUNG PAKAI URL DARI API
+            backgroundImage: hasPhoto ? NetworkImage(photoUrl!) : null,
+
+            // ✅ FALLBACK INISIAL
+            child: hasPhoto
+                ? null
+                : Text(
+                    getInitials(name),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
           ),
+
           const SizedBox(width: 10),
+
+          // 💬 ISI REVIEW
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(text, style: const TextStyle(fontSize: 13)),
+                Text(
+                  text,
+                  style: const TextStyle(fontSize: 13),
+                ),
               ],
             ),
           ),
@@ -767,6 +815,8 @@ String? _authToken;
       ),
     );
   }
+
+
 
 
   Widget _buildServiceTab() {
@@ -816,61 +866,143 @@ String? _authToken;
 
   Widget _buildServiceCard(int index) {
     final s = _services[index];
-    // print("DEBUG: Building card for ${s.name}. isTechnician: ${widget.isTechnician}");
-    return Container(
-      margin: const EdgeInsets.all(6),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: Colors.white, boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 2))]),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Stack(children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: s.imageFile != null
-                ? Image.file(s.imageFile!, height: 90, width: double.infinity, fit: BoxFit.cover)
-                : Image.network(s.imageUrl ?? "https://picsum.photos/400/300?service", height: 90, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) {
-                    return Container(height: 90, color: Colors.grey[200], child: const Icon(Icons.image_not_supported));
-                  }),
-          ),
-          if (widget.isTechnician) ...[
-            // print("DEBUG: Rendering edit/delete buttons for ${s.name}"), // Uncomment if needed, but using ...[] trick to insert log is hard.
-            Positioned(
-              right: 6,
-              top: 6,
-              child: Builder(builder: (context) {
-                // print("DEBUG: Rendering buttons for ${s.name}");
-                return Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)), child: IconButton(icon: const Icon(Icons.edit, size: 18, color: Colors.white), onPressed: () => _showEditServiceModal(index))),
-                const SizedBox(width: 6),
-                Container(decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)), child: IconButton(icon: const Icon(Icons.delete, size: 18, color: Colors.white), onPressed: () => _confirmDeleteService(index))),
-              ]);
-              }),
+    
+    
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        final id = _idTeknisi ?? widget.teknisiId;
+        if (id == null) {
+          print("ERROR: id teknisi null");
+          return;
+        }
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => HalamanLayanan(
+              idTeknisi: _idTeknisi ?? widget.teknisiId!, // pastikan selalu ada id
+              idKeahlian: s.idKeahlian ?? 0,
+              nama: s.name,
+              deskripsi: s.description,
+              rating: ratingTeknisi ?? 0,
+              harga: s.price ?? 0,
+              gambarUtama: s.imageUrl ?? "",
+              gambarLayanan: _gallery,
+              fotoProfile: fotoTeknisi,
+              data: {
+                "id": s.id,
+                "nama": s.name,
+                "deskripsi": s.description,
+                "harga": s.price,
+                "gambar": s.imageUrl,
+                "idKeahlian": s.idKeahlian,
+                "namaKeahlian": s.namaKeahlian,
+                "id_teknisi": _idTeknisi ?? widget.teknisiId,
+              },
             ),
+          ),
+        );
+      },
+
+      child: Container(
+        margin: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 5,
+              offset: Offset(0, 2),
+            )
           ],
-        ]),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(s.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 4),
-              Expanded(
-                child: Text(
-                  s.description,
-                  style: const TextStyle(fontSize: 12, color: Colors.black87),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 4,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: s.imageFile != null
+                      ? Image.file(s.imageFile!, height: 90, width: double.infinity, fit: BoxFit.cover)
+                      : Image.network(
+                          s.imageUrl ?? "https://picsum.photos/400/300?service",
+                          height: 90,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) {
+                            return Container(
+                              height: 90,
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.image_not_supported),
+                            );
+                          },
+                        ),
+                ),
+
+                /// Tombol EDIT & DELETE (khusus teknisi)
+                if (widget.isTechnician) ...[
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)),
+                          child: IconButton(
+                            icon: const Icon(Icons.edit, size: 18, color: Colors.white),
+                            onPressed: () => _showEditServiceModal(index),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)),
+                          child: IconButton(
+                            icon: const Icon(Icons.delete, size: 18, color: Colors.white),
+                            onPressed: () => _confirmDeleteService(index),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 4),
+                    Expanded(
+                      child: Text(
+                        s.description,
+                        style: const TextStyle(fontSize: 12, color: Colors.black87),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 4,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      s.getPriceText(s.price),
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF0C4481), fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                s.getPriceText(s.price),
-                style: const TextStyle(fontSize: 13, color: Color(0xFF0C4481), fontWeight: FontWeight.w600),
-              ),
-            ]),
-          ),
+            ),
+          ],
         ),
-      ]),
+      ),
     );
   }
+
 
 
 

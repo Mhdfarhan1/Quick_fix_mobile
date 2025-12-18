@@ -27,6 +27,25 @@ class _MyOrderScreenState extends State<MyOrderScreen>
   List<dynamic> completedOrders = [];
   bool isLoading = true;
 
+  // -----------------------------
+  // Helper normalisasi status
+  // -----------------------------
+  String _normalizeStatus(Map<String, dynamic> order) {
+    return (order['status_pekerjaan'] ?? order['status'] ?? '').toString();
+  }
+
+  bool _isCompletedStatus(String? s) {
+    if (s == null) return false;
+    const completed = {
+      'selesai',
+      'selesai_pending_verifikasi',
+      'selesai_confirmed',
+      'batal',
+    };
+    return completed.contains(s);
+  }
+
+
   @override
   void initState() {
     super.initState();
@@ -73,16 +92,28 @@ class _MyOrderScreenState extends State<MyOrderScreen>
       debugPrint("📥 BODY: ${response.body}");
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+      final List<dynamic> data = jsonDecode(response.body);
 
-        setState(() {
-          ongoingOrders = data.where((p) => p['status'] != 'selesai').toList();
-          completedOrders = data.where((p) => p['status'] == 'selesai').toList();
-          isLoading = false;
-        });
+      setState(() {
+        // normalisasi tiap order → tambahkan field 'status_normal' biar mudah dipakai di UI
+        final normalized = data.map<Map<String, dynamic>>((p) {
+          final copy = Map<String, dynamic>.from(p);
+          copy['status_normal'] = _normalizeStatus(copy);
+          return copy;
+        }).toList();
 
-        return;
-      }
+        // ongoing: yang bukan completed
+        ongoingOrders = normalized.where((p) => !_isCompletedStatus(p['status_normal'] as String?)).toList();
+
+        // completed: termasuk variasi selesai dan batal
+        completedOrders = normalized.where((p) => _isCompletedStatus(p['status_normal'] as String?)).toList();
+
+        isLoading = false;
+      });
+
+      return;
+    }
+
 
 
       setState(() => isLoading = false);
@@ -106,7 +137,7 @@ class _MyOrderScreenState extends State<MyOrderScreen>
     final tanggal = order['tanggal_booking'] ?? '-';
     final alamat = order['alamat_lengkap'] ?? '-';
     final harga = (order['harga'] is num) ? order['harga'] as num : num.tryParse('${order['harga']}') ?? 0;
-    final status = (order['status'] ?? '-').toString();
+    final status = (order['status_pekerjaan'] ?? order['status'] ?? '-').toString();
     final imageUrl = order['foto_teknisi'] != null 
         ? "${BaseUrl.server}/storage/foto/foto_teknisi/${order['foto_teknisi']}"
         : "${BaseUrl.server}/storage/default.png";
@@ -114,6 +145,16 @@ class _MyOrderScreenState extends State<MyOrderScreen>
 
     final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final hargaFormatted = formatter.format(harga);
+
+    Color statusColor;
+    if (status == "selesai") {
+      statusColor = Colors.green;
+    } else if (status == "batal") {
+      statusColor = Colors.red;
+    } else {
+      statusColor = Colors.orange;
+    }
+
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -123,21 +164,28 @@ class _MyOrderScreenState extends State<MyOrderScreen>
         color: Colors.white,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            if (order['status'] == 'selesai') {
-              Navigator.push(
+          onTap: () async {
+            bool? refreshed;
+
+            if (status == 'selesai' || status == 'selesai_pending_verifikasi' || status == 'selesai_confirmed') {
+              refreshed = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => OrderDetailSelesaiScreen(order: Map<String, dynamic>.from(order)),
                 ),
               );
             } else {
-              Navigator.push(
+              refreshed = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => OrderDetailScreen(order: Map<String, dynamic>.from(order)),
                 ),
               );
+            }
+
+            // 🔄 kalau dari detail return true, refresh list
+            if (refreshed == true) {
+              fetchPesanan();
             }
           },
           child: Padding(
@@ -184,15 +232,15 @@ class _MyOrderScreenState extends State<MyOrderScreen>
 
                       const SizedBox(height: 6),
 
-                      // Status kecil warna hijau
-                      Text(
-                        status.replaceAll("_", " "),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
+                        Text(
+                          status.replaceAll("_", " "),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
+
 
                       const SizedBox(height: 8),
 

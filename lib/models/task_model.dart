@@ -17,6 +17,7 @@ class Task {
   final String? namaTeknisi;
   final int? idTeknisi;
   final DateTime createdAt;
+  final String? fotoPelanggan;
 
   Task({
     required this.id,
@@ -36,6 +37,7 @@ class Task {
     this.namaTeknisi,
     this.namaKeahlian,
     this.idTeknisi,
+    this.fotoPelanggan,
     required this.createdAt,
   });
 
@@ -79,6 +81,13 @@ class Task {
       namaKategori: json['nama_kategori'],
       namaKeahlian: json['nama_keahlian'],
 
+      fotoPelanggan: (json['foto_profile']
+          ?? json['foto_pelanggan']
+          ?? json['foto_teknisi'])
+          ?.toString()
+          .trim(),
+
+
       idTeknisi: json['id_teknisi'] != null
           ? int.tryParse(json['id_teknisi'].toString())
           : null,
@@ -88,4 +97,28 @@ class Task {
           : DateTime.now(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "id_pemesanan": id,
+      "kode_pemesanan": kodePemesanan,
+      "nama_pelanggan": namaPelanggan,
+      "keluhan": deskripsi,
+      "status_pekerjaan": statusPekerjaan,
+      "harga": harga,
+      "tanggal_booking": tanggalBooking?.toIso8601String(),
+      "jam_booking": jamBooking,
+      "alamat_lengkap": alamatLengkap,
+      "kota": kota,
+      "provinsi": provinsi,
+      "latitude": latitude,
+      "longitude": longitude,
+      "nama_kategori": namaKategori,
+      "nama_keahlian": namaKeahlian,
+      "nama_teknisi": namaTeknisi,
+      "id_teknisi": idTeknisi,
+      "created_at": createdAt.toIso8601String(),
+    };
+  }
+
 }

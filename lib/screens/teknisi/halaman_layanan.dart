@@ -10,6 +10,11 @@ import '../../../config/base_url.dart';
 import '../pengguna/pemesanan/form_pemesanan.dart';
 import '../teknisi/profile/list_ulasan_page.dart';
 import '../../models/review_model.dart';
+import '../../services/api_service.dart';
+import '../../../services/chat_service.dart';
+import '../teknisi/profile/prof_tek.dart';
+
+import '../chat/chat_page.dart';
 
 class HalamanLayanan extends StatefulWidget {
   final int idTeknisi;
@@ -21,6 +26,7 @@ class HalamanLayanan extends StatefulWidget {
   final String gambarUtama;
   final String? fotoProfile;
   final List<String> gambarLayanan;
+  final Map<String, dynamic> data;
 
   const HalamanLayanan({
     super.key,
@@ -33,7 +39,10 @@ class HalamanLayanan extends StatefulWidget {
     required this.gambarUtama,
     required this.gambarLayanan,
     required this.fotoProfile,
+    required this.data
   });
+
+
 
   @override
   State<HalamanLayanan> createState() => _HalamanLayananState();
@@ -73,11 +82,11 @@ class _HalamanLayananState extends State<HalamanLayanan> {
   }
 
   Future<void> loadUserSession() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  idUser = prefs.getInt("id_user");
-  print("🔎 Loaded id_user from prefs: $idUser");
-  setState(() {}); // ✅ penting
-}
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    idUser = prefs.getInt("id_user");
+    print("🔎 Loaded id_user from prefs: $idUser");
+    setState(() {}); // ✅ penting
+  }
 
   Future<void> fetchDetail() async {
     final url = Uri.parse(
@@ -187,6 +196,63 @@ class _HalamanLayananState extends State<HalamanLayanan> {
       child: Row(
         children: [
 
+          // 🔵 Tombol Chat
+          // 🔵 Tombol Chat
+          Container(
+            height: 52,
+            width: 52,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0C4481),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.chat, color: Colors.white),
+              onPressed: () async {
+                if (idUser == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("⚠️ Anda belum login")),
+                  );
+                  return;
+                }
+
+                final role = await ApiService.storage.read(key: 'role');
+
+                final chatId = widget.data["id_chat"];
+                final idTeknisi = widget.data["id_teknisi"];
+                final idUserLocal = idUser; // <-- dari SharedPreferences
+
+                int? finalChatId = chatId;
+
+                if (finalChatId == null) {
+                  finalChatId = await ChatService.createOrGetChat(
+                    idTeknisi,
+                    idUserLocal!,
+                  );
+
+                  if (finalChatId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Gagal membuat chat baru.")),
+                    );
+                    return;
+                  }
+                }
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatPage(
+                      chatId: finalChatId!,
+                      idTeknisi: idTeknisi,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+
+          const SizedBox(width: 12),
+
           // 🟡 Tombol Pesan Sekarang
           Expanded(
             flex: 3,
@@ -200,7 +266,6 @@ class _HalamanLayananState extends State<HalamanLayanan> {
                 }
 
                 Navigator.push(
-                  
                   context,
                   MaterialPageRoute(
                     builder: (_) => FormPemesanan(
@@ -236,6 +301,7 @@ class _HalamanLayananState extends State<HalamanLayanan> {
       ),
     );
   }
+
 
   Widget _headerInfo() {
     return Container(
@@ -282,9 +348,14 @@ class _HalamanLayananState extends State<HalamanLayanan> {
                 ),
               ),
               ElevatedButton(
-                onPressed: () {
-                  // Aksi saat tombol ditekan
-                },
+                onPressed: () =>Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProfileTeknisiPage(
+                      teknisiId: widget.idTeknisi,
+                    ),
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color.fromARGB(255, 172, 245, 255),
                   shape: RoundedRectangleBorder(

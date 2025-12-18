@@ -4,6 +4,7 @@ import 'package:app_links/app_links.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'config/base_url.dart';
 import 'screens/splash/splash_screen.dart';
@@ -24,6 +25,8 @@ void main() async {
 
   timeago.setLocaleMessages('id', timeago.IdMessages());
   timeago.setLocaleMessages('id', timeago.IdShortMessages());
+
+  await initializeDateFormatting('id_ID', null);
 
   runApp(
     MultiProvider(

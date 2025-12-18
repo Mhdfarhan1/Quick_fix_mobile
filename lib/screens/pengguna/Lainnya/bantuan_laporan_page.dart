@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'kategori_laporan_page.dart';
+import 'pusat_bantuan_FAQ_page.dart';
 
 class BantuanLaporanPage extends StatelessWidget {
   const BantuanLaporanPage({super.key});
@@ -22,18 +23,20 @@ class BantuanLaporanPage extends StatelessWidget {
         children: [
           _buildCard(
             icon: CupertinoIcons.chat_bubble_2_fill,
-            title: "Pusat Bantuan",
+            title: "Pusat Bantuan Pelanggan",
             subtitle: "Cari jawaban dan panduan penggunaan",
             onTap: () {
-              // TODO: Navigasi ke halaman Pusat Bantuan
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PusatBantuanFAQPage()),
+              );
             },
           ),
           _buildCard(
             icon: CupertinoIcons.exclamationmark_bubble,
             title: "Laporkan Masalah",
-            subtitle: "Laporkan masalah pesanan,pembayaran, atau aplikasi",
+            subtitle: "Laporkan masalah pesanan, pembayaran, atau aplikasi",
             onTap: () {
-              // pake animasi custom
               Navigator.of(context).push(_slideRouteToKategori());
             },
           ),
@@ -75,28 +78,21 @@ class BantuanLaporanPage extends StatelessWidget {
   }
 }
 
-/// Route dengan animasi slide dari kanan + fade
 Route _slideRouteToKategori() {
   return PageRouteBuilder(
     pageBuilder: (context, animation, secondaryAnimation) =>
-    const KategoriLaporanPage(),
+        const KategoriLaporanPage(),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      const begin = Offset(1.0, 0.0); // mulai dari kanan
+      const begin = Offset(1.0, 0.0);
       const end = Offset.zero;
       const curve = Curves.easeOutCubic;
 
-      final tween = Tween(begin: begin, end: end).chain(
-        CurveTween(curve: curve),
-      );
-
-      final fadeTween = Tween<double>(begin: 0, end: 1).chain(
-        CurveTween(curve: curve),
-      );
-
       return SlideTransition(
-        position: animation.drive(tween),
+        position: animation.drive(Tween(begin: begin, end: end)
+            .chain(CurveTween(curve: curve))),
         child: FadeTransition(
-          opacity: animation.drive(fadeTween),
+          opacity: animation.drive(
+              Tween<double>(begin: 0, end: 1).chain(CurveTween(curve: curve))),
           child: child,
         ),
       );

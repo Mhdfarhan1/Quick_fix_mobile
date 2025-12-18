@@ -6,6 +6,7 @@ class TechnicianReview {
   final int rating;
   final String komentar;
   final String namaPelanggan;
+  final String? fotoUrl; // ✅ TAMBAH INI
   final DateTime? createdAt;
 
   TechnicianReview({
@@ -16,6 +17,7 @@ class TechnicianReview {
     required this.rating,
     required this.komentar,
     required this.namaPelanggan,
+    this.fotoUrl, // ✅ TAMBAH INI
     required this.createdAt,
   });
 
@@ -28,6 +30,10 @@ class TechnicianReview {
       rating: json['rating'],
       komentar: json['komentar'] ?? "",
       namaPelanggan: json['pelanggan']?['nama'] ?? "Tidak diketahui",
+
+      // ✅ AMBIL LANGSUNG DARI API
+      fotoUrl: json['pelanggan']?['foto_url'],
+
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,

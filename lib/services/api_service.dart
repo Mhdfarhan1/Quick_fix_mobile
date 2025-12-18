@@ -80,6 +80,11 @@ class ApiService {
       return null;
     }
   }
+  // PUBLIC wrapper (WAJIB ADA)
+  static Future<String?> getToken() async {
+    return await _getToken();
+  }
+
 
   static Future<Map<String, String>> _buildHeaders({
     bool json = true,
@@ -205,6 +210,7 @@ class ApiService {
           await prefs.setString('email', user['email'] ?? '');
           await prefs.setString('role', user['role'] ?? '');
           await prefs.setString('no_hp', user['no_hp'] ?? '');
+          await prefs.setString('user', jsonEncode(user));
 
           if (user['id_teknisi'] != null) {
             await prefs.setInt('id_teknisi', user['id_teknisi']);
