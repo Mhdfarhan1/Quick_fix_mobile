@@ -1,67 +1,89 @@
 import 'package:flutter/material.dart';
+import '../../../services/api_service.dart';
+import '../../../models/category_model.dart';
+import '../../../models/service_model.dart';
+import '../../../config/base_url.dart';
+import 'car_category_screen.dart';
+import 'electronics_category_screen.dart';
+import 'housing_category_screen.dart';
+import '../pencarian/halaman_pencarian.dart';
 
-class MotorcycleCategoryScreen extends StatelessWidget {
+class MotorcycleCategoryScreen extends StatefulWidget {
   const MotorcycleCategoryScreen({super.key});
 
-  // Data untuk kategori utama - SAMA DENGAN SEBELUMNYA
-  final List<Map<String, dynamic>> mainCategories = const [
-    {
-      "nama": "Elektronik",
-      "icon": Icons.electrical_services,
-      "color": Color(0xFF1976D2),
-    },
-    {
-      "nama": "Perumahan", 
-      "icon": Icons.home,
-      "color": Color(0xFF0C4481),
-    },
-    {
-      "nama": "Otomotif Mobil",
-      "icon": Icons.directions_car,
-      "color": Color(0xFF1976D2),
-    },
-    {
-      "nama": "Otomotif Motor",
-      "icon": Icons.two_wheeler,
-      "color": Color(0xFF0C4481),
-    },
-  ];
+  @override
+  State<MotorcycleCategoryScreen> createState() => _MotorcycleCategoryScreenState();
+}
 
-  // Data untuk layanan motor
-  final List<Map<String, dynamic>> motorcycleServices = const [
-    {
-      "judul": "Ganti Oli Mesin",
-      "gambar": "https://images.unsplash.com/photo-1603712610496-5362a2c93c90?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
-    },
-    {
-      "judul": "Service Karburator",
-      "gambar": "https://images.unsplash.com/photo-1571068316344-75bc76f77890?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
-    },
-    {
-      "judul": "Perbaikan Rem", 
-      "gambar": "https://images.unsplash.com/photo-1603712610496-5362a2c93c90?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
-    },
-    {
-      "judul": "Ganti Ban Motor",
-      "gambar": "https://images.unsplash.com/photo-1571068316344-75bc76f77890?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
-    },
-    {
-      "judul": "Tune Up Mesin",
-      "gambar": "https://images.unsplash.com/photo-1603712610496-5362a2c93c90?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
-    },
-    {
-      "judul": "Service Rantai",
-      "gambar": "https://images.unsplash.com/photo-1571068316344-75bc76f77890?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
-    },
-    {
-      "judul": "Perbaikan Kelistrikan",
-      "gambar": "https://images.unsplash.com/photo-1603712610496-5362a2c93c90?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
-    },
-    {
-      "judul": "Service Aki",
-      "gambar": "https://images.unsplash.com/photo-1571068316344-75bc76f77890?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
-    },
-  ];
+class _MotorcycleCategoryScreenState extends State<MotorcycleCategoryScreen> {
+  late Future<List<CategoryModel>> _categoriesFuture;
+  late Future<List<ServiceModel>> _servicesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _categoriesFuture = _fetchCategories();
+    // Search for "Motor"
+    _servicesFuture = _fetchServicesForCategory("Motor");
+  }
+
+  Future<List<CategoryModel>> _fetchCategories() async {
+    try {
+      final response = await ApiService.fetchKategori();
+      if (response['statusCode'] == 200) {
+        final dynamic responseData = response['data'];
+        
+        if (responseData is List) {
+          return responseData.map((json) => CategoryModel.fromJson(json)).toList();
+        } else if (responseData is Map<String, dynamic>) {
+           if (responseData.containsKey('data') && responseData['data'] is List) {
+             return (responseData['data'] as List).map((json) => CategoryModel.fromJson(json)).toList();
+           } else {
+             return [];
+           }
+        } else {
+          return [];
+        }
+      } else {
+        throw Exception('Failed to load categories: ${response['data']['message']}');
+      }
+    } catch (e) {
+      print("Error fetching categories: $e");
+      return []; 
+    }
+  }
+
+  Future<List<ServiceModel>> _fetchServicesForCategory(String categoryName) async {
+    try {
+      final categories = await _fetchCategories();
+      final category = categories.firstWhere(
+        (c) => c.nama.toLowerCase().contains(categoryName.toLowerCase()),
+        orElse: () => CategoryModel(id: -1, nama: 'Unknown'),
+      );
+
+      if (category.id == -1) {
+        print("DEBUG: Category '$categoryName' NOT FOUND in list.");
+        return [];
+      }
+
+      final response = await ApiService.fetchKeahlian(kategoriId: category.id);
+      if (response['statusCode'] == 200) {
+        final dynamic responseData = response['data'];
+        if (responseData is List) {
+            return responseData.map((json) => ServiceModel.fromJson(json)).toList();
+        } else if (responseData is Map<String, dynamic> && responseData.containsKey('data') && responseData['data'] is List) {
+            return (responseData['data'] as List).map((json) => ServiceModel.fromJson(json)).toList();
+        } else {
+            return [];
+        }
+      } else {
+        throw Exception('Failed to load services: ${response['data']['message']}');
+      }
+    } catch (e) {
+      print("Error fetching services: $e");
+      return [];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +113,7 @@ class MotorcycleCategoryScreen extends StatelessWidget {
             _buildCategoryHeader(),
             _buildMainCategories(),
             _buildServicesHeader("Layanan Motor"),
-            _buildMotorcycleServices(),
+            _buildServices(),
             const SizedBox(height: 20),
           ],
         ),
@@ -99,7 +121,6 @@ class MotorcycleCategoryScreen extends StatelessWidget {
     );
   }
 
-  // ------------------- HEADER KATEGORI -------------------
   Widget _buildCategoryHeader() {
     return const Padding(
       padding: EdgeInsets.fromLTRB(24, 20, 24, 16),
@@ -114,66 +135,113 @@ class MotorcycleCategoryScreen extends StatelessWidget {
     );
   }
 
-  // ------------------- KATEGORI UTAMA -------------------
   Widget _buildMainCategories() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return FutureBuilder<List<CategoryModel>>(
+      future: _categoriesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text("Tidak ada kategori"));
+        }
+
+        final categories = snapshot.data!;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: GridView.builder(
-        padding: const EdgeInsets.all(16),
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 3.5,
-        ),
-        itemCount: mainCategories.length,
-        itemBuilder: (context, index) {
-          return _buildCategoryItem(mainCategories[index]);
-        },
-      ),
+          child: GridView.builder(
+            padding: const EdgeInsets.all(16),
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 3.5,
+            ),
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              return _buildCategoryItem(categories[index]);
+            },
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildCategoryItem(Map<String, dynamic> category) {
+  Widget _buildCategoryItem(CategoryModel category) {
+    IconData iconData = Icons.help_outline;
+    Color color = const Color(0xFF1976D2);
+    
+    final name = category.nama.toLowerCase();
+
+    // Match icons with dashboard (home_page.dart)
+    if (name.contains("mobil")) {
+      iconData = Icons.directions_car;
+      color = const Color(0xFF1976D2);
+    } else if (name.contains("motor")) {
+      iconData = Icons.motorcycle; // Updated from two_wheeler
+      color = const Color(0xFF0C4481);
+    } else if (name.contains("elektronik")) {
+      iconData = Icons.electrical_services;
+      color = const Color(0xFF1976D2);
+    } else if (name.contains("renovasi") || name.contains("rumah")) {
+      iconData = Icons.home_repair_service; // Updated from home
+      color = const Color(0xFF0C4481);
+    }
+
     return Material(
       borderRadius: BorderRadius.circular(8),
-      color: category["color"],
+      color: color,
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: () {
-          print("Kategori ${category['nama']} dipilih");
+          print("Kategori ${category.nama} dipilih");
+          final n = category.nama.toLowerCase();
+          
+          if (n.contains("mobil")) {
+             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const CarCategoryScreen()));
+          } else if (n.contains("motor")) {
+            // Already here
+          } else if (n.contains("elektronik")) {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ElectronicsCategoryScreen()));
+          } else if (n.contains("renovasi") || n.contains("rumah")) {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HousingCategoryScreen()));
+          }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
               Icon(
-                category["icon"],
+                iconData,
                 color: Colors.white,
                 size: 24,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  category["nama"],
+                  category.nama,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -183,7 +251,6 @@ class MotorcycleCategoryScreen extends StatelessWidget {
     );
   }
 
-  // ------------------- HEADER LAYANAN -------------------
   Widget _buildServicesHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
@@ -198,91 +265,84 @@ class MotorcycleCategoryScreen extends StatelessWidget {
     );
   }
 
-  // ------------------- LAYANAN MOTOR -------------------
-  Widget _buildMotorcycleServices() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 0.8,
-        ),
-        itemCount: motorcycleServices.length,
-        itemBuilder: (context, index) {
-          return _buildServiceCard(motorcycleServices[index]);
-        },
-      ),
+  Widget _buildServices() {
+    return FutureBuilder<List<ServiceModel>>(
+      future: _servicesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.all(20.0),
+            child: CircularProgressIndicator(),
+          ));
+        } else if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.all(20.0),
+            child: Text("Tidak ada layanan tersedia"),
+          ));
+        }
+
+        final services = snapshot.data!;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: services.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              return _buildServiceCard(services[index]);
+            },
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildServiceCard(Map<String, dynamic> service) {
+  Widget _buildServiceCard(ServiceModel service) {
     return Card(
-      elevation: 4,
+      elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          print("Layanan ${service['judul']} dipilih");
+          print("Layanan ${service.judul} dipilih");
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+               builder: (context) => HalamanPencarian(searchQuery: service.judul),
+            ),
+          );
         },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // GAMBAR LAYANAN
-            Expanded(
-              flex: 3,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-                child: Image.network(
-                  service["gambar"],
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      color: Colors.grey[200],
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0C4481)),
-                        ),
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.error_outline, color: Colors.grey),
-                    );
-                  },
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                service.judul,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF0C4481),
                 ),
               ),
-            ),
-            // JUDUL LAYANAN
-            Expanded(
-              flex: 1,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                child: Center(
-                  child: Text(
-                    service["judul"],
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                      color: Color(0xFF0C4481),
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+              if (service.deskripsi != null && service.deskripsi!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  service.deskripsi!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[700],
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ),
-          ],
+              ],
+            ],
+          ),
         ),
       ),
     );

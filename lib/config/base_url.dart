@@ -7,7 +7,7 @@ class BaseUrl {
   // Coba pakai ngrok dulu, kalau offline pakai lokal
   static String get server {
     const ngrokUrl = "https://85342055a81d.ngrok-free.app";
-    final localIp = "http://192.168.1.2:8000";
+    final localIp = "http://172.20.10.2:8000";
 
     // Flutter Web
     if (kIsWeb) return "http://localhost:8000";

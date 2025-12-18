@@ -396,7 +396,7 @@ class _MasalahPesananPageState extends State<MasalahPesananPage> {
 
     try {
       // GANTI IP ini kalau backend kamu beda
-      final uri = Uri.parse("http://192.168.1.6:8000/api/complaints");
+      final uri = Uri.parse("http://172.20.10.2:8000/api/complaints");
 
       var request = http.MultipartRequest("POST", uri);
       request.headers['Accept'] = "application/json";
