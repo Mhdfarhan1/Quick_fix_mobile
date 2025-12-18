@@ -439,7 +439,7 @@ class _MasalahAkunPageState extends State<MasalahAkunPage> {
     );
 
     try {
-      final uri = Uri.parse("http://192.168.1.6:8000/api/complaints");
+      final uri = Uri.parse("http://10.202.59.17:8000/api/complaints");
 
       var request = http.MultipartRequest("POST", uri);
       request.headers['Accept'] = "application/json";

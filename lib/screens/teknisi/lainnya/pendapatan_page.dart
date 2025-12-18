@@ -1,6 +1,14 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../../../services/api_service.dart';
+import '../../../config/base_url.dart';
+import '../../../models/riwayat_pendapatan.dart';
+import '../../../providers/auth_provider.dart';
+
 
 class PendapatanPage extends StatefulWidget {
   const PendapatanPage({super.key});
@@ -11,6 +19,22 @@ class PendapatanPage extends StatefulWidget {
 
 class _PendapatanPageState extends State<PendapatanPage> {
   bool isBulanan = true;
+  bool isLoading = true;
+  bool isLoadingMore = false;
+
+  int currentPage = 1;
+  int lastPage = 1;
+
+  List<double> values = [];
+  List<RiwayatPendapatan> riwayat = [];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      fetchPendapatan(reset: true);
+    });
+  }
 
   String formatRupiah(num number) {
     final format = NumberFormat.currency(
@@ -18,192 +42,191 @@ class _PendapatanPageState extends State<PendapatanPage> {
     return format.format(number);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0C4481),
-        elevation: 0,
-        foregroundColor: Colors.white,
-        title: const Text("Riwayat Pendapatan"),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _toggleButton("Bulanan", isBulanan, () {
-                setState(() => isBulanan = true);
-              }),
-              const SizedBox(width: 10),
-              _toggleButton("Tahunan", !isBulanan, () {
-                setState(() => isBulanan = false);
-              }),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildBarChart(),
+  Future<void> fetchPendapatan({bool reset = false}) async {
+    if (reset) {
+      currentPage = 1;
+      riwayat.clear();
+      values.clear();
+      isLoading = true;
+    } else {
+      isLoadingMore = true;
+    }
 
-          const SizedBox(height: 20),
+    setState(() {});
 
-          _riwayatCard(
-            title: "Pekerjaan #12345",
-            tanggal: "12 Juni 2024",
-            pendapatan: formatRupiah(250000),
-          ),
-        ],
+    final token = await ApiService.storage.read(key: 'token');
+
+    if (token == null) {
+      debugPrint('❌ Token kosong (ApiService)');
+      return;
+    }
+
+
+    final res = await http.get(
+      Uri.parse(
+        '${BaseUrl.api}/teknisi/pendapatan'
+        '?mode=${isBulanan ? 'bulanan' : 'tahunan'}'
+        '&page=$currentPage',
       ),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
     );
+
+    debugPrint('🔑 TOKEN: $token');
+    debugPrint('🌐 URL: ${BaseUrl.api}/teknisi/pendapatan');
+    debugPrint('📄 STATUS CODE: ${res.statusCode}');
+    debugPrint('📦 BODY: ${res.body}');
+
+
+    final json = jsonDecode(res.body);
+
+    if (currentPage == 1) {
+      values = (json['grafik'] as List)
+        .map<double>((e) => double.parse(e['total'].toString()))
+        .toList();
+
+    }
+
+    final data = json['riwayat']['data'] as List;
+    lastPage = json['riwayat']['last_page'];
+
+    riwayat.addAll(
+      data.map((e) => RiwayatPendapatan.fromJson(e)).toList(),
+    );
+
+    isLoading = false;
+    isLoadingMore = false;
+
+    setState(() {});
   }
 
-  Widget _toggleButton(String text, bool active, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF0C4481) : Colors.white,
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: const Color(0xFF0C4481)),
+
+
+
+    @override
+    Widget build(BuildContext context) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF0C4481),
+          foregroundColor: Colors.white,
+          title: const Text("Riwayat Pendapatan"),
         ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 15,
-            color: active ? Colors.white : const Color(0xFF0C4481),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBarChart() {
-    List<double> values = isBulanan
-        ? [150000, 70000, 200000, 120000]
-        : [
-            1500000,
-            2000000,
-            1750000,
-            2200000,
-            1800000,
-            2100000,
-            2300000,
-            2500000,
-            2000000,
-            1900000,
-            2400000,
-            2600000
-          ];
-
-    List<String> labels = isBulanan
-        ? ["M1", "M2", "M3", "M4"]
-        : [
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "Mei",
-            "Jun",
-            "Jul",
-            "Agu",
-            "Sep",
-            "Okt",
-            "Nov",
-            "Des"
-          ];
-
-    double maxValue = values.reduce((a, b) => a > b ? a : b);
-
-    return Column(
-      children: [
-        Text(
-          isBulanan ? "November" : "2025",
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          height: 320,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: BarChart(
-              BarChartData(
-                maxY: maxValue * 1.2, // beri sedikit padding atas
-                minY: 0,
-                barGroups: List.generate(values.length, (i) {
-                  return BarChartGroupData(
-                    x: i,
-                    barRods: [
-                      BarChartRodData(
-                        toY: values[i],
-                        width: isBulanan ? 28 : 16,
-                        borderRadius: BorderRadius.circular(6),
-                        color: _chartColor(i),
-                        backDrawRodData: BackgroundBarChartRodData(
-                          show: true,
-                          toY: maxValue * 1.2,
-                          color: Colors.grey.shade200,
-                        ),
-                      ),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _toggleButton("Bulanan", isBulanan, () {
+                        setState(() => isBulanan = true);
+                        fetchPendapatan(reset: true);
+                      }),
+                      const SizedBox(width: 10),
+                      _toggleButton("Tahunan", !isBulanan, () {
+                        setState(() => isBulanan = false);
+                        fetchPendapatan(reset: true);
+                      }),
                     ],
-                  );
-                }),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        int idx = value.toInt();
-                        if (idx >= 0 && idx < labels.length) {
-                          return Text(
-                            labels[idx],
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          );
-                        }
-                        return const Text('');
-                      },
-                    ),
                   ),
-                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: maxValue / 4,
-                  getDrawingHorizontalLine: (value) =>
-                      FlLine(color: Colors.grey.shade300, strokeWidth: 1),
-                ),
-                borderData: FlBorderData(show: false),
-                barTouchData: BarTouchData(
-                  enabled: true,
-                  handleBuiltInTouches: true,
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      return BarTooltipItem(
-                        formatRupiah(rod.toY),
-                        const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold),
-                      );
-                    },
-                  ),
-                ),
+                  const SizedBox(height: 20),
+                  _buildBarChart(),
+                  const SizedBox(height: 20),
+                  Expanded(child: _buildRiwayatList()),
+                ],
               ),
-              swapAnimationDuration: const Duration(milliseconds: 400),
-              swapAnimationCurve: Curves.easeOut,
+      );
+    }
+
+
+    Widget _toggleButton(String text, bool active, VoidCallback onTap) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+          decoration: BoxDecoration(
+            color: active ? const Color(0xFF0C4481) : Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: const Color(0xFF0C4481)),
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 15,
+              color: active ? Colors.white : const Color(0xFF0C4481),
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),
+      );
+    }
+
+    Widget _buildRiwayatList() {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: [
+        ...riwayat.map((item) {
+          return _riwayatCard(
+            title: item.namaKeahlian,
+            tanggal: DateFormat('dd MMM yyyy', 'id_ID').format(item.tanggal),
+            pendapatan: formatRupiah(item.amount),
+          );
+        }),
+        if (currentPage < lastPage)
+          TextButton(
+            onPressed: isLoadingMore
+                ? null
+                : () {
+                    currentPage++;
+                    fetchPendapatan();
+                  },
+            child: isLoadingMore
+                ? const CircularProgressIndicator()
+                : const Text("Load More"),
+          ),
       ],
     );
   }
+
+
+  Widget _buildBarChart() {
+    if (values.isEmpty) {
+      return const Center(child: Text("Belum ada data grafik"));
+    }
+
+    final labels = isBulanan
+        ? ["M1", "M2", "M3", "M4"]
+        : ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+    final maxValue = values.reduce((a, b) => a > b ? a : b);
+
+    return SizedBox(
+      height: 320,
+      child: BarChart(
+        BarChartData(
+          maxY: maxValue * 1.2,
+          barGroups: List.generate(values.length, (i) {
+            return BarChartGroupData(
+              x: i,
+              barRods: [
+                BarChartRodData(
+                  toY: values[i],
+                  color: _chartColor(i),
+                  width: 18,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ],
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
 
   Color _chartColor(int index) {
     List<Color> colors = [

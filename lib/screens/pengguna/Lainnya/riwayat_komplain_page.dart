@@ -61,7 +61,7 @@ class _RiwayatKomplainPageState extends State<RiwayatKomplainPage> {
         return;
       }
 
-      final url = Uri.parse("http://10.202.59.178:8000/api/complaints");
+      final url = Uri.parse("http://192.168.1.6:8000/api/complaints");
       final response = await http.get(
         url,
         headers: {

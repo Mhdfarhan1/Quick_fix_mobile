@@ -80,6 +80,11 @@ class ApiService {
       return null;
     }
   }
+  // PUBLIC wrapper (WAJIB ADA)
+  static Future<String?> getToken() async {
+    return await _getToken();
+  }
+
 
   static Future<Map<String, String>> _buildHeaders({
     bool json = true,
